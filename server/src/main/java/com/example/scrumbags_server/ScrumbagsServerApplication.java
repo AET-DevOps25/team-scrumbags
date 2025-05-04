@@ -12,6 +12,7 @@ public class ScrumbagsServerApplication {
         SpringApplication.run(ScrumbagsServerApplication.class, args);
     }
 
+    @CrossOrigin(origins = "http://localhost:4200")
     @GetMapping("/hello")
     public String hello() {
         return "Hello, World!";
