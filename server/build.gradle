@@ -18,9 +18,18 @@ repositories {
 }
 
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter-web'
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	 // Web starter (for REST controllers and embedded Tomcat)
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    // JPA starter (for Hibernate and database access)
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    // MySQL driver (for connecting to MySQL database)
+    runtimeOnly 'com.mysql:mysql-connector-j'
+
+    // Spring Boot test starter (for testing with JUnit)
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.named('test') {
