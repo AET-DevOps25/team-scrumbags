@@ -50,7 +50,7 @@ jobs:
             timeout=$((timeout - 5))
             if [ $timeout -le 0 ]; then
               echo "Spring Boot failed to start in time"
-              docker logs scrumbags-server
+              docker logs team-scrumbags-server
               exit 1
             fi
           done
