@@ -18,6 +18,7 @@ repositories {
 }
 
 dependencies {
+
 	 // Web starter (for REST controllers and embedded Tomcat)
     implementation 'org.springframework.boot:spring-boot-starter-web'
 
@@ -30,6 +31,12 @@ dependencies {
     // Spring Boot test starter (for testing with JUnit)
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // Actuator starter (for monitoring and management)
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // Prometheus (for metrics collection)
+    implementation 'io.micrometer:micrometer-registry-prometheus'
 }
 
 tasks.named('test') {
