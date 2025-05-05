@@ -42,10 +42,10 @@ jobs:
       - name: Build and run stack with Docker Compose
         run: docker compose up --build -d
 
-      - name: Wait for services to become healthy
+      - name: Wait for Spring Boot to become healthy
         run: |
           timeout=60
-          while [[ "$(docker inspect -f '{{.State.Health.Status}}' scrumbags-server)" != "healthy" ]]; do
+          while [[ "$(docker inspect -f '{{.State.Health.Status}}' team-scrumbags-server)" != "healthy" ]]; do
             sleep 5
             timeout=$((timeout - 5))
             if [ $timeout -le 0 ]; then
