@@ -1,7 +1,7 @@
-FROM node:22.15 as build
+FROM node:22.15 AS build
 WORKDIR /app
 COPY . .
 RUN npm ci && npm run build --prod
 
 FROM nginx:alpine
-COPY --from=build /app/dist/your-angular-app /usr/share/nginx/html
+COPY --from=build /app/dist/client /usr/share/nginx/html
