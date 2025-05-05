@@ -45,4 +45,4 @@ jobs:
       - name: Wait for services
         run: |
           sleep 30
-          curl -f http://localhost:8080/actuator/health
+          curl -f http://127.0.0.1:8080/actuator/health
