@@ -40,7 +40,7 @@ jobs:
           npm run build --prod
 
       - name: Build and run stack with Docker Compose
-        run: docker-compose up --build -d
+        run: docker compose up --build -d
 
       - name: Wait for services
         run: |
