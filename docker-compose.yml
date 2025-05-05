@@ -19,6 +19,11 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/scrumbags-db?useSSL=false&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: scrumbags
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     depends_on:
       - mysql
 

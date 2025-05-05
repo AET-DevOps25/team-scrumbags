@@ -42,7 +42,14 @@ jobs:
       - name: Build and run stack with Docker Compose
         run: docker compose up --build -d
 
-      - name: Wait for services
+      - name: Wait for services to become healthy
         run: |
-          sleep 30
-          curl -f http://127.0.0.1:8080/actuator/health
+          timeout=60
+          while [[ "$(docker inspect -f '{{.State.Health.Status}}' <your-spring-container-name>)" != "healthy" ]]; do
+            sleep 5
+            timeout=$((timeout - 5))
+            if [ $timeout -le 0 ]; then
+              echo "Spring Boot failed to start in time"
+              exit 1
+            fi
+          done
