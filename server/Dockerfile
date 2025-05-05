@@ -1,4 +1,4 @@
-FROM openjdk:21-jdk
+FROM openjdk:21
 WORKDIR /app
 COPY . .
 RUN ./gradlew build --no-daemon
