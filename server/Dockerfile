@@ -5,6 +5,6 @@ COPY . .
 
 RUN apt-get update && apt-get install -y findutils
 
-RUN ./gradlew build -x test --no-daemon
+RUN ./gradlew build -no-daemon
 
 CMD ["java", "-jar", "build/libs/*.jar"]
