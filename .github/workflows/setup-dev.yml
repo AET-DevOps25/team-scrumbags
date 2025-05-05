@@ -33,6 +33,10 @@ jobs:
           distribution: "zulu"
           java-version: "21"
 
+      - name: Run server tests
+        working-directory: ./server
+        run: ./gradlew test --no-daemon
+
       - name: Build Angular app
         working-directory: ./client
         run: |
