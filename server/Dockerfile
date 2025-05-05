@@ -1,10 +1,9 @@
-FROM openjdk:21-slim
-
+FROM gradle:8.5-jdk21 as builder
 WORKDIR /app
 COPY . .
+RUN ./gradlew build --no-daemon
 
-RUN apt-get update && apt-get install -y findutils
-
-RUN ./gradlew build -no-daemon
-
-CMD ["java", "-jar", "build/libs/*.jar"]
+FROM eclipse-temurin:21
+WORKDIR /app
+COPY --from=builder /app/build/libs/*.jar app.jar
+ENTRYPOINT ["java", "-jar", "app.jar"]
