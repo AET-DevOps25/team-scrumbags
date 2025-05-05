@@ -18,25 +18,17 @@ repositories {
 }
 
 dependencies {
-
-	 // Web starter (for REST controllers and embedded Tomcat)
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-
-    // JPA starter (for Hibernate and database access)
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-
-    // MySQL driver (for connecting to MySQL database)
-    runtimeOnly 'com.mysql:mysql-connector-j'
-
-    // Spring Boot test starter (for testing with JUnit)
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-
-    // Actuator starter (for monitoring and management)
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-
-    // Prometheus (for metrics collection)
-    implementation 'io.micrometer:micrometer-registry-prometheus'
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
+	runtimeOnly 'com.mysql:mysql-connector-j'
+	runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+	testImplementation 'org.testcontainers:junit-jupiter'
+	testImplementation 'org.testcontainers:mysql'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.named('test') {
