@@ -1,7 +1,9 @@
-FROM node:22.15 AS build
-WORKDIR /app
-COPY . .
-RUN npm ci && npm run build --prod
-
-FROM nginx:alpine
-COPY --from=build /app/dist/client /usr/share/nginx/html
+# Dockerfile
+FROM node:lts
+RUN mkdir /home/node/app && chown node:node /home/node/app
+RUN mkdir /home/node/app/node_modules && chown node:node /home/node/app/node_modules
+WORKDIR  /home/node/app
+USER node
+COPY --chown=node:node package.json package-lock.json ./
+RUN npm ci --quiet
+COPY --chown=node:node . .

@@ -2,7 +2,7 @@ global:
   scrape_interval: 5s
 
 scrape_configs:
-  - job_name: "spring-boot-app"
+  - job_name: "scrumbags-server"
     metrics_path: "/actuator/prometheus"
     static_configs:
-      - targets: ["backend:8080"]
+      - targets: ["team-scrumbags-server:8080"]

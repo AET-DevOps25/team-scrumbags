@@ -38,8 +38,13 @@ services:
   client:
     build:
       context: ./client
+    command: sh -c "npm start"
     ports:
       - "4200:80"
+    working_dir: /home/node/app
+    volumes:
+      - ./client:/home/node/app
+      - node_modules:/home/node/app/node_modules
     depends_on:
       - server
 
@@ -58,3 +63,6 @@ services:
       - "3000:3000"
     depends_on:
       - prometheus
+
+volumes:
+  node_modules:
