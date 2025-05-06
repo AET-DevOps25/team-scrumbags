@@ -1,7 +1,7 @@
 services:
   mysql:
     container_name: mysql
-    image: mysql:latest
+    image: mysql:8.0
     restart: always
     environment:
       - "MYSQL_DATABASE=scrumbags-db"
