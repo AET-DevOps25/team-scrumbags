@@ -13,7 +13,7 @@ services:
     ports:
       - "3306:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "mysql"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -34,7 +34,8 @@ services:
       timeout: 5s
       retries: 5
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
 
   client:
     build:
