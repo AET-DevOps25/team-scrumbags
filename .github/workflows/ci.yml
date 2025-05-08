@@ -98,7 +98,7 @@ jobs:
           context: ./server
           file: ./server/Dockerfile
           push: true
-          tags: ghcr.io/team-scrumbags/server:${{ github.sha }}
+          tags: ${{ github.sha }}
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Build and push client image
@@ -107,5 +107,5 @@ jobs:
           context: ./client
           file: ./client/Dockerfile
           push: true
-          tags: ghcr.io/team-scrumbags/client:${{ github.sha }}
+          tags: ${{ github.sha }}
           labels: ${{ steps.meta.outputs.labels }}
