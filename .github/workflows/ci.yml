@@ -31,6 +31,9 @@ jobs:
           java-version: "21"
           cache: "gradle"
 
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
       - name: Check code and test server
         run: |
           ./gradlew check
@@ -60,6 +63,9 @@ jobs:
       - name: Run lint
         run: npm run lint
         working-directory: client
+
+      - name: Run tests
+        run: npm test -- --watch=false --bail
 
   build-and-push:
     name: Build and Push Docker Images

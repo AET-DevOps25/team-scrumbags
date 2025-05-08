@@ -15,7 +15,7 @@ java {
 }
 
 checkstyle {
-    toolVersion = "10.3.2"
+    toolVersion = "10.12.4"
 }
 
 repositories {
@@ -39,10 +39,6 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
-}
-
-tasks.named("check") {
-    dependsOn("checkstyleMain", "checkstyleTest")
 }
 
 jar {
