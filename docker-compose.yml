@@ -4,10 +4,10 @@ services:
     image: mysql:8.0
     restart: always
     environment:
-      - "MYSQL_DATABASE=scrumbags-db"
-      - "MYSQL_PASSWORD=scrumbags"
-      - "MYSQL_ROOT_PASSWORD=scrumbags"
-      - "MYSQL_USER=scrumbags"
+      - "MYSQL_DATABASE=${MYSQL_DATABASE}"
+      - "MYSQL_PASSWORD=${MYSQL_PASSWORD}"
+      - "MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}"
+      - "MYSQL_USER=${MYSQL_USER}"
     ports:
       - "3306:3306"
     healthcheck:
@@ -23,9 +23,9 @@ services:
     ports:
       - "8080:8080"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/scrumbags-db?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: scrumbags
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_ROOT_USER}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
       interval: 10s
