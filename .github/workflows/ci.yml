@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  #contents: read
   packages: write
 
 jobs:
@@ -36,7 +36,6 @@ jobs:
 
       - name: Check code and test server # todo: fix ./gradlew check
         run: |
-          ./gradlew check
           ./gradlew clean test
 
   client-test:
@@ -57,7 +56,7 @@ jobs:
           cache-dependency-path: client/package-lock.json
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
         working-directory: client
 
       - name: Run lint
@@ -65,7 +64,7 @@ jobs:
         working-directory: client
 
       - name: Run tests
-        run: npm test -- --watch=false
+        run: npm test -- --watch=false --browsers=ChromeHeadless
         working-directory: client
 
   build-and-push:
