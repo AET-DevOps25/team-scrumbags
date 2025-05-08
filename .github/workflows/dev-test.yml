@@ -1,0 +1,98 @@
+name: Dev Test
+
+on:
+  push:
+    branches:
+      - dev-jeremy
+      # todo: add actual branches when we know them
+
+concurrency:
+  group: "ci-${{ github.ref_name }}"
+  cancel-in-progress: true
+
+jobs:
+  server-test:
+    name: Test Spring Boot server
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.head_commit.message, 'test:')
+    defaults:
+      run:
+        working-directory: ./server
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "21"
+          cache: "gradle"
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Check code and test server # todo: fix ./gradlew check
+        run: |
+          ./gradlew clean test
+
+  client-test:
+    name: Lint Angular client
+    if: startsWith(github.event.head_commit.message, 'test:')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./client
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.15"
+          cache: "npm"
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: client
+
+      - name: Run lint
+        run: npm run lint
+        working-directory: client
+
+      - name: Run tests
+        run: npm test -- --watch=false --browsers=ChromeHeadless
+        working-directory: client
+
+  docker-test:
+    runs-on: ubuntu-latest
+    services:
+      docker:
+        image: docker:27.5.1
+        options: --privileged
+    if: startsWith(github.event.head_commit.message, 'test:')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and run stack with Docker Compose
+        run: docker compose up --build -d
+
+      - name: Wait for Spring Boot to become healthy
+        run: |
+          timeout=60
+          while [[ "$(docker inspect -f '{{.State.Health.Status}}' team-scrumbags-server)" != "healthy" ]]; do
+            sleep 5
+            timeout=$((timeout - 5))
+            if [ $timeout -le 0 ]; then
+              echo "Spring Boot failed to start in time"
+              docker logs team-scrumbags-server
+              exit 1
+            fi
+          done
+          echo "Spring Boot is healthy!"
