@@ -34,7 +34,7 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Check code and test server
+      - name: Check code and test server # todo: fix ./gradlew check
         run: |
           ./gradlew check
           ./gradlew clean test
