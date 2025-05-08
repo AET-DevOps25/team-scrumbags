@@ -94,7 +94,7 @@ jobs:
           context: ./server
           file: ./server/Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/server:latest
+          tags: ghcr.io/team-scrumbags/server:${{ steps.vars.outputs.sha_short }}
 
       - name: Build and push client image
         uses: docker/build-push-action@v6
@@ -102,4 +102,4 @@ jobs:
           context: ./client
           file: ./client/Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/client:latest
+          tags: ghcr.io/team-scrumbags/client:${{ steps.vars.outputs.sha_short }}
