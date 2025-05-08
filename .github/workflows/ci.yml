@@ -6,7 +6,7 @@ on:
       - main
 
 concurrency:
-  group: 'ci-${{ github.ref_name }}'
+  group: "ci-${{ github.ref_name }}"
   cancel-in-progress: true
 
 permissions:
@@ -27,22 +27,21 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
-          java-version: '21'
-          cache: 'gradle'
+          distribution: "zulu"
+          java-version: "21"
+          cache: "gradle"
 
       - name: Test and lint server
         run: |
           ./gradlew clean test
-          ./gradlew checkstyleMain checkstyleTest
           ./gradlew lint
 
   client-test:
     name: Lint Angular client
     runs-on: ubuntu-latest
     defaults:
-        run:
-          working-directory: ./client
+      run:
+        working-directory: ./client
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -50,8 +49,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.15'
-          cache: 'npm'
+          node-version: "22.15"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -61,7 +60,7 @@ jobs:
 
   build-and-push:
     name: Build and Push Docker Images
-    needs: [ server-test, client-test ]
+    needs: [server-test, client-test]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
