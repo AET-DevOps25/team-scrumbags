@@ -1,20 +1,18 @@
-name: Setup Dev Environment
+name: Check Dev Environment
 
 on:
   push:
     branches:
       - dev-jeremy
-  pull_request:
-    branches:
-      - main
 
 jobs:
-  build-and-run:
+  test-docker:
     runs-on: ubuntu-latest
     services:
       docker:
         image: docker:27.5.1
         options: --privileged
+    if: startsWith(github.event.head_commit.message, 'test:')
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
