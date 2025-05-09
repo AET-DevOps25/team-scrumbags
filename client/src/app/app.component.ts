@@ -1,4 +1,4 @@
-import { Component } from "@angular/core";
+import { Component, OnInit } from "@angular/core";
 import { RouterOutlet } from "@angular/router";
 import { HelloService } from "./services/hello.service";
 
@@ -8,7 +8,7 @@ import { HelloService } from "./services/hello.service";
   templateUrl: "./app.component.html",
   styleUrls: ["./app.component.scss"],
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
   title = "client";
 
   message = "Loading...";
