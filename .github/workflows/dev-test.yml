@@ -69,6 +69,7 @@ jobs:
   # TODO: uncomment if gh secrets are enabled for the project
   # docker-test:
   #   runs-on: ubuntu-latest
+  #   needs: [server-test, client-test]
   #   services:
   #     docker:
   #       image: docker:27.5.1
