@@ -1,5 +1,5 @@
 | Contributor | Week | Status                  | Impediments         | Promises        |
 |-------------|------|-------------------------|---------------------|-----------------|
-| Jeremy       | 1    | Project setup with all tools etc.     | - | Complete project setup  |
-| Umut         | 1    | todo  | todo | todo  |
-| Dennis       | 1    | todo  | todo | todo  |
+| Jeremy       | 1    | Project setup with Angular, Spring Boot, Docker, MySQL; Created problem statement and project requirements     | - | -  |
+| Umut         | 1    | Created problem statement and project requirements  | - | -  |
+| Dennis       | 1    | Created problem statement and project requirements  | - | -  |
