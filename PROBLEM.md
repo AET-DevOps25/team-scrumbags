@@ -70,10 +70,30 @@ FR4.1: The system can proactively propose issues to the user based on the data i
 # System Design
 
 ## Architecture
-Server: Spring Boot REST API
 
-Client: React / Angular / Vue.js frontend
+![Top Level Architecture Diagram](/docs/subsystem.drawio.png)
 
-GenAI Service: Python, LangChain microservice
+The TRACE system consists of 3 major parts:
+1. **Fetching of Data** from external sources (GitHub, Discord, Meeting Notes)
+2. **Processing of this Data** including storage of the retrieved data (mainly done by the GenAI service)
+3. **Distribution of tasks and basic Project Management** e.g storage of Project Metadata like begin date, members, etc.
 
-Database: (e.g., PostgreSQL, MongoDB)
+The following describes each component in more detail:
+
+**Client**: \
+The client is a angular web application that allows users to interact with the system. It provides a user-friendly interface for connecting to external services, uploading meeting notes, and querying the system.
+
+**ProjectManagement**: \
+The project management component is responsible for storing and managing project metadata, including team members, project start date, and other relevant information. This information is stored in a relational database. Furthermore the component acts like a central hub for the system, coordinating data flow between the client and the other services. 
+
+**Transcription Service**: \
+The transcription service is responsible for converting meeting notes (both video and text) into a format that can be processed by the GenAI service. This also includes extracting the speekers. The transcription text is then forwarded to the GenAI Service for storage. This service will most likely use a transcription model like LocalWisper.
+
+**Communication Connector**: \
+The communication connector is responsible for integrating with external communication platforms, primarily Discord. It fetches messages and relevant data from message channels periodically and forwards it to the GenAI service for storage and processing. The connector should allow to easily integrate other communication platforms in the future.
+
+**GitHub Connector**: \
+The GitHub connector is responsible for integrating with GitHub projects. It fetches issues, commits, and pull requests from the specified repositories and forwards this data to the GenAI service for storage and processing.
+
+**GenAI Service**: \
+The GenAI service processes the data collected from various sources, generates summaries, and provides answers to user queries. The service uses a large language model (LLM) to understand and process natural language queries and generate relevant responses. To do so all collected data is stored in a vectorized database.
