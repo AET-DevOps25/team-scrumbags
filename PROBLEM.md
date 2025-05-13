@@ -81,7 +81,7 @@ The TRACE system consists of 3 major parts:
 The following describes each component in more detail:
 
 **Client**: \
-The client is a angular web application that allows users to interact with the system. It provides a user-friendly interface for connecting to external services, uploading meeting notes, and querying the system.
+The client is an Angular web application that allows users to interact with the system. It provides a user-friendly interface for connecting to external services, uploading meeting notes, and querying the system.
 
 **ProjectManagement**: \
 The project management component is responsible for storing and managing project metadata, including team members, project start date, and other relevant information. This information is stored in a relational database. Furthermore the component acts like a central hub for the system, coordinating data flow between the client and the other services. 
