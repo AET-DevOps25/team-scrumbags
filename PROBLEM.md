@@ -87,7 +87,7 @@ The client is a angular web application that allows users to interact with the s
 The project management component is responsible for storing and managing project metadata, including team members, project start date, and other relevant information. This information is stored in a relational database. Furthermore the component acts like a central hub for the system, coordinating data flow between the client and the other services. 
 
 **Transcription Service**: \
-The transcription service is responsible for converting meeting notes (both video and text) into a format that can be processed by the GenAI service. This also includes extracting the speekers. The transcription text is then forwarded to the GenAI Service for storage. This service will most likely use a transcription model like LocalWisper.
+The transcription service is responsible for converting meeting notes (both video and text) into a format that can be processed by the GenAI service. This also includes extracting the speakers. The transcription text is then forwarded to the GenAI Service for storage. This service will most likely use a transcription model like Local Whisper.
 
 **Communication Connector**: \
 The communication connector is responsible for integrating with external communication platforms, primarily Discord. It fetches messages and relevant data from message channels periodically and forwards it to the GenAI service for storage and processing. The connector should allow to easily integrate other communication platforms in the future.
