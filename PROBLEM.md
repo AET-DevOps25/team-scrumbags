@@ -76,7 +76,7 @@ FR4.1: The system can proactively propose issues to the user based on the data i
 The TRACE system consists of 3 major parts:
 1. **Fetching of Data** from external sources (GitHub, Discord, Meeting Notes)
 2. **Processing of this Data** including storage of the retrieved data (mainly done by the GenAI service)
-3. **Distribution of tasks and basic Project Management** e.g storage of Project Metadata like begin date, members, etc.
+3. **Distribution of tasks and basic Project Management** e.g., storage of Project Metadata like begin date, members, etc.
 
 The following describes each component in more detail:
 
