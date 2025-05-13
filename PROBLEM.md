@@ -5,6 +5,8 @@ Modern development teams use a variety of platforms such as GitHub (code and iss
 
 The goal of this project is to create a system that can summarize the progress of a programming project. Therefore the software collects data from communication channels, repositories and meeting notes. The system will then use a GenAI service to summarize the data and provide concise overview of the projects status. 
 
+![Analysis Object Model](docs/aom.drawio.png)
+
 ## Main Functionality
 Integration Connectors:
 - connect to users repository GitHub (issues, commits, PRs)
