@@ -17,6 +17,11 @@ Integration Connectors:
 - **Project Managers**:  want to track progress, blockers and team member contributions
 - **Developers** want to acquire information about project status, requirement changes, collegue activities and past meeting content
 
+\
+![](./docs/usecase.drawio.png)
+
+The Project Manager has to set up the project by integrating a Version Control System where project progress is tracked and a communcation channel where team members discuss project related topics. The Project Manager and the Developers can the upload meeting notes to the system. With all this information integrated, both can then ask the system about the projects status, which takes sent messages, issues, PRs and meeting notes into account. Furthermore the project manager can request reports about the teams activities filtered by time and team members.
+
 ## GenAI Integration
 - Summarizing complex multi-source activity (e.g., combining GitHub commits + Discord chats + meeting notes)
 - Semantic understanding of questions ("Is the button color issue fixed?") even if the exact terms don’t match the issue title
