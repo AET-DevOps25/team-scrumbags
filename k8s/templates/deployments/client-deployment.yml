@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client
+  namespace: trace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: client
+  template:
+    metadata:
+      labels:
+        app: client
+    spec:
+      containers:
+        - name: client
+          image: ghcr.io/ls1intum/pedelec-app/damage:latest
+          ports:
+            - containerPort: 3000
+              name: client-api
+
+              #resources: # It is always a good idea to limit the resources of your containers - We did not cover this in the lecture, but it is a good practice to do so.
+              #limits:
+              #cpu: "1"
+              #memory: "512Mi"

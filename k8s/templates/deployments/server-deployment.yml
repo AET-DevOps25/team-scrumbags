@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: server
+  namespace: trace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: server
+  template:
+    metadata:
+      labels:
+        app: server
+    spec:
+      containers:
+        - name: server
+          image: ghcr.io/ls1intum/pedelec-app/damage:latest
+          ports:
+            - containerPort: 8080
+              name: server-api
+
+          #resources: # It is always a good idea to limit the resources of your containers - We did not cover this in the lecture, but it is a good practice to do so.
+            #limits:
+              #cpu: "1"
+              #memory: "512Mi"
