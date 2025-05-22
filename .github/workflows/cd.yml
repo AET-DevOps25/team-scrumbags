@@ -26,8 +26,8 @@ jobs:
 #        run: |
 #          helm upgrade --install mysql ./helm/mysql \
 #            --namespace default \
-#            --set image.repository=ghcr.io/${{ github.repository_owner }}/mysql \
-#            --set image.tag=latest \
+#            --set image.repository=mysql \
+#            --set image.tag=8.0 \
 #            --set mysqlRootPassword=${{ secrets.MYSQL_ROOT_PASSWORD }} \
 #            --set mysqlUser=${{ secrets.MYSQL_USER }} \
 #            --set mysqlPassword=${{ secrets.MYSQL_PASSWORD }}
