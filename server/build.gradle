@@ -5,7 +5,7 @@ plugins {
 	//id("checkstyle")
 }
 
-group = 'com.example'
+group = 'com.trace'
 version = '0.0.1-SNAPSHOT'
 
 java {
