@@ -15,7 +15,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: TRACE
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   server-test:
