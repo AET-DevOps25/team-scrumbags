@@ -1,4 +1,4 @@
-name: build
+name: build sdlc
 on:
   push:
     branches: [ '*' ]
