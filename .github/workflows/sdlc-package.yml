@@ -3,12 +3,14 @@ on:
   pull_request:
     branches:
       - main
+      - release/*
     paths:
       - 'sdlc-connector/**'
       - '.github/workflows/sdlc-package.yml'
   push:
     branches:
       - main
+      - release/*
     paths:
       - 'sdlc-connector/**'
       - '.github/workflows/sdlc-package.yml'
@@ -55,6 +57,6 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./sdlc-connector
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
