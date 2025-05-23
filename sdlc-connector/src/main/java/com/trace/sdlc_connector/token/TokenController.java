@@ -1,0 +1,45 @@
+package com.trace.sdlc_connector.token;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
+
+@RestController
+@RequestMapping("api")
+public class TokenController {
+
+    private final TokenService service;
+
+    public TokenController(TokenService service) {
+        this.service = service;
+    }
+
+    @PostMapping("{projectId}/token")
+    public ResponseEntity<?> saveGithubToken(@PathVariable UUID projectId, @RequestParam(required = false, defaultValue = "github", name = "system") SupportedSystem supportedSystem, @RequestBody String token) {
+        if (token == null || token.isEmpty()) {
+            return ResponseEntity.badRequest().body("Token is missing or empty");
+        }
+
+        var tokenEntity = service.saveToken(projectId, supportedSystem, token);
+
+        return ResponseEntity.ok(tokenEntity);
+    }
+
+    @GetMapping("{projectId}/token")
+    public ResponseEntity<?> getTokens(@PathVariable UUID projectId, @RequestParam(required = false) SupportedSystem supportedSystem) {
+        var tokens = service.getTokens(projectId, supportedSystem);
+
+        return ResponseEntity.ok(tokens);
+    }
+
+    @GetMapping("{projectId}/token/{tokenId}")
+    public ResponseEntity<?> getToken(@PathVariable UUID projectId, @PathVariable UUID tokenId) {
+        TokenEntity token = service.getTokenById(tokenId);
+        if (token == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok(token);
+    }
+}
