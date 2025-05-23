@@ -1,4 +1,19 @@
 services:
+  sdlc-connector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      - DEBUG=${DEBUG}
+      - DB_URL=jdbc:postgresql://db:5432/${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - TOKEN_SECRET=${TOKEN_SECRET}
+
   db:
     image: postgres:latest
     environment:
