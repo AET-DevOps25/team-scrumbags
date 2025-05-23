@@ -1,9 +1,21 @@
-name: build sdlc
-on: [push, pull_request]
+name: Build sdlc
+on: 
+  push:
+    paths:
+      - 'sdlc-connector/**'
+      - '.github/workflows/sdlc-build.yml'
+  pull_request:
+    paths:
+      - 'sdlc-connector/**'
+      - '.github/workflows/sdlc-build.yml'
+  workflow_call:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./sdlc-connector
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
