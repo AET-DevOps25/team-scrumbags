@@ -1,4 +1,4 @@
-name: Build sdlc
+name: SDLC build java
 on: 
   push:
     paths:
