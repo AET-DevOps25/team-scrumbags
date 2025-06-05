@@ -1,0 +1,29 @@
+services:
+  sdlc-connector:
+    image: ghcr.io/aet-devops25/team-scrumbags/sdlc-connector:${SDLC_IMAGE_TAG}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      - DEBUG=${DEBUG}
+      - DB_URL=jdbc:postgresql://db:5432/sdlc-connector
+      - DB_USER=${SDLC_DB_USER}
+      - DB_PASSWORD=${SDLC_DB_PASSWORD}
+      - TOKEN_SECRET=${SDLC_TOKEN_SECRET}
+
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: ${SDLC_DB_USER}
+      POSTGRES_PASSWORD: ${SDLC_DB_PASSWORD}
+      POSTGRES_DB: sdlc-connector
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:

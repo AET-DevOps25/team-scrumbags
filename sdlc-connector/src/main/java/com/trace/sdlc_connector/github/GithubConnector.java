@@ -104,6 +104,15 @@ public class GithubConnector {
         return ResponseEntity.ok("Webhook received");
     }
 
+    @PostMapping("/{projectId}/github")
+    public ResponseEntity<?> retrieveAllData(
+            @PathVariable UUID projectId) {
+        var entities = dataRepo.findAllByProjectId(projectId);
+
+        return ResponseEntity.ok(entities);
+    }
+
+
     /**
      * Process a GitHub webhook event
      *
