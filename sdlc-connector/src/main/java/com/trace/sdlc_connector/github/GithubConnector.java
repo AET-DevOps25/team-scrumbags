@@ -3,7 +3,6 @@ package com.trace.sdlc_connector.github;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.trace.sdlc_connector.DataEntity;
 import com.trace.sdlc_connector.DataRepo;
-import com.trace.sdlc_connector.github.eventhandler.*;
 import com.trace.sdlc_connector.token.SupportedSystem;
 import com.trace.sdlc_connector.token.TokenRepo;
 import org.slf4j.Logger;
@@ -26,6 +25,36 @@ public class GithubConnector {
 
     private final TokenRepo tokenRepo;
     private final DataRepo dataRepo;
+
+    /*
+        private final Map<String, GithubEventHandler> eventHandler = Stream.of(
+                    new BranchCreateEventHandler(),
+                    new BranchDeleteEventHandler(),
+                    new CommitCommentEventHandler(),
+                    new DeploymentEventHandler(),
+                    new DeploymentStatusEventHandler(),
+                    new DeploymentReviewEventHandler(),
+                    new DiscussionCommentEventHandler(),
+                    new DiscussionEventHandler(),
+                    new IssueCommentEventHandler(),
+                    new IssueEventHandler(),
+                    new MilestoneEventHandler(),
+                    new PackageEventHandler(),
+                    new PullRequestEventHandler(),
+                    new PullRequestReviewCommentEventHandler(),
+                    new PullRequestReviewEventHandler(),
+                    new PullRequestReviewThreadEventHandler(),
+                    new PushEventHandler(),
+                    new RegistryPackageEventHandler(),
+                    new ReleaseEventHandler(),
+                    new StatusEventHandler(),
+                    new SubIssueEventHandler(),
+                    new WorkflowDispatchEventHandler(),
+                    new WorkflowJobEventHandler(),
+                    new WorkflowRunEventHandler()
+            )
+            .collect(Collectors.toMap(GithubEventHandler::getEventType, handler -> handler));
+     */
 
     public GithubConnector(TokenRepo tokenRepo, DataRepo dataRepo) {
         this.tokenRepo = tokenRepo;
@@ -91,6 +120,21 @@ public class GithubConnector {
 
         return entity;
     }
+
+    /*
+          public DataEntity processWebhookEvent(String eventType, JsonNode payload) {
+        logger.info("Processing GitHub webhook event: {}", eventType);
+
+        GithubEventHandler handler = eventHandler.getOrDefault(eventType, null);
+
+        if (handler == null) {
+            logger.info("Unhandled GitHub event type: {}", eventType);
+            return null;
+        }
+
+        return handler.handleEvent(payload);
+    }
+     */
 
     /**
      * Validates a GitHub webhook payload using the X-Hub-Signature-256 header
