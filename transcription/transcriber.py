@@ -53,7 +53,6 @@ if __name__ == "__main__":
     device = "cpu"  # or "cpu"
     batch_size = 16
     compute_type = "int8"  # use "int8" for CPU
-    similarity_threshold = 0.75
 
     # --- LOAD MODEL ---
     print("Loading WhisperX...")
