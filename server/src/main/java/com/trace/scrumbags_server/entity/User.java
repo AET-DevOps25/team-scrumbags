@@ -1,4 +1,4 @@
-package com.example.scrumbags_server.entity;
+package com.trace.scrumbags_server.entity;
 
 import jakarta.persistence.*;
 
