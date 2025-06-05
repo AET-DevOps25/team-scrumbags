@@ -1,0 +1,26 @@
+package com.trace.sdlc_connector.github.eventhandler;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.trace.sdlc_connector.DataEntity;
+
+public class BranchDeleteEventHandler extends GithubEventHandler{
+
+    private static final String EVENT_TYPE = "delete";
+
+    public BranchDeleteEventHandler() {
+        super(EVENT_TYPE);
+    }
+
+    @Override
+    public DataEntity handleEvent(JsonNode payload) {
+        DataEntity dataEntity = new DataEntity();
+
+        dataEntity.setType(payload.get("ref_type").asText());
+
+        dataEntity.getData().put("pusher_type", payload.get("pusher_type").asText());
+        dataEntity.getData().put("ref", payload.get("ref").asText());
+        dataEntity.getData().put("sender", payload.get("sender").asText());
+
+        return dataEntity;
+    }
+}
