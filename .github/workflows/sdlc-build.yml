@@ -1,5 +1,12 @@
 name: SDLC build java
 on: 
+  push:
+    branches:
+      - main
+      - release/*
+    paths:
+      - 'sdlc-connector/**'
+      - '.github/workflows/sdlc-package.yml'
   pull_request:
     paths:
       - 'sdlc-connector/**'

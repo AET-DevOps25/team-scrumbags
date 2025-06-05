@@ -1,12 +1,5 @@
 name: SDLC docker build and push
 on:
-  pull_request:
-    branches:
-      - main
-      - release/*
-    paths:
-      - 'sdlc-connector/**'
-      - '.github/workflows/sdlc-package.yml'
   push:
     branches:
       - main
@@ -14,9 +7,7 @@ on:
     paths:
       - 'sdlc-connector/**'
       - '.github/workflows/sdlc-package.yml'
-  release:
-    types:
-      - released
+  workflow_dispatch:
 
 jobs:
   build:
