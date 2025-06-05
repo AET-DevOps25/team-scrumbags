@@ -2,6 +2,9 @@ name: Test and Push Core
 
 on:
   pull_request:
+    paths:
+      - 'server/**'
+      - '.github/workflows/core-package.yml'
     branches:
       - main
 

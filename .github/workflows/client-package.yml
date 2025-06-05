@@ -2,6 +2,9 @@ name: Test and Push Angular Client
 
 on:
   pull_request:
+    paths:
+      - 'client/**'
+      - '.github/workflows/client-package.yml'
     branches:
       - main
 
