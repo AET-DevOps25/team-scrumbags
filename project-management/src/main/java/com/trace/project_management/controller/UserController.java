@@ -1,8 +1,10 @@
-package com.trace.scrumbags_server.controller;
+package com.trace.project_management.controller;
 
-import com.trace.scrumbags_server.entity.User;
-import com.trace.scrumbags_server.repository.UserRepository;
+import com.trace.project_management.entity.User;
+import com.trace.project_management.repository.UserRepository;
 import java.util.List;
+
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -21,8 +23,10 @@ public class UserController {
      * @return a list of all {@link User} entities in the database
      */
     @GetMapping
-    public List<User> allUsers() {
-        return userRepository.findAll();
+    public ResponseEntity<List<User>> allUsers() {
+        var users = userRepository.findAll();
+
+        return ResponseEntity.ok(users);
     }
 
     /**
@@ -32,7 +36,9 @@ public class UserController {
      * @return the created {@link User} entity
      */
     @PostMapping
-    public User createUser(@RequestBody User user) {
-        return userRepository.save(user);
+    public ResponseEntity<User> createUser(@RequestBody User user) {
+        user = userRepository.save(user);
+
+        return ResponseEntity.ok(user);
     }
 }

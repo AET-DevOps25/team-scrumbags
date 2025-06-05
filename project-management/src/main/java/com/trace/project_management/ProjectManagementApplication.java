@@ -1,4 +1,4 @@
-package com.trace.scrumbags_server;
+package com.trace.project_management;
 
 import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.boot.SpringApplication;
@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 @SpringBootApplication
 @RestController
-public class ScrumbagsServerApplication {
+public class ProjectManagementApplication {
 
     public static void main(String[] args) {
         // Load .env file from root directory
@@ -21,7 +21,7 @@ public class ScrumbagsServerApplication {
         dotenv.entries().forEach(entry ->
                 System.setProperty(entry.getKey(), entry.getValue()));
 
-        SpringApplication.run(ScrumbagsServerApplication.class, args);
+        SpringApplication.run(ProjectManagementApplication.class, args);
     }
 
     @CrossOrigin(origins = "http://localhost:4200")

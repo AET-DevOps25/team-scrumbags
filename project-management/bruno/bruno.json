@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "devops-project-management",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

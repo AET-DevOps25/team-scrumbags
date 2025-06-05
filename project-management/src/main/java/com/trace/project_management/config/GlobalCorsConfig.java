@@ -1,4 +1,4 @@
-package com.trace.scrumbags_server.config;
+package com.trace.project_management.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
