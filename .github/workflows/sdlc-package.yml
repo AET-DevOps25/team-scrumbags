@@ -1,5 +1,13 @@
 name: SDLC docker build and push
 on:
+  # TODO remove after testing
+  pull_request:
+    branches:
+      - main
+      - release/*
+    paths:
+      - 'sdlc-connector/**'
+      - '.github/workflows/sdlc-package.yml'
   push:
     branches:
       - main
