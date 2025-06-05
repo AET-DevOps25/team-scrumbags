@@ -30,9 +30,10 @@ jobs:
             rm sdlc-connector/.env.prod
             touch sdlc-connector/.env.prod
             echo "SDLC_IMAGE_TAG=${{ vars.SDLC_IMAGE_TAG }}" >> sdlc-connector/.env.prod
-            echo "SDLC_DB_USER=${{ vars.SDLC_DB_USER }}" >> sdlc-connector/.env.prod
-            echo "SDLC_DB_PASSWORD=${{ vars.SDLC_DB_PASSWORD }}" >> sdlc-connector/.env.prod
-            echo "SDLC_TOKEN_SECRET=${{ vars.SDLC_TOKEN_SECRET }}" >> sdlc-connector/.env.prod
+            echo "DEBUG=${{ vars.DEBUG }}" >> sdlc-connector/.env.prod
+            echo "SDLC_DB_USER=${{ secrets.SDLC_DB_USER }}" >> sdlc-connector/.env.prod
+            echo "SDLC_DB_PASSWORD=${{ secrets.SDLC_DB_PASSWORD }}" >> sdlc-connector/.env.prod
+            echo "SDLC_TOKEN_SECRET=${{ secrets.SDLC_TOKEN_SECRET }}" >> sdlc-connector/.env.prod
 
       - name: SSH to VM and Execute Docker-Compose Up
         uses: appleboy/ssh-action@v1.0.3
