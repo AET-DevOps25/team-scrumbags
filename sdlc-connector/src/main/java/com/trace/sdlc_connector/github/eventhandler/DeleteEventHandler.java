@@ -9,12 +9,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-public class DeploymentStatusEventHandler extends GithubEventHandler{
+public class DeleteEventHandler extends GithubEventHandler{
 
-    private static final String EVENT_TYPE = "deployment_status";
+    private static final String EVENT_TYPE = "delete";
     private final UserMappingRepo userMappingRepo;
 
-    public DeploymentStatusEventHandler(UserMappingRepo userMappingRepo) {
+    public DeleteEventHandler(UserMappingRepo userMappingRepo) {
         super(EVENT_TYPE);
         this.userMappingRepo = userMappingRepo;
     }
@@ -27,16 +27,12 @@ public class DeploymentStatusEventHandler extends GithubEventHandler{
 
         Map<String, Object> content = new HashMap<>();
 
-        content.put("check_run", payload.get("check_run").asText());
-        content.put("deployment", payload.get("deployment").asText());
-        content.put("deployment_status", payload.get("deployment_status").asText());
-        content.put("sender", payload.get("sender").asText());
-        content.put("workflow", payload.get("workflow").asText());
-        content.put("workflow_run", payload.get("workflow_run").asText());
+        content.put("pusher_type", payload.get("pusher_type").asText());
+        content.put("ref", payload.get("ref").asText());
 
         return new Message(
                 new Metadata(
-                        EVENT_TYPE + " " + payload.get("action").asText(),
+                        EVENT_TYPE + " " + payload.get("ref_type").asText(),
                         userId,
                         now,
                         projectId

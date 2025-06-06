@@ -1,7 +1,9 @@
 package com.trace.sdlc_connector.github.eventhandler;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.trace.sdlc_connector.DataEntity;
+import com.trace.sdlc_connector.Message;
+
+import java.util.UUID;
 
 // reference: https://docs.github.com/en/webhooks/webhook-events-and-payloads
 public abstract class GithubEventHandler {
@@ -15,5 +17,5 @@ public abstract class GithubEventHandler {
         return eventType;
     }
 
-    public abstract DataEntity handleEvent(JsonNode payload);
+    public abstract Message handleEvent(UUID projectId, JsonNode payload, Long now);
 }

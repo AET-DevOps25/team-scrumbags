@@ -1,10 +1,10 @@
 package com.trace.sdlc_connector.github;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.trace.sdlc_connector.DataEntity;
-import com.trace.sdlc_connector.DataRepo;
-import com.trace.sdlc_connector.token.SupportedSystem;
+import com.trace.sdlc_connector.*;
+import com.trace.sdlc_connector.github.eventhandler.*;
 import com.trace.sdlc_connector.token.TokenRepo;
+import com.trace.sdlc_connector.user.UserMappingRepo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -15,7 +15,10 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Formatter;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 @RestController
@@ -24,41 +27,41 @@ public class GithubConnector {
     private static final Logger logger = LoggerFactory.getLogger(GithubConnector.class);
 
     private final TokenRepo tokenRepo;
-    private final DataRepo dataRepo;
+    private final MessageRepo messageRepo;
 
-    /*
-        private final Map<String, GithubEventHandler> eventHandler = Stream.of(
-                    new BranchCreateEventHandler(),
-                    new BranchDeleteEventHandler(),
-                    new CommitCommentEventHandler(),
-                    new DeploymentEventHandler(),
-                    new DeploymentStatusEventHandler(),
-                    new DeploymentReviewEventHandler(),
-                    new DiscussionCommentEventHandler(),
-                    new DiscussionEventHandler(),
-                    new IssueCommentEventHandler(),
-                    new IssueEventHandler(),
-                    new MilestoneEventHandler(),
-                    new PackageEventHandler(),
-                    new PullRequestEventHandler(),
-                    new PullRequestReviewCommentEventHandler(),
-                    new PullRequestReviewEventHandler(),
-                    new PullRequestReviewThreadEventHandler(),
-                    new PushEventHandler(),
-                    new RegistryPackageEventHandler(),
-                    new ReleaseEventHandler(),
-                    new StatusEventHandler(),
-                    new SubIssueEventHandler(),
-                    new WorkflowDispatchEventHandler(),
-                    new WorkflowJobEventHandler(),
-                    new WorkflowRunEventHandler()
-            )
-            .collect(Collectors.toMap(GithubEventHandler::getEventType, handler -> handler));
-     */
-
-    public GithubConnector(TokenRepo tokenRepo, DataRepo dataRepo) {
+    private final Map<String, GithubEventHandler> eventHandler;
+    public GithubConnector(TokenRepo tokenRepo, MessageRepo messageRepo, UserMappingRepo userMappingRepo) {
         this.tokenRepo = tokenRepo;
-        this.dataRepo = dataRepo;
+        this.messageRepo = messageRepo;
+
+        this.eventHandler = Stream.of(
+                        new CreateEventHandler(userMappingRepo),
+                        new DeleteEventHandler(userMappingRepo),
+                        new CommitCommentEventHandler(userMappingRepo),
+                        new DeploymentEventHandler(userMappingRepo),
+                        new DeploymentStatusEventHandler(userMappingRepo),
+                        new DeploymentReviewEventHandler(userMappingRepo),
+                        new DiscussionCommentEventHandler(userMappingRepo),
+                        new DiscussionEventHandler(userMappingRepo),
+                        new IssueCommentEventHandler(userMappingRepo),
+                        new IssueEventHandler(userMappingRepo),
+                        new MilestoneEventHandler(userMappingRepo),
+                        new PackageEventHandler(userMappingRepo),
+                        new PullRequestEventHandler(userMappingRepo),
+                        new PullRequestReviewCommentEventHandler(userMappingRepo),
+                        new PullRequestReviewEventHandler(userMappingRepo),
+                        new PullRequestReviewThreadEventHandler(userMappingRepo),
+                        new PushEventHandler(userMappingRepo),
+                        new RegistryPackageEventHandler(userMappingRepo),
+                        new ReleaseEventHandler(userMappingRepo),
+                        new StatusEventHandler(userMappingRepo),
+                        new SubIssueEventHandler(userMappingRepo),
+                        new WorkflowDispatchEventHandler(userMappingRepo),
+                        new WorkflowJobEventHandler(userMappingRepo),
+                        new WorkflowRunEventHandler(userMappingRepo)
+                )
+                .collect(Collectors.toMap(GithubEventHandler::getEventType, handler -> handler));
+
     }
 
     @PostMapping("projects/{projectId}/github")
@@ -67,6 +70,8 @@ public class GithubConnector {
             @RequestBody String payload,
             @RequestHeader("X-GitHub-Event") String eventType,
             @RequestHeader("X-Hub-Signature-256") String signature) {
+
+        var now = System.currentTimeMillis();
 
         var secrets = tokenRepo.findAllByProjectIdAndSupportedSystem(projectId, SupportedSystem.GITHUB);
 
@@ -95,10 +100,9 @@ public class GithubConnector {
                     .body("Error processing webhook payload");
         }
 
-        DataEntity dataEntity = processWebhookEvent(eventType, jsonPayload);
-        dataEntity.setProjectId(projectId);
+        Message message = processWebhookEvent(eventType, projectId, jsonPayload, now);
 
-        dataRepo.save(dataEntity);
+        messageRepo.save(new MessageEntity(message));
 
         // dont return data entity as github will receive the response
         return ResponseEntity.ok("Webhook received");
@@ -107,31 +111,12 @@ public class GithubConnector {
     @GetMapping("projects/{projectId}/github")
     public ResponseEntity<?> retrieveAllData(
             @PathVariable UUID projectId) {
-        var entities = dataRepo.findAllByProjectId(projectId);
+        var entities = messageRepo.findAllByProjectId(projectId);
 
         return ResponseEntity.ok(entities);
     }
 
-
-    /**
-     * Process a GitHub webhook event
-     *
-     * @param eventType GitHub event type from X-GitHub-Event header
-     * @param payload   The JSON payload from GitHub
-     */
-    public DataEntity processWebhookEvent(String eventType, JsonNode payload) {
-        logger.info("Processing GitHub webhook event: {}", eventType);
-
-        DataEntity entity = new DataEntity();
-        payload.fields().forEachRemaining(entry -> {
-            entity.getData().put(entry.getKey(), entry.getValue().toString());
-        });
-
-        return entity;
-    }
-
-    /*
-          public DataEntity processWebhookEvent(String eventType, JsonNode payload) {
+    public Message processWebhookEvent(String eventType, UUID projectId, JsonNode payload, Long now) {
         logger.info("Processing GitHub webhook event: {}", eventType);
 
         GithubEventHandler handler = eventHandler.getOrDefault(eventType, null);
@@ -141,9 +126,8 @@ public class GithubConnector {
             return null;
         }
 
-        return handler.handleEvent(payload);
+        return handler.handleEvent(projectId, payload, now);
     }
-     */
 
     /**
      * Validates a GitHub webhook payload using the X-Hub-Signature-256 header

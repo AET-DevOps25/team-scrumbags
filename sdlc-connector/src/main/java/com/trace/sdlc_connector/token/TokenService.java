@@ -1,5 +1,6 @@
 package com.trace.sdlc_connector.token;
 
+import com.trace.sdlc_connector.SupportedSystem;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 
@@ -25,7 +26,7 @@ public class TokenService {
 
     public List<TokenEntity> getTokens(@NonNull UUID projectId, @Nullable SupportedSystem supportedSystem) {
         List<TokenEntity> tokens;
-        if(supportedSystem != null) {
+        if (supportedSystem != null) {
             tokens = tokenRepo.findAllByProjectIdAndSupportedSystem(projectId, supportedSystem);
         } else {
             tokens = tokenRepo.findAllByProjectId(projectId);

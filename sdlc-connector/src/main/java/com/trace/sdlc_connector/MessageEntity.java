@@ -10,25 +10,40 @@ import java.util.Map;
 import java.util.UUID;
 
 @Entity
-@Table(name = "data_entity")
-public class DataEntity {
+@Table(name = "message_entity")
+public class MessageEntity {
 
     @Id
     @GeneratedValue
     private UUID id;
 
-    private UUID projectId;
-
     private String type;
+
+    private UUID userId;
 
     @Temporal(TemporalType.TIMESTAMP)
     private Date timestamp;
 
+    private UUID projectId;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    private Map<String, String> data = new HashMap<>();
+    private Map<String, Object> content = new HashMap<>();
 
-    public DataEntity() {
+    public MessageEntity() {
+    }
+
+    public MessageEntity(Message message) {
+        this.type = message.getMetadata().getType();
+        this.userId = message.getMetadata().getUserId();
+        this.timestamp = new Date(message.getMetadata().getTimestamp());
+        this.projectId = message.getMetadata().getProjectId();
+        this.content = message.getContent();
+    }
+
+    public Message toMessage() {
+        Metadata metadata = new Metadata(this.type, this.userId, this.timestamp.getTime(), this.projectId);
+        return new Message(metadata, this.content);
     }
 
     public void setId(UUID id) {
@@ -59,7 +74,7 @@ public class DataEntity {
         return timestamp;
     }
 
-    public Map<String, String> getData() {
-        return data;
+    public Map<String, Object> getContent() {
+        return content;
     }
 }

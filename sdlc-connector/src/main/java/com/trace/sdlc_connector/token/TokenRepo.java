@@ -1,5 +1,6 @@
 package com.trace.sdlc_connector.token;
 
+import com.trace.sdlc_connector.SupportedSystem;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

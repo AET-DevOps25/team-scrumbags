@@ -1,5 +1,6 @@
 package com.trace.sdlc_connector.token;
 
+import com.trace.sdlc_connector.SupportedSystem;
 import jakarta.persistence.*;
 
 import java.util.UUID;
