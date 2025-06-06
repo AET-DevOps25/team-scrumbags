@@ -1,16 +1,47 @@
 services:
+  reverse-proxy:
+    image: traefik:v3.4
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedByDefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=test@test.de"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./letsencrypt:/letsencrypt
+
   sdlc-connector:
     image: ghcr.io/aet-devops25/team-scrumbags/sdlc-connector:${SDLC_IMAGE_TAG}
     ports:
       - "8080:8080"
     depends_on:
       - db
+      - reverse-proxy
     environment:
       - DEBUG=${DEBUG}
       - DB_URL=jdbc:postgresql://db:5432/sdlc-connector
       - DB_USER=${SDLC_DB_USER}
       - DB_PASSWORD=${SDLC_DB_PASSWORD}
       - TOKEN_SECRET=${SDLC_TOKEN_SECRET}
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.server.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.services.server.loadbalancer.server.port=8080"
+      - "traefik.http.routers.server.entrypoints=websecure"
+      - "traefik.http.routers.server.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.strip-api.stripprefix.prefixes=/api"
+      - "traefik.http.routers.server.middlewares=strip-api"
 
   db:
     image: postgres:latest
