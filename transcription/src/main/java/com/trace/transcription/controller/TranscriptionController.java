@@ -40,6 +40,15 @@ public class TranscriptionController {
         return ResponseEntity.ok("Transcription Service is running");
     }
 
+    @GetMapping("/{projectId}/all-speakers")
+    public ResponseEntity<List<SpeakerEntity>> getAllSpeakers(@PathVariable("projectId") UUID projectId) {
+        List<SpeakerEntity> speakers = speakerRepository.findAllByProjectId(projectId);
+        if (speakers.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(speakers);
+    }
+
     @GetMapping("/{id}/test")
     public ResponseEntity<?> getEntityById(@PathVariable("id") String id) {
         // This is just a placeholder for testing purposes
@@ -155,10 +164,8 @@ public class TranscriptionController {
             String transcriptJson;
             try (SharedInterpreter interp = new SharedInterpreter()) {
                 // Add the directory containing my_transcriber.py to sys.path
-                interp.exec("import sys");
-
-                String pythonFolder = Paths.get("src", "main", "python").toAbsolutePath().toString();
-                interp.exec("sys.path.append('" + pythonFolder.replace("\\", "\\\\") + "')");
+                interp.exec("import sys; print(sys.executable)");
+                interp.exec("sys.path.append('scripts')"); // Make sure 'scripts/' is in PYTHONPATH
 
                 // Bind the tempDir path into Python as a variable
                 interp.set("input_dir", tempDir.toString());
@@ -171,6 +178,10 @@ public class TranscriptionController {
                     throw new JepException("Python returned null transcript");
                 }
                 transcriptJson = result.toString();
+            } catch (JepException e) {
+                logger.error("JEP error processing audio for project {}: {}", projectId, e.getMessage());
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Error processing audio: " + e.getMessage());
             }
 
             // Step 4: Forward the JSON to the core service

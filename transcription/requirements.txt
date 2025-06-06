@@ -4,3 +4,4 @@ faiss-cpu
 scikit-learn
 matplotlib
 pydub
+jep

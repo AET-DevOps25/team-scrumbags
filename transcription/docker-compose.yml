@@ -28,6 +28,9 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+      PYTHONPATH: /app/scripts
+      LD_LIBRARY_PATH: /opt/venv/lib/python3.12/site-packages/jep
+      JAVA_OPTS: -Djava.library.path=/opt/venv/lib/python3.12/site-packages/jep
     ports:
       - "4269:4269"
     depends_on:
