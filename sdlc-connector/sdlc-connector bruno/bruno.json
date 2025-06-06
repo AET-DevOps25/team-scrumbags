@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "sdlc-connector",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}
