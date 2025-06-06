@@ -2,6 +2,8 @@ package com.trace.transcription.model;
 
 import jakarta.persistence.*;
 
+import java.util.UUID;
+
 @Entity
 public class SpeakerEntity {
 
@@ -10,10 +12,12 @@ public class SpeakerEntity {
 
     private String speakerName;
 
-    private String projectId;
+    private UUID projectId;
 
     @Lob
     private byte[] speakingSample;
+
+    private String sampleExtension;
 
     public String getSpeakerId() {
         return speakerId;
@@ -31,11 +35,11 @@ public class SpeakerEntity {
         this.speakerName = speakerName;
     }
 
-    public String getProjectId() {
+    public UUID getProjectId() {
         return projectId;
     }
 
-    public void setProjectId(String projectId) {
+    public void setProjectId(UUID projectId) {
         this.projectId = projectId;
     }
 
@@ -45,6 +49,14 @@ public class SpeakerEntity {
 
     public void setSpeakingSample(byte[] speakingSample) {
         this.speakingSample = speakingSample;
+    }
+
+    public String getSampleExtension() {
+        return sampleExtension;
+    }
+
+    public void setSampleExtension(String sampleExtension) {
+        this.sampleExtension = sampleExtension;
     }
 
 }

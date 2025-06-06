@@ -24,6 +24,8 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter'
 	implementation 'com.mysql:mysql-connector-j'
 	implementation 'io.github.cdimascio:dotenv-java:3.0.0'
+	implementation 'commons-io:commons-io:2.19.0'
+	implementation 'black.ninia:jep:4.2.2'
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
