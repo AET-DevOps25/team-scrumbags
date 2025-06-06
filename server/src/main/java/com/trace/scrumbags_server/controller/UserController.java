@@ -1,7 +1,8 @@
-package com.example.scrumbags_server.controller;
+package com.trace.scrumbags_server.controller;
 
-import com.example.scrumbags_server.entity.User;
-import com.example.scrumbags_server.repository.UserRepository;
+import com.trace.scrumbags_server.entity.User;
+import com.trace.scrumbags_server.repository.UserRepository;
+
 import java.util.List;
 import org.springframework.web.bind.annotation.*;
 

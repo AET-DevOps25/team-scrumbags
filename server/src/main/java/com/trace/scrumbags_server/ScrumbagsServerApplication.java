@@ -1,4 +1,4 @@
-package com.example.scrumbags_server;
+package com.trace.scrumbags_server;
 
 import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.boot.SpringApplication;

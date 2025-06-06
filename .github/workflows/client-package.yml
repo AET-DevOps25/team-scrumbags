@@ -1,47 +1,14 @@
-name: CI (Build, Test and Push)
+name: Test and Push Angular Client
 
 on:
   pull_request:
+    paths:
+      - 'client/**'
+      - '.github/workflows/client-package.yml'
     branches:
       - main
 
-concurrency:
-  group: "ci-${{ github.ref_name }}"
-  cancel-in-progress: true
-
-permissions:
-  contents: read
-  packages: write
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-
 jobs:
-  server-test:
-    name: Test Spring Boot server
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./server
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: "zulu"
-          java-version: "21"
-          cache: "gradle"
-
-      - name: Make gradlew executable
-        run: chmod +x gradlew
-
-      - name: Check code and test server # todo: fix ./gradlew check
-        run: |
-          ./gradlew clean test
-
   client-test:
     name: Lint Angular client
     runs-on: ubuntu-latest
@@ -72,8 +39,7 @@ jobs:
         working-directory: client
 
   build-and-push:
-    name: Build and Push Docker Images
-    needs: [server-test, client-test]
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -92,15 +58,6 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
-      - name: Build and push server image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./server
-          file: ./server/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
       - name: Build and push client image
         uses: docker/build-push-action@v6
         with:
@@ -109,10 +66,3 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
-      # - name: Generate artifact attestation
-      #   uses: actions/attest-build-provenance@v2
-      #   with:
-      #     subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
-      #     subject-digest: ${{ steps.push.outputs.digest }}
-      #     push-to-registry: true
