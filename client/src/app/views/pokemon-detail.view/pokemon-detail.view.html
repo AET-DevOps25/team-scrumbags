@@ -1,0 +1,54 @@
+<div class="max-w-2xl mx-auto">
+  <!-- Loading State -->
+  @if (loading()) {
+  <div class="flex justify-center items-center min-h-[400px]">
+    <mat-spinner></mat-spinner>
+    <span class="ml-4 text-lg">Loading Pokemon details...</span>
+  </div>
+  }
+
+  <!-- Error State -->
+  @else if (error()) {
+  <div class="text-center">
+    <mat-card class="p-8">
+      <h2 class="text-xl font-bold mat-error mb-4">Error</h2>
+      <p class="mb-4">{{ error() }}</p>
+      <button mat-raised-button color="primary" (click)="onGoBack()">
+        Back to Pokemon List
+      </button>
+    </mat-card>
+  </div>
+  }
+
+  <!-- Pokemon Details -->
+  @else if (pokemon()) {
+  <div class="space-y-6">
+    <!-- Header with back button -->
+    <div class="flex items-center justify-between">
+      <button mat-button color="primary" (click)="onGoBack()">
+        ← Back to List
+      </button>
+    </div>
+
+    <!-- Pokemon Card -->
+    <mat-card class="p-6">
+      <div class="text-center">
+        <!-- Pokemon Image -->
+        <div class="mb-6">
+          <img
+            [src]="pokemon()!.sprite"
+            [alt]="pokemon()!.name"
+            class="w-48 h-48 mx-auto object-contain"
+          />
+        </div>
+
+        <!-- Pokemon Info -->
+        <h1 class="text-4xl font-bold mb-2 mat-primary">
+          {{ pokemon()!.name | titlecase }}
+        </h1>
+        <p class="text-xl mb-6 mat-text-secondary">#{{ pokemon()!.id }}</p>
+      </div>
+    </mat-card>
+  </div>
+  }
+</div>

@@ -1,0 +1,14 @@
+<mat-card class="w-full max-w-sm mx-auto transition-transform duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-lg">
+  <mat-card-header class="pb-4">
+    <mat-card-title class="text-xl font-medium">{{ pokemon().name | titlecase }}</mat-card-title>
+    <mat-card-subtitle class="font-normal">#{{ pokemon().id }}</mat-card-subtitle>
+  </mat-card-header>
+  
+  <div class="flex justify-center items-center p-4 min-h-[150px]">
+      <img [src]="pokemon().sprite" [alt]="pokemon().name" class="max-w-[120px] max-h-[120px] object-contain" />
+  </div>
+  
+  <mat-card-actions class="flex justify-center px-4 pb-4">
+    <button mat-button color="primary" (click)="onViewDetails()">View Details</button>
+  </mat-card-actions>
+</mat-card>
