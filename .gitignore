@@ -378,3 +378,11 @@ sketch
 # gitignore template for Vue.js projects
 #
 # Recommended template: Node.gitignore
+
+### Audio Test Files ###
+*.mp3
+*.wav
+*.flac
+*.opus
+*.mkv
+*.mp4
