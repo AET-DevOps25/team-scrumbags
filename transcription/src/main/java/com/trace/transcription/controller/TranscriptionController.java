@@ -212,4 +212,84 @@ public class TranscriptionController {
         }
     }
 
+
+
+    //DEL user
+    @DeleteMapping("/{projectId}/speakers/{speakerId}")
+    public ResponseEntity<String> deleteSpeaker(
+            @PathVariable("projectId") UUID projectId,
+            @PathVariable("speakerId") String speakerId) {
+
+        // Check if speaker exists
+        SpeakerEntity speaker = speakerRepository.findByProjectIdAndSpeakerId(projectId, speakerId);
+        if (speaker == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        // Delete the speaker
+        speakerRepository.delete(speaker);
+        return ResponseEntity.ok("Speaker " + speakerId + " deleted successfully.");
+    }
+
+
+    //modify single user
+    @PutMapping("/{projectId}/speakers/{speakerId}")
+    public ResponseEntity<String> modifySpeaker(
+            @PathVariable("projectId") UUID projectId,
+            @PathVariable("speakerId") String speakerId,
+            @RequestParam(value = "speakerName", required = false) String speakerName,
+            @RequestParam(value = "speakingSample", required = false) MultipartFile speakingSample) {
+
+        SpeakerEntity speaker = speakerRepository.findByProjectIdAndSpeakerId(projectId, speakerId);
+        if (speaker == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        if (speakerName != null && !speakerName.isEmpty()) {
+            speaker.setSpeakerName(speakerName);
+        }
+        if (speakingSample != null && !speakingSample.isEmpty()) {
+            try {
+                String extension = FilenameUtils.getExtension(speakingSample.getOriginalFilename());
+                speaker.setSpeakingSample(speakingSample.getBytes());
+                speaker.setSampleExtension(extension);
+            } catch (IOException e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Error saving speaking sample: " + e.getMessage());
+            }
+        }
+
+        speakerRepository.save(speaker);
+        return ResponseEntity.ok("Speaker " + speakerId + " updated successfully.");
+    }
+
+    //get all samples
+    @GetMapping("/{projectId}/recordings")
+    public ResponseEntity<List<String>> getAllRecordings(
+            @PathVariable("projectId") UUID projectId) {
+
+        List<SpeakerEntity> speakers = speakerRepository.findAllByProjectId(projectId);
+
+        if (speakers == null || speakers.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+
+        List<String> recordings = new ArrayList<>();
+        for (SpeakerEntity speaker : speakers) {
+            if (speaker.getSpeakingSample() != null && speaker.getSpeakingSample().length > 0) {
+                recordings.add(speaker.getSpeakerId() + "." + speaker.getSampleExtension());
+            }
+        }
+        if (recordings.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(recordings);
+    }
+
+
+    //get all recordings
+
+    //include timestamp in transcript, extract from audio file metadata if available, else request timestamp / current time
+    //launch processing in thread to not block
+
 }

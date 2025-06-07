@@ -14,6 +14,8 @@ public class SpeakerEntity {
 
     private UUID projectId;
 
+    //todo add timestamp for when the sample was created, or if no metadata, when the sample was uploaded
+
     @Lob
     private byte[] speakingSample;
 
