@@ -51,7 +51,6 @@ public class TranscriptionController {
 
     @GetMapping("/{id}/test")
     public ResponseEntity<?> getEntityById(@PathVariable("id") String id) {
-        // This is just a placeholder for testing purposes
         return ResponseEntity.ok("Test entity with ID: " + id);
     }
 
@@ -213,8 +212,11 @@ public class TranscriptionController {
     }
 
 
-
-    //DEL user
+    /**
+     * DELETE /{projectId}/speakers/{speakerId}
+     * <p>
+     * Deletes the speaker with the given ID from the project.
+     */
     @DeleteMapping("/{projectId}/speakers/{speakerId}")
     public ResponseEntity<String> deleteSpeaker(
             @PathVariable("projectId") UUID projectId,
@@ -232,7 +234,15 @@ public class TranscriptionController {
     }
 
 
-    //modify single user
+    /**
+     * PUT /{projectId}/speakers/{speakerId}
+     * <p>
+     * Request (multipart/form-data):
+     *   - speakerName: String (optional)
+     *   - speakingSample: MultipartFile (optional)
+     * <p>
+     * Updates the speaker's name and/or speaking sample.
+     */
     @PutMapping("/{projectId}/speakers/{speakerId}")
     public ResponseEntity<String> modifySpeaker(
             @PathVariable("projectId") UUID projectId,
@@ -263,7 +273,11 @@ public class TranscriptionController {
         return ResponseEntity.ok("Speaker " + speakerId + " updated successfully.");
     }
 
-    //get all samples
+    /**
+     * GET /{projectId}/recordings
+     * <p>
+     * Returns a list of all recordings (speaker IDs with their sample extensions) for the given project.
+     */
     @GetMapping("/{projectId}/recordings")
     public ResponseEntity<List<String>> getAllRecordings(
             @PathVariable("projectId") UUID projectId) {
