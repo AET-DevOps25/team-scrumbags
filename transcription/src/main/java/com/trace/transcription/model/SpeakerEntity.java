@@ -5,36 +5,35 @@ import jakarta.persistence.*;
 import java.util.UUID;
 
 @Entity
+@Table(name = "speaker_entity")
 public class SpeakerEntity {
 
     @Id
-    private String speakerId;
+    private String id;
 
-    private String speakerName;
+    private String name;
 
     private UUID projectId;
-
-    //todo add timestamp for when the sample was created, or if no metadata, when the sample was uploaded
 
     @Lob
     private byte[] speakingSample;
 
     private String sampleExtension;
 
-    public String getSpeakerId() {
-        return speakerId;
+    public String getId() {
+        return id;
     }
 
-    public void setSpeakerId(String speakerId) {
-        this.speakerId = speakerId;
+    public void setId(String id) {
+        this.id = id;
     }
 
-    public String getSpeakerName() {
-        return speakerName;
+    public String getName() {
+        return name;
     }
 
-    public void setSpeakerName(String speakerName) {
-        this.speakerName = speakerName;
+    public void setName(String name) {
+        this.name = name;
     }
 
     public UUID getProjectId() {

@@ -1,0 +1,9 @@
+package com.trace.transcription.repository;
+
+import com.trace.transcription.model.TranscriptEntity;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.UUID;
+
+public interface TranscriptRepository extends JpaRepository<TranscriptEntity, UUID> {
+}

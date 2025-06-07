@@ -2,6 +2,7 @@ package com.trace.transcription.controller;
 
 import com.trace.transcription.model.SpeakerEntity;
 import com.trace.transcription.repository.SpeakerRepository;
+import com.trace.transcription.repository.TranscriptRepository;
 import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,12 +14,10 @@ import org.springframework.web.multipart.MultipartFile;
 import jep.JepException;
 import jep.SharedInterpreter;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 
 @RestController
@@ -27,12 +26,15 @@ public class TranscriptionController {
     public static final Logger logger = LoggerFactory.getLogger(TranscriptionController.class);
 
     private final String coreServiceUrl; // e.g. "http://core-service:8080"
-    private final SpeakerRepository speakerRepository;
     private final RestTemplate restTemplate = new RestTemplate();
 
-    public TranscriptionController(@Value("${core.service.url}") String coreServiceUrl, @Value("${file.upload-dir}") String uploadDir, SpeakerRepository speakerRepository) {
+    private final SpeakerRepository speakerRepository;
+    private final TranscriptRepository transcriptRepository;
+
+    public TranscriptionController(@Value("${core.service.url}") String coreServiceUrl, SpeakerRepository speakerRepository, TranscriptRepository transcriptRepository) {
         this.coreServiceUrl = coreServiceUrl;
         this.speakerRepository = speakerRepository;
+        this.transcriptRepository = transcriptRepository;
     }
 
     @GetMapping("/test")
@@ -40,7 +42,7 @@ public class TranscriptionController {
         return ResponseEntity.ok("Transcription Service is running");
     }
 
-    @GetMapping("/{projectId}/all-speakers")
+    @GetMapping("projects/{projectId}/all-speakers")
     public ResponseEntity<List<SpeakerEntity>> getAllSpeakers(@PathVariable("projectId") UUID projectId) {
         List<SpeakerEntity> speakers = speakerRepository.findAllByProjectId(projectId);
         if (speakers.isEmpty()) {
@@ -64,7 +66,7 @@ public class TranscriptionController {
      * <p>
      * All lists must be the same size. Each index corresponds to one Speaker record.
      */
-    @PostMapping("/{projectId}/speakers")
+    @PostMapping("projects/{projectId}/speakers")
     public ResponseEntity<String> uploadSpeakers(
             @PathVariable("projectId") UUID projectId,
             @RequestParam("speakerIds") List<String> speakerIds,
@@ -89,8 +91,8 @@ public class TranscriptionController {
 
                 // create and set entity
                 SpeakerEntity speaker = new SpeakerEntity();
-                speaker.setSpeakerId(speakerId);
-                speaker.setSpeakerName(speakerName);
+                speaker.setId(speakerId);
+                speaker.setName(speakerName);
                 speaker.setProjectId(projectId);
 
                 speaker.setSpeakingSample(file.getBytes());
@@ -122,10 +124,12 @@ public class TranscriptionController {
      * 4. Transcriber returns JSON-formatted transcript
      * 5. sends transcript to core service //todo change send to genai service instead, when genai service ready
      */
-    @PostMapping("/{projectId}/receive")
+    @PostMapping("projects/{projectId}/receive")
     public ResponseEntity<String> receiveMediaAndSendTranscript(
             @PathVariable("projectId") UUID projectId,
-            @RequestParam("file") MultipartFile file) {
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "timestamp", required = false) Date timestamp
+    ) {
 
         Path tempDir;
 
@@ -154,7 +158,7 @@ public class TranscriptionController {
                 String sampleExt = speaker.getSampleExtension(); // e.g. "mp3", "wav"
                 if (audioBytes != null && audioBytes.length > 0) {
                     // Give each file a unique filename, e.g. "<speakerId>.<sampleExt>"
-                    Path speakerPath = tempDir.resolve(speaker.getSpeakerId() + sampleExt);
+                    Path speakerPath = tempDir.resolve(speaker.getId() + sampleExt);
                     Files.write(speakerPath, audioBytes, StandardOpenOption.CREATE);
                 }
             }
@@ -206,8 +210,16 @@ public class TranscriptionController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Processing error: " + ex.getMessage());
         } finally {
-            // (Optional) Clean up tempDir on exit if you don’t need to keep files around.
-            // You can leave tempDir if you want to inspect it later.
+            //clean up temp directory
+            try {
+                Files.walk(tempDir)
+                        .sorted(Comparator.reverseOrder())
+                        .map(Path::toFile)
+                        .forEach(File::delete);
+                logger.info("Cleaned up temp directory: {}", tempDir);
+            } catch (IOException e) {
+                logger.error("Failed to clean up temp directory {}: {}", tempDir, e.getMessage());
+            }
         }
     }
 
@@ -217,13 +229,13 @@ public class TranscriptionController {
      * <p>
      * Deletes the speaker with the given ID from the project.
      */
-    @DeleteMapping("/{projectId}/speakers/{speakerId}")
+    @DeleteMapping("projects/{projectId}/speakers/{speakerId}")
     public ResponseEntity<String> deleteSpeaker(
             @PathVariable("projectId") UUID projectId,
             @PathVariable("speakerId") String speakerId) {
 
         // Check if speaker exists
-        SpeakerEntity speaker = speakerRepository.findByProjectIdAndSpeakerId(projectId, speakerId);
+        SpeakerEntity speaker = speakerRepository.findByProjectIdAndId(projectId, speakerId);
         if (speaker == null) {
             return ResponseEntity.notFound().build();
         }
@@ -243,20 +255,20 @@ public class TranscriptionController {
      * <p>
      * Updates the speaker's name and/or speaking sample.
      */
-    @PutMapping("/{projectId}/speakers/{speakerId}")
+    @PutMapping("projects/{projectId}/speakers/{speakerId}")
     public ResponseEntity<String> modifySpeaker(
             @PathVariable("projectId") UUID projectId,
             @PathVariable("speakerId") String speakerId,
             @RequestParam(value = "speakerName", required = false) String speakerName,
             @RequestParam(value = "speakingSample", required = false) MultipartFile speakingSample) {
 
-        SpeakerEntity speaker = speakerRepository.findByProjectIdAndSpeakerId(projectId, speakerId);
+        SpeakerEntity speaker = speakerRepository.findByProjectIdAndId(projectId, speakerId);
         if (speaker == null) {
             return ResponseEntity.notFound().build();
         }
 
         if (speakerName != null && !speakerName.isEmpty()) {
-            speaker.setSpeakerName(speakerName);
+            speaker.setName(speakerName);
         }
         if (speakingSample != null && !speakingSample.isEmpty()) {
             try {
@@ -278,7 +290,7 @@ public class TranscriptionController {
      * <p>
      * Returns a list of all recordings (speaker IDs with their sample extensions) for the given project.
      */
-    @GetMapping("/{projectId}/recordings")
+    @GetMapping("projects/{projectId}/recordings")
     public ResponseEntity<List<String>> getAllRecordings(
             @PathVariable("projectId") UUID projectId) {
 
@@ -291,7 +303,7 @@ public class TranscriptionController {
         List<String> recordings = new ArrayList<>();
         for (SpeakerEntity speaker : speakers) {
             if (speaker.getSpeakingSample() != null && speaker.getSpeakingSample().length > 0) {
-                recordings.add(speaker.getSpeakerId() + "." + speaker.getSampleExtension());
+                recordings.add(speaker.getId() + "." + speaker.getSampleExtension());
             }
         }
         if (recordings.isEmpty()) {
