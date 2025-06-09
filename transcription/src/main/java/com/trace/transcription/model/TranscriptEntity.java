@@ -15,7 +15,7 @@ public class TranscriptEntity {
 
     @Lob
     private String content;
-    private String projectId;
+    private UUID projectId;
 
     @Temporal(TemporalType.TIMESTAMP)
     private Date timestamp;
@@ -36,12 +36,12 @@ public class TranscriptEntity {
         this.content = content;
     }
 
-    public String getProjectId() {
+    public UUID getProjectId() {
         return projectId;
     }
 
-    public void setProjectId(String id) {
-        this.projectId = id;
+    public void setProjectId(UUID projectId) {
+        this.projectId = projectId;
     }
 
     public Date getTimestamp() {

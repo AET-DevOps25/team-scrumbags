@@ -286,11 +286,11 @@ public class TranscriptionController {
     }
 
     /**
-     * GET /{projectId}/recordings
+     * GET /{projectId}/samples
      * <p>
-     * Returns a list of all recordings (speaker IDs with their sample extensions) for the given project.
+     * Returns a list of all samples (speaker IDs with their sample extensions) for the given project.
      */
-    @GetMapping("projects/{projectId}/recordings")
+    @GetMapping("projects/{projectId}/samples")
     public ResponseEntity<List<String>> getAllRecordings(
             @PathVariable("projectId") UUID projectId) {
 
@@ -313,7 +313,19 @@ public class TranscriptionController {
     }
 
 
-    //get all recordings
+    /**
+     * GET /{projectId}/transcripts
+     * <p>
+     * Returns all transcripts for the given project.
+     */
+    @GetMapping("projects/{projectId}/transcripts")
+    public ResponseEntity<List<String>> getAllTranscripts(@PathVariable("projectId") UUID projectId) {
+        List<String> transcripts = transcriptRepository.findAllByProjectId(projectId);
+        if (transcripts.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(transcripts);
+    }
 
     //include timestamp in transcript, extract from audio file metadata if available, else request timestamp / current time
     //launch processing in thread to not block
