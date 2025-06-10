@@ -7,5 +7,5 @@ import java.util.List;
 import java.util.UUID;
 
 public interface TranscriptRepository extends JpaRepository<TranscriptEntity, UUID> {
-    List<String> findAllByProjectId(UUID projectId);
+    List<TranscriptEntity> findAllByProjectId(UUID projectId);
 }

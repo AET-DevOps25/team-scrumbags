@@ -135,7 +135,7 @@ public class TranscriptionController {
             @RequestParam(value = "timestamp", required = false) Date timestamp
     ) {
 
-        DeferredResult<ResponseEntity<String>> deferredResult = new DeferredResult<>();
+        DeferredResult<ResponseEntity<String>> deferredResult = new DeferredResult<>(300_000L);
 
         executor.execute(() -> {
             try {
@@ -167,7 +167,7 @@ public class TranscriptionController {
     }
 
     private String transcriptAsync(UUID projectId, MultipartFile file) throws IOException, InterruptedException {
-        Path tempDir = Files.createTempDirectory("media-" + projectId + "-");
+        Path tempDir = Files.createTempDirectory("media-" + projectId + "_" + UUID.randomUUID() + "-");
         try {
             // Save incoming file
             String cleanFileName = Paths.get(Objects.requireNonNull(file.getOriginalFilename()))
@@ -182,14 +182,13 @@ public class TranscriptionController {
                 byte[] audio = speaker.getSpeakingSample();
                 String ext = speaker.getSampleExtension();
                 if (audio != null && audio.length > 0) {
-                    Path spath = tempDir.resolve("sample-" + speaker.getId() + "." + ext);
+                    Path spath = tempDir.resolve("sample-" + speaker.getName() + "." + ext);
                     Files.write(spath, audio, StandardOpenOption.CREATE);
                 }
             }
 
             // Launch Python process
-            String pythonPath = Paths.get(".venv", "bin", "python").toAbsolutePath().toString();
-            ProcessBuilder pb = new ProcessBuilder("/opt/venv/bin/python", "transcriber.py", tempDir.toString())
+            ProcessBuilder pb = new ProcessBuilder("python3", "transcriber.py", tempDir.toString())
                     .redirectErrorStream(true);
 
             Process proc = pb.start();
@@ -212,6 +211,7 @@ public class TranscriptionController {
             if (transcriptJson.isEmpty()) {
                 throw new RuntimeException("Empty transcript from Python script");
             }
+            logger.info("Received transcript JSON: {}", transcriptJson);
             return transcriptJson;
         } finally {
             // Cleanup

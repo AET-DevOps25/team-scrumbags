@@ -1,8 +1,31 @@
 import whisperx
+import sys
+import argparse
 import os
+import re
 from pydub import AudioSegment
 import subprocess
 from dotenv import load_dotenv
+
+def find_speakers_and_inputs(directory):
+    speaker_names = {}
+    inputs = []
+
+    sample_pattern = re.compile(r"sample-(\w+)\.(\w+)$", re.IGNORECASE)
+    media_extensions = (".mp3", ".wav", ".m4a", ".flac", ".aac", ".ogg", ".mp4", ".mov")
+
+    for filename in os.listdir(directory):
+        file_path = os.path.join(directory, filename)
+
+        if os.path.isfile(file_path) and filename.lower().endswith(media_extensions):
+            match = sample_pattern.match(filename)
+            if match:
+                speaker = match.group(1)
+                speaker_names[speaker] = file_path
+            else:
+                inputs.append(file_path)
+
+    return speaker_names, inputs
 
 def convert_to_wav(input_file, output_wav):
     """Convert any audio/video file to WAV using FFmpeg."""
@@ -19,9 +42,9 @@ def merge_wav_files(wav_paths, output_path):
 
     combined.export(output_path, format="wav")
 
-def convert_and_merge(inputs, output):
+def convert_and_merge(inputs, output, directory):
     # Step 1: Convert all inputs to WAV
-    converted_wavs = [f"converted_temp_{i}.wav" for i in range(len(inputs))]
+    converted_wavs = [f"{directory}/converted_temp_{i}.wav" for i in range(len(inputs))]
     for inp, out in zip(inputs, converted_wavs):
         convert_to_wav(inp, out)
 
@@ -39,16 +62,23 @@ def convert_and_merge(inputs, output):
 
 if __name__ == "__main__":
     load_dotenv()
+    parser = argparse.ArgumentParser(description="Process media files in a directory")
+    parser.add_argument("directory", help="Directory containing media files")
+    args = parser.parse_args()
 
-    speaker_names = {"Jeremy": "", "Nataliya": ""}
+    speaker_names, inputs = find_speakers_and_inputs(args.directory)
 
-    file1 = "audio/recJer.mp3"
-    file2 = "audio/recMal.mp3"
-    file3 = "audio/rec2.mp3"
+    project_id = ""
 
-    inputs = [file1, file2, file3]  # Any audio/video formats
-    merged = "audio/merged.wav"
-    convert_and_merge(inputs, merged)
+    match = re.match(r"media-([^_]+)_([^_]+)$", args.directory)
+    if match:
+        project_id = match.group(1)
+        print("Project ID: ", project_id)
+    else:
+        print("No match for project id found.")
+
+    merged = f"{args.directory}/merged.wav"
+    convert_and_merge(inputs, merged, args.directory)
 
     device = "cpu"  # or "cpu"
     batch_size = 16
