@@ -2,43 +2,30 @@ package com.trace.sdlc_connector.github.eventhandler;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.trace.sdlc_connector.*;
-import com.trace.sdlc_connector.user.UserMapping;
 import com.trace.sdlc_connector.user.UserMappingRepo;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 
-public class DeploymentEventHandler extends GithubEventHandler{
+public class DeploymentEventHandler extends GithubEventHandler {
 
     private static final String EVENT_TYPE = "deployment";
-    private final UserMappingRepo userMappingRepo;
 
     public DeploymentEventHandler(UserMappingRepo userMappingRepo) {
-        super(EVENT_TYPE);
-        this.userMappingRepo = userMappingRepo;
+        super(EVENT_TYPE, userMappingRepo);
     }
 
     @Override
     public Message handleEvent(UUID projectId, JsonNode payload, Long now) {
-        UUID userId = userMappingRepo.findById(new UserMapping.UserMappingId(
-                projectId, SupportedSystem.GITHUB, payload.get("sender").get("id").asText()
-        )).orElseThrow().getUserId();
+        var message = super.handleEvent(projectId, payload, now);
 
-        Map<String, Object> content = new HashMap<>();
-        content.put("deployment", payload.get("deployment").asText());
-        content.put("workflow_id", payload.get("workflow").get("id").asText());
-        content.put("workflow_name", payload.get("workflow").get("name").asText());
-        content.put("workflow_run_id", payload.get("workflow_run").get("id").asText());
+        message.getMetadata().setType(EVENT_TYPE + " " + payload.get("action").asText());
 
-        return new Message(
-                new Metadata(
-                        EVENT_TYPE + " " + payload.get("action").asText(),
-                        userId,
-                        now,
-                        projectId
-                ),
-                content
-        );
+        message.getContent().put("deployment", payload.get("deployment").asText());
+        // required but nullable fields
+        message.getContent().put("workflow_id", JsonNodeUtils.nullableMap(payload, "workflow", wf -> wf.get("id").asText()));
+        message.getContent().put("workflow_name", JsonNodeUtils.nullableMap(payload, "workflow", wf -> wf.get("name").asText()));
+        message.getContent().put("workflow_run_id", JsonNodeUtils.nullableMap(payload, "workflow_run", wr -> wr.get("id").asText()));
+
+        return message;
     }
 }

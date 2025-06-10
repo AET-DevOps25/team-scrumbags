@@ -12,34 +12,23 @@ import java.util.UUID;
 public class PullRequestReviewThreadEventHandler extends GithubEventHandler{
 
     private static final String EVENT_TYPE = "pull_request_review_thread";
-    private final UserMappingRepo userMappingRepo;
 
     public PullRequestReviewThreadEventHandler(UserMappingRepo userMappingRepo) {
-        super(EVENT_TYPE);
-        this.userMappingRepo = userMappingRepo;
+        super(EVENT_TYPE, userMappingRepo);
     }
 
     @Override
     public Message handleEvent(UUID projectId, JsonNode payload, Long now) {
-        UUID userId = userMappingRepo.findById(new UserMapping.UserMappingId(
-                projectId, SupportedSystem.GITHUB, payload.get("sender").get("id").asText()
-        )).orElseThrow().getUserId();
+        var message = super.handleEvent(projectId, payload, now);
 
-        Map<String, Object> content = new HashMap<>();
         var action = payload.get("action").asText();
+        message.getMetadata().setType(EVENT_TYPE + " " + action);
 
-        content.put("thread", payload.get("thread").asText());
-        content.put("pull_request_id", payload.get("pull_request").get("id").asText());
-        content.put("pull_request_title", payload.get("pull_request").get("title").asText());
+        // required fields
+        message.getContent().put("thread", payload.get("thread").asText());
+        message.getContent().put("pull_request_id", payload.get("pull_request").get("id").asText());
+        message.getContent().put("pull_request_title", payload.get("pull_request").get("title").asText());
 
-        return new Message(
-                new Metadata(
-                        EVENT_TYPE + " " + action,
-                        userId,
-                        now,
-                        projectId
-                ),
-                content
-        );
+        return message;
     }
 }

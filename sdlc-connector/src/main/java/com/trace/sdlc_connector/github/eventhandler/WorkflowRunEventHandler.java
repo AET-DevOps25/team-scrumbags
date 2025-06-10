@@ -9,35 +9,26 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-public class WorkflowRunEventHandler extends GithubEventHandler{
+public class WorkflowRunEventHandler extends GithubEventHandler {
 
     private static final String EVENT_TYPE = "workflow_run";
-    private final UserMappingRepo userMappingRepo;
 
     public WorkflowRunEventHandler(UserMappingRepo userMappingRepo) {
-        super(EVENT_TYPE);
-        this.userMappingRepo = userMappingRepo;
+        super(EVENT_TYPE, userMappingRepo);
     }
 
     @Override
     public Message handleEvent(UUID projectId, JsonNode payload, Long now) {
-        UUID userId = userMappingRepo.findById(new UserMapping.UserMappingId(
-                projectId, SupportedSystem.GITHUB, payload.get("sender").get("id").asText()
-        )).orElseThrow().getUserId();
+        var message = super.handleEvent(projectId, payload, now);
 
-        Map<String, Object> content = new HashMap<>();
+        message.getMetadata().setType(EVENT_TYPE + " " + payload.get("action").asText());
 
-        content.put("workflow_run", payload.get("workflow_run").asText());
-        content.put("workflow", payload.get("workflow").asText());
+        // required fields
+        message.getContent().put("workflow_run", payload.get("workflow_run").asText());
 
-        return new Message(
-                new Metadata(
-                        EVENT_TYPE + " " + payload.get("action").asText(),
-                        userId,
-                        now,
-                        projectId
-                ),
-                content
-        );
+        // required but nullable fields
+        message.getContent().put("workflow", JsonNodeUtils.nullableMap(payload, "workflow", wf -> wf.asText()));
+
+        return message;
     }
 }

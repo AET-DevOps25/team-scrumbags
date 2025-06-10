@@ -7,65 +7,63 @@ import com.trace.sdlc_connector.user.UserMappingRepo;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 public class IssueEventHandler extends GithubEventHandler {
 
     private static final String EVENT_TYPE = "issues";
-    private final UserMappingRepo userMappingRepo;
 
     public IssueEventHandler(UserMappingRepo userMappingRepo) {
-        super(EVENT_TYPE);
-        this.userMappingRepo = userMappingRepo;
+        super(EVENT_TYPE, userMappingRepo);
     }
 
     @Override
     public Message handleEvent(UUID projectId, JsonNode payload, Long now) {
-        UUID userId = userMappingRepo.findById(new UserMapping.UserMappingId(
-                projectId, SupportedSystem.GITHUB, payload.get("sender").get("id").asText()
-        )).orElseThrow().getUserId();
+        var message = super.handleEvent(projectId, payload, now);
 
-        Map<String, Object> content = new HashMap<>();
         var action = payload.get("action").asText();
+        message.getMetadata().setType(EVENT_TYPE + " " + action);
 
-        content.put("issue_id", payload.get("issue").get("id").asText());
-        content.put("issue_title", payload.get("issue").get("title").asText());
+        message.getContent().put("issue_id", payload.get("issue").get("id").asText());
+        message.getContent().put("issue_title", payload.get("issue").get("title").asText());
 
         // optional fields
         switch (action) {
             case "assigned", "unassigned":
-                content.put("assignee_id", payload.get("assignee").get("id").asText());
-                content.put("assignee_login", payload.get("assignee").get("login").asText());
+                // optional and nullable
+                if (payload.has("assignee")) {
+                    message.getContent().put("assignee_id", JsonNodeUtils.nullableMap(payload, "assignee", a -> a.get("id").asText()));
+                    message.getContent().put("assignee_login", JsonNodeUtils.nullableMap(payload, "assignee", a -> a.get("login").asText()));
+                }
                 break;
             case "demilestoned", "milestoned":
-                content.put("milestone_id", payload.get("milestone").get("id").asText());
-                content.put("milestone_title", payload.get("milestone").get("title").asText());
+                if (payload.has("milestone")) {
+                    message.getContent().put("milestone_id", JsonNodeUtils.nullableMap(payload, "milestone", m -> m.get("id").asText()));
+                    message.getContent().put("milestone_title", JsonNodeUtils.nullableMap(payload, "milestone", m -> m.get("title").asText()));
+                }
                 break;
             case "edited":
-                content.put("changes", payload.get("changes").asText());
-                content.put("label_id", payload.get("label").get("id").asText());
-                content.put("label", payload.get("label").get("name").asText());
-                break;
+                message.getContent().put("changes", payload.get("changes").asText());
+                // intended fall-through to handle "label"
             case "labeled", "unlabeled":
-                content.put("label_id", payload.get("label").get("id").asText());
-                content.put("label", payload.get("label").get("name").asText());
+                // optional
+                JsonNodeUtils.optional(payload, "label", label -> {
+                    message.getContent().put("label_id", label.get("id").asText());
+                    message.getContent().put("label_name", label.get("name").asText());
+                });
                 break;
             case "opened", "transferred":
-                content.put("changes", payload.get("changes").asText());
+                if (payload.has("changes")) {
+                    message.getContent().put("changes", payload.get("changes").asText());
+                }
                 break;
             case "typed":
-                content.put("type", payload.get("type").asText());
+                // required nullable field
+                message.getContent().put("type", JsonNodeUtils.nullableMap(payload, "type", t -> t.asText()));
                 break;
         }
 
-        return new Message(
-                new Metadata(
-                        EVENT_TYPE + " " + action,
-                        userId,
-                        now,
-                        projectId
-                ),
-                content
-        );
+        return message;
     }
 }

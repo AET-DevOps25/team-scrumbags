@@ -12,37 +12,35 @@ import java.util.UUID;
 public class StatusEventHandler extends GithubEventHandler{
 
     private static final String EVENT_TYPE = "status";
-    private final UserMappingRepo userMappingRepo;
 
     public StatusEventHandler(UserMappingRepo userMappingRepo) {
-        super(EVENT_TYPE);
-        this.userMappingRepo = userMappingRepo;
+        super(EVENT_TYPE, userMappingRepo);
     }
 
     @Override
     public Message handleEvent(UUID projectId, JsonNode payload, Long now) {
-        UUID userId = userMappingRepo.findById(new UserMapping.UserMappingId(
-                projectId, SupportedSystem.GITHUB, payload.get("sender").get("id").asText()
-        )).orElseThrow().getUserId();
+        var message = super.handleEvent(projectId, payload, now);
 
-        Map<String, Object> content = new HashMap<>();
+        message.getMetadata().setType(EVENT_TYPE);
 
-        content.put("id", payload.get("id").asText());
-        content.put("name", payload.get("name").asText());
-        content.put("description", payload.get("description").asText());
-        content.put("context", payload.get("context").asText());
-        content.put("state", payload.get("state").asText());
-        content.put("commit_sha", payload.get("sha").asText());
-        // TODO branches
+        // required fields
+        message.getContent().put("id", payload.get("id").asText());
+        message.getContent().put("name", payload.get("name").asText());
+        message.getContent().put("context", payload.get("context").asText());
+        message.getContent().put("state", payload.get("state").asText());
+        message.getContent().put("commit_sha", payload.get("sha").asText());
+        message.getContent().put("created_at", payload.get("created_at").asText());
+        message.getContent().put("updated_at", payload.get("updated_at").asText());
 
-        return new Message(
-                new Metadata(
-                        EVENT_TYPE,
-                        userId,
-                        now,
-                        projectId
-                ),
-                content
-        );
+        StringBuilder branches = new StringBuilder();
+        payload.get("branches").forEach(branch ->
+                branches.append(branch.asText()).append(","));
+        message.getContent().put("branches", branches.toString());
+
+        // required but nullable fields
+        message.getContent().put("description", JsonNodeUtils.nullableMap(payload, "description", JsonNode::asText));
+        message.getContent().put("target_url", JsonNodeUtils.nullableMap(payload, "target_url", JsonNode::asText));
+
+        return message;
     }
 }

@@ -12,30 +12,19 @@ import java.util.UUID;
 public class CommitCommentEventHandler extends GithubEventHandler {
 
     private static final String EVENT_TYPE = "commit_comment";
-    private final UserMappingRepo userMappingRepo;
 
     public CommitCommentEventHandler(UserMappingRepo userMappingRepo) {
-        super(EVENT_TYPE);
-        this.userMappingRepo = userMappingRepo;
+        super(EVENT_TYPE, userMappingRepo);
     }
 
     @Override
     public Message handleEvent(UUID projectId, JsonNode payload, Long now) {
-        UUID userId = userMappingRepo.findById(new UserMapping.UserMappingId(
-                projectId, SupportedSystem.GITHUB, payload.get("sender").get("id").asText()
-        )).orElseThrow().getUserId();
+        var message = super.handleEvent(projectId, payload, now);
 
-        Map<String, Object> content = new HashMap<>();
-        content.put("comment", payload.get("comment").asText());
+        message.getMetadata().setType(EVENT_TYPE + " " + payload.get("action").asText());
 
-        return new Message(
-                new Metadata(
-                        EVENT_TYPE + " " + payload.get("action").asText(),
-                        userId,
-                        now,
-                        projectId
-                ),
-                content
-        );
+        message.getContent().put("comment", payload.get("comment").asText());
+
+        return message;
     }
 }

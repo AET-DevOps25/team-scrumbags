@@ -12,32 +12,25 @@ import java.util.UUID;
 public class WorkflowJobEventHandler extends GithubEventHandler{
 
     private static final String EVENT_TYPE = "workflow_job";
-    private final UserMappingRepo userMappingRepo;
 
     public WorkflowJobEventHandler(UserMappingRepo userMappingRepo) {
-        super(EVENT_TYPE);
-        this.userMappingRepo = userMappingRepo;
+        super(EVENT_TYPE, userMappingRepo);
     }
 
     @Override
     public Message handleEvent(UUID projectId, JsonNode payload, Long now) {
-        UUID userId = userMappingRepo.findById(new UserMapping.UserMappingId(
-                projectId, SupportedSystem.GITHUB, payload.get("sender").get("id").asText()
-        )).orElseThrow().getUserId();
+        var message = super.handleEvent(projectId, payload, now);
 
-        Map<String, Object> content = new HashMap<>();
+        message.getMetadata().setType(EVENT_TYPE + " " + payload.get("action").asText());
 
-        content.put("workflow_job", payload.get("workflow_job").asText());
-        content.put("deployment", payload.get("deployment").asText());
+        // required fields
+        message.getContent().put("workflow_job", payload.get("workflow_job").asText());
 
-        return new Message(
-                new Metadata(
-                        EVENT_TYPE + " " + payload.get("action").asText(),
-                        userId,
-                        now,
-                        projectId
-                ),
-                content
-        );
+        // optional fields
+        JsonNodeUtils.optional(payload, "deployment", d -> {
+            message.getContent().put("deployment", d.asText());
+        });
+
+        return message;
     }
 }

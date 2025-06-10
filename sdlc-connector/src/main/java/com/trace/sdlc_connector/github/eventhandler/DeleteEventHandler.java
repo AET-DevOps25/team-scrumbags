@@ -12,32 +12,20 @@ import java.util.UUID;
 public class DeleteEventHandler extends GithubEventHandler{
 
     private static final String EVENT_TYPE = "delete";
-    private final UserMappingRepo userMappingRepo;
 
     public DeleteEventHandler(UserMappingRepo userMappingRepo) {
-        super(EVENT_TYPE);
-        this.userMappingRepo = userMappingRepo;
+        super(EVENT_TYPE, userMappingRepo);
     }
 
     @Override
     public Message handleEvent(UUID projectId, JsonNode payload, Long now) {
-        UUID userId = userMappingRepo.findById(new UserMapping.UserMappingId(
-                projectId, SupportedSystem.GITHUB, payload.get("sender").get("id").asText()
-        )).orElseThrow().getUserId();
+        var message = super.handleEvent(projectId, payload, now);
 
-        Map<String, Object> content = new HashMap<>();
+        message.getMetadata().setType(EVENT_TYPE + " " + payload.get("ref_type").asText());
 
-        content.put("pusher_type", payload.get("pusher_type").asText());
-        content.put("ref", payload.get("ref").asText());
+        message.getContent().put("pusher_type", payload.get("pusher_type").asText());
+        message.getContent().put("ref", payload.get("ref").asText());
 
-        return new Message(
-                new Metadata(
-                        EVENT_TYPE + " " + payload.get("ref_type").asText(),
-                        userId,
-                        now,
-                        projectId
-                ),
-                content
-        );
+        return message;
     }
 }

@@ -12,40 +12,31 @@ import java.util.UUID;
 public class IssueCommentEventHandler extends GithubEventHandler{
 
     private static final String EVENT_TYPE = "issue_comment";
-    private final UserMappingRepo userMappingRepo;
 
     public IssueCommentEventHandler(UserMappingRepo userMappingRepo) {
-        super(EVENT_TYPE);
-        this.userMappingRepo = userMappingRepo;
+        super(EVENT_TYPE, userMappingRepo);
     }
 
     @Override
     public Message handleEvent(UUID projectId, JsonNode payload, Long now) {
-        UUID userId = userMappingRepo.findById(new UserMapping.UserMappingId(
-                projectId, SupportedSystem.GITHUB, payload.get("sender").get("id").asText()
-        )).orElseThrow().getUserId();
+        var message = super.handleEvent(projectId, payload, now);
 
-        Map<String, Object> content = new HashMap<>();
         var action = payload.get("action").asText();
 
-        content.put("comment", payload.get("comment").asText());
-        content.put("issue_id", payload.get("issue").get("id").asText());
-        content.put("issue_title", payload.get("title").get("id").asText());
+        message.getMetadata().setType(EVENT_TYPE + " " + action);
+
+        // required fields
+        message.getContent().put("comment", payload.get("comment").asText());
+        message.getContent().put("issue_id", payload.get("issue").get("id").asText());
+        message.getContent().put("issue_title", payload.get("title").get("id").asText());
 
         switch (action) {
             case "edited":
-                content.put("changes", payload.get("changes").asText());
+                // required field
+                message.getContent().put("changes", payload.get("changes").asText());
                 break;
         }
 
-        return new Message(
-                new Metadata(
-                        EVENT_TYPE + " " + action,
-                        userId,
-                        now,
-                        projectId
-                ),
-                content
-        );
+        return message;
     }
 }

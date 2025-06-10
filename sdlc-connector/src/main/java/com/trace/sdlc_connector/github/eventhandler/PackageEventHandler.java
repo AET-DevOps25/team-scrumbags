@@ -12,31 +12,20 @@ import java.util.UUID;
 public class PackageEventHandler extends GithubEventHandler {
 
     private static final String EVENT_TYPE = "package";
-    private final UserMappingRepo userMappingRepo;
 
     public PackageEventHandler(UserMappingRepo userMappingRepo) {
-        super(EVENT_TYPE);
-        this.userMappingRepo = userMappingRepo;
+        super(EVENT_TYPE, userMappingRepo);
     }
 
     @Override
     public Message handleEvent(UUID projectId, JsonNode payload, Long now) {
-        UUID userId = userMappingRepo.findById(new UserMapping.UserMappingId(
-                projectId, SupportedSystem.GITHUB, payload.get("sender").get("id").asText()
-        )).orElseThrow().getUserId();
+        var message = super.handleEvent(projectId, payload, now);
 
-        Map<String, Object> content = new HashMap<>();
+        message.getMetadata().setType(EVENT_TYPE + " " + payload.get("action").asText());
 
-        content.put("package", payload.get("package").asText());
+        // required fields
+        message.getContent().put("package", payload.get("package").asText());
 
-        return new Message(
-                new Metadata(
-                        EVENT_TYPE + " " + payload.get("action").asText(),
-                        userId,
-                        now,
-                        projectId
-                ),
-                content
-        );
+        return message;
     }
 }

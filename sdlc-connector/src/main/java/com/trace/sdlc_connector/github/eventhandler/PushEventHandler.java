@@ -12,41 +12,31 @@ import java.util.UUID;
 public class PushEventHandler extends GithubEventHandler{
 
     private static final String EVENT_TYPE = "push";
-    private final UserMappingRepo userMappingRepo;
 
     public PushEventHandler(UserMappingRepo userMappingRepo) {
-        super(EVENT_TYPE);
-        this.userMappingRepo = userMappingRepo;
+        super(EVENT_TYPE, userMappingRepo);
     }
 
     @Override
     public Message handleEvent(UUID projectId, JsonNode payload, Long now) {
-        UUID userId = userMappingRepo.findById(new UserMapping.UserMappingId(
-                projectId, SupportedSystem.GITHUB, payload.get("sender").get("id").asText()
-        )).orElseThrow().getUserId();
+        var message = super.handleEvent(projectId, payload, now);
 
-        Map<String, Object> content = new HashMap<>();
+        message.getMetadata().setType(EVENT_TYPE);
 
-        content.put("after", payload.get("after").asText());
-        content.put("base_ref", payload.get("base_ref").asText());
-        content.put("before", payload.get("before").asText());
-        content.put("commits", payload.get("commits").asText());
-        content.put("compare", payload.get("compare").asText());
-        content.put("created", payload.get("created").asText());
-        content.put("deleted", payload.get("deleted").asText());
-        content.put("forced", payload.get("forced").asText());
-        content.put("head_commit", payload.get("head_commit").asText());
-        content.put("pusher", payload.get("pusher").asText());
-        content.put("ref", payload.get("ref").asText());
+        // required fields
+        message.getContent().put("after", payload.get("after").asText());
+        message.getContent().put("before", payload.get("before").asText());
+        message.getContent().put("commits", payload.get("commits").asText());
+        message.getContent().put("compare", payload.get("compare").asText());
+        message.getContent().put("created", payload.get("created").asText());
+        message.getContent().put("deleted", payload.get("deleted").asText());
+        message.getContent().put("forced", payload.get("forced").asText());
+        message.getContent().put("pusher", payload.get("pusher").asText());
+        message.getContent().put("ref", payload.get("ref").asText());
 
-        return new Message(
-                new Metadata(
-                        EVENT_TYPE,
-                        userId,
-                        now,
-                        projectId
-                ),
-                content
-        );
+        // required but nullable fields
+        message.getContent().put("base_ref", JsonNodeUtils.nullableMap(payload, "base_ref", JsonNode::asText));
+        message.getContent().put("head_commit", JsonNodeUtils.nullableMap(payload, "head_commit", JsonNode::asText));
+        return message;
     }
 }

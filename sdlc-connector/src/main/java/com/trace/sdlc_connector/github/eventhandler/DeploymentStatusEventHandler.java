@@ -2,46 +2,41 @@ package com.trace.sdlc_connector.github.eventhandler;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.trace.sdlc_connector.*;
-import com.trace.sdlc_connector.user.UserMapping;
 import com.trace.sdlc_connector.user.UserMappingRepo;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 
-public class DeploymentStatusEventHandler extends GithubEventHandler{
+public class DeploymentStatusEventHandler extends GithubEventHandler {
 
     private static final String EVENT_TYPE = "deployment_status";
-    private final UserMappingRepo userMappingRepo;
 
     public DeploymentStatusEventHandler(UserMappingRepo userMappingRepo) {
-        super(EVENT_TYPE);
-        this.userMappingRepo = userMappingRepo;
+        super(EVENT_TYPE, userMappingRepo);
     }
 
     @Override
     public Message handleEvent(UUID projectId, JsonNode payload, Long now) {
-        UUID userId = userMappingRepo.findById(new UserMapping.UserMappingId(
-                projectId, SupportedSystem.GITHUB, payload.get("sender").get("id").asText()
-        )).orElseThrow().getUserId();
+        var message = super.handleEvent(projectId, payload, now);
 
-        Map<String, Object> content = new HashMap<>();
+        message.getMetadata().setType(EVENT_TYPE + " " + payload.get("action").asText());
 
-        content.put("check_run", payload.get("check_run").asText());
-        content.put("deployment", payload.get("deployment").asText());
-        content.put("deployment_status", payload.get("deployment_status").asText());
-        content.put("sender", payload.get("sender").asText());
-        content.put("workflow", payload.get("workflow").asText());
-        content.put("workflow_run", payload.get("workflow_run").asText());
+        // required fields
+        message.getContent().put("deployment", payload.get("deployment").asText());
+        message.getContent().put("deployment_status", payload.get("deployment_status").asText());
 
-        return new Message(
-                new Metadata(
-                        EVENT_TYPE + " " + payload.get("action").asText(),
-                        userId,
-                        now,
-                        projectId
-                ),
-                content
-        );
+        // optional and possibly null fields
+        if (payload.has("check_run")) {
+            message.getContent().put("check_run", JsonNodeUtils.nullableMap(payload, "check_run", cr -> cr.asText()));
+        }
+        if (payload.has("workflow")) {
+            message.getContent().put("workflow_id", JsonNodeUtils.nullableMap(payload, "workflow", wf -> wf.get("id").asText()));
+            message.getContent().put("workflow_name", JsonNodeUtils.nullableMap(payload, "workflow", wf -> wf.get("name").asText()));
+        }
+        if (payload.has("workflow_run")) {
+            message.getContent().put("workflow_run_id", JsonNodeUtils.nullableMap(payload, "workflow_run", wr -> wr.get("id").asText()));
+            message.getContent().put("workflow_run_name", JsonNodeUtils.nullableMap(payload, "workflow_run", wr -> wr.get("name").asText()));
+        }
+
+        return message;
     }
 }

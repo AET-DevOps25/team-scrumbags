@@ -12,31 +12,19 @@ import java.util.UUID;
 public class RegistryPackageEventHandler extends GithubEventHandler{
 
     private static final String EVENT_TYPE = "registry_package";
-    private final UserMappingRepo userMappingRepo;
 
     public RegistryPackageEventHandler(UserMappingRepo userMappingRepo) {
-        super(EVENT_TYPE);
-        this.userMappingRepo = userMappingRepo;
+        super(EVENT_TYPE, userMappingRepo);
     }
 
     @Override
     public Message handleEvent(UUID projectId, JsonNode payload, Long now) {
-        UUID userId = userMappingRepo.findById(new UserMapping.UserMappingId(
-                projectId, SupportedSystem.GITHUB, payload.get("sender").get("id").asText()
-        )).orElseThrow().getUserId();
+        var message = super.handleEvent(projectId, payload, now);
 
-        Map<String, Object> content = new HashMap<>();
+        message.getMetadata().setType(EVENT_TYPE + " " + payload.get("action").asText());
 
-        content.put("registry_package", payload.get("registry_package").asText());
+        message.getContent().put("registry_package", payload.get("registry_package").asText());
 
-        return new Message(
-                new Metadata(
-                        EVENT_TYPE + " " + payload.get("action").asText(),
-                        userId,
-                        now,
-                        projectId
-                ),
-                content
-        );
+        return message;
     }
 }

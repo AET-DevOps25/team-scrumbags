@@ -7,70 +7,71 @@ import com.trace.sdlc_connector.user.UserMappingRepo;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 public class PullRequestEventHandler extends GithubEventHandler{
 
     private static final String EVENT_TYPE = "pull_request";
-    private final UserMappingRepo userMappingRepo;
 
     public PullRequestEventHandler(UserMappingRepo userMappingRepo) {
-        super(EVENT_TYPE);
-        this.userMappingRepo = userMappingRepo;
+        super(EVENT_TYPE, userMappingRepo);
     }
 
     @Override
     public Message handleEvent(UUID projectId, JsonNode payload, Long now) {
-        UUID userId = userMappingRepo.findById(new UserMapping.UserMappingId(
-                projectId, SupportedSystem.GITHUB, payload.get("sender").get("id").asText()
-        )).orElseThrow().getUserId();
+        var message = super.handleEvent(projectId, payload, now);
 
-        Map<String, Object> content = new HashMap<>();
         var action = payload.get("action").asText();
+        message.getMetadata().setType(EVENT_TYPE + " " + action);
 
-        content.put("number", payload.get("number").asText());
-        content.put("pull_request", payload.get("pull_request").asText());
+        message.getContent().put("number", payload.get("number").asText());
+        message.getContent().put("pull_request", payload.get("pull_request").asText());
 
         switch (action) {
             case "assigned", "unassigned":
-                content.put("assignee_id", payload.get("assignee").get("id").asText());
-                content.put("assignee_login", payload.get("assignee").get("login").asText());
+                // required but nullable
+                message.getContent().put("assignee_id", JsonNodeUtils.nullableMap(payload, "assignee", a -> a.get("id").asText()));
+                message.getContent().put("assignee_login", JsonNodeUtils.nullableMap(payload, "assignee", a -> a.get("login").asText()));
                 break;
             case "auto_merge_disabled", "auto_merge_enabled":
-                content.put("reason", payload.get("reason").asText());
+                // required
+                message.getContent().put("reason", payload.get("reason").asText());
                 break;
             case "demilestoned", "milestoned":
-                content.put("milestone_id", payload.get("milestone").get("id").asText());
-                content.put("milestone_title", payload.get("milestone").get("title").asText());
+                // optional
+                JsonNodeUtils.optional(payload, "milestone", milestone -> {
+                    message.getContent().put("milestone_id", milestone.get("id").asText());
+                    message.getContent().put("milestone_title", milestone.get("title").asText());
+                });
                 break;
-            case "dequeued", "enqueued":
-                content.put("reason", payload.get("reason").asText());
+            case "dequeued":
+                // required
+                message.getContent().put("reason", payload.get("reason").asText());
                 break;
             case "edited":
-                content.put("changes", payload.get("changes").asText());
+                // required
+                message.getContent().put("changes", payload.get("changes").asText());
                 break;
             case "labeled", "unlabeled":
-                content.put("label_id", payload.get("label").get("id").asText());
-                content.put("label_name", payload.get("label").get("name").asText());
+                // optional
+                JsonNodeUtils.optional(payload, "label", label -> {
+                    message.getContent().put("label_id", label.get("id").asText());
+                    message.getContent().put("label_name", label.get("name").asText());
+                });
                 break;
             case "review_request_removed", "review_requested":
-                content.put("requested_reviewer_id", payload.get("requested_reviewer").get("id").asText());
-                content.put("requested_reviewer_login", payload.get("requested_reviewer").get("login").asText());
+                // required but nullable
+                message.getContent().put("requested_reviewer_id", JsonNodeUtils.nullableMap(payload, "requested_reviewer", r -> r.get("id").asText()));
+                message.getContent().put("requested_reviewer_login", JsonNodeUtils.nullableMap(payload, "requested_reviewer", r -> r.get("login").asText()));
                 break;
             case "synchronize":
-                content.put("before", payload.get("before").asText());
-                content.put("after", payload.get("after").asText());
+                // required
+                message.getContent().put("before", payload.get("before").asText());
+                message.getContent().put("after", payload.get("after").asText());
                 break;
         }
 
-        return new Message(
-                new Metadata(
-                        EVENT_TYPE + " " + action,
-                        userId,
-                        now,
-                        projectId
-                ),
-                content
-        );
+        return message;
     }
 }

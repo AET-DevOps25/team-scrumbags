@@ -12,33 +12,22 @@ import java.util.UUID;
 public class SubIssueEventHandler extends GithubEventHandler{
 
     private static final String EVENT_TYPE = "sub_issues";
-    private final UserMappingRepo userMappingRepo;
 
     public SubIssueEventHandler(UserMappingRepo userMappingRepo) {
-        super(EVENT_TYPE);
-        this.userMappingRepo = userMappingRepo;
+        super(EVENT_TYPE, userMappingRepo);
     }
 
     @Override
     public Message handleEvent(UUID projectId, JsonNode payload, Long now) {
-        UUID userId = userMappingRepo.findById(new UserMapping.UserMappingId(
-                projectId, SupportedSystem.GITHUB, payload.get("sender").get("id").asText()
-        )).orElseThrow().getUserId();
+        var message = super.handleEvent(projectId, payload, now);
 
-        Map<String, Object> content = new HashMap<>();
+        message.getMetadata().setType(EVENT_TYPE + " " + payload.get("action").asText());
 
-        content.put("parent_issue_id", payload.get("parent_issue_id").asText());
-        content.put("sub_issue_id", payload.get("sub_issue_id").asText());
-        content.put("sub_issue", payload.get("sub_issue").asText());
+        // required fields
+        message.getContent().put("parent_issue_id", payload.get("parent_issue_id").asText());
+        message.getContent().put("sub_issue_id", payload.get("sub_issue_id").asText());
+        message.getContent().put("sub_issue", payload.get("sub_issue").asText());
 
-        return new Message(
-                new Metadata(
-                        EVENT_TYPE + " " + payload.get("action").asText(),
-                        userId,
-                        now,
-                        projectId
-                ),
-                content
-        );
+        return message;
     }
 }
