@@ -7,6 +7,9 @@ import java.util.Optional;
 
 public class JsonNodeUtils {
     public static Optional<String> textAt(JsonNode json, String path) {
+        if(path.charAt(0) != '/') {
+            path = "/" + path; // Ensure the path starts with a slash
+        }
         var node = json.at(path);
         if (node.isMissingNode() || node.isNull()) {
             return Optional.empty();
