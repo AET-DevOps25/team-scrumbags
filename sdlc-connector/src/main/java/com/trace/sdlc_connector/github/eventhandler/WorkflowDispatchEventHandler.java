@@ -28,7 +28,7 @@ public class WorkflowDispatchEventHandler extends GithubEventHandler{
         message.getContent().put("workflow", payload.get("workflow").asText());
 
         // required but nullable fields
-        message.getContent().put("inputs", JsonNodeUtils.nullableMap(payload, "inputs", JsonNode::asText));
+        JsonNodeUtils.putTextAtInMap(payload, "inputs", message.getContent());
 
         return message;
     }

@@ -9,7 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-public class PushEventHandler extends GithubEventHandler{
+public class PushEventHandler extends GithubEventHandler {
 
     private static final String EVENT_TYPE = "push";
 
@@ -35,8 +35,9 @@ public class PushEventHandler extends GithubEventHandler{
         message.getContent().put("ref", payload.get("ref").asText());
 
         // required but nullable fields
-        message.getContent().put("base_ref", JsonNodeUtils.nullableMap(payload, "base_ref", JsonNode::asText));
-        message.getContent().put("head_commit", JsonNodeUtils.nullableMap(payload, "head_commit", JsonNode::asText));
+        JsonNodeUtils.putTextAtInMap(payload, "base_ref", message.getContent());
+        JsonNodeUtils.putTextAtInMap(payload, "head_commit", message.getContent());
+
         return message;
     }
 }

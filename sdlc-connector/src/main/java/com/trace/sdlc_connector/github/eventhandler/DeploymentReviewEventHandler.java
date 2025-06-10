@@ -36,7 +36,7 @@ public class DeploymentReviewEventHandler extends GithubEventHandler {
         }
 
         // required field which can be null
-        message.getContent().put("workflow_run_id", JsonNodeUtils.nullableMap(payload, "workflow_run", wfr -> wfr.get("id").asText()));
+        JsonNodeUtils.putTextAtInMap(payload, "workflow_run/id", message.getContent());
 
         // optional field
         if (payload.has("workflow_job_runs")) {
@@ -49,20 +49,16 @@ public class DeploymentReviewEventHandler extends GithubEventHandler {
 
         switch (action) {
             case "approved", "rejected":
-                if (payload.has("comment")) {
-                    message.getContent().put("comment", payload.get("comment").asText());
-                }
-                if (payload.has("approver")) {
-                    JsonNodeUtils.optional(payload, "approver", a -> {
-                        message.getContent().put("approver_id", a.get("id").asText());
-                        message.getContent().put("approver_login", a.get("login").asText());
-                    });
-                }
+                JsonNodeUtils.putTextAtInMap(payload, "comment", message.getContent());
+
+                JsonNodeUtils.putTextAtInMap(payload, "approver/id", message.getContent());
+                JsonNodeUtils.putTextAtInMap(payload, "approver/login", message.getContent());
                 break;
             case "requested":
                 message.getContent().put("environment", payload.get("environment").asText());
-                message.getContent().put("requestor_id", JsonNodeUtils.nullableMap(payload, "requestor", r -> r.get("id").asText()));
-                message.getContent().put("requestor_login", JsonNodeUtils.nullableMap(payload, "requestor", r -> r.get("login").asText()));
+
+                JsonNodeUtils.putTextAtInMap(payload, "requestor/id", message.getContent());
+                JsonNodeUtils.putTextAtInMap(payload, "requestor/login", message.getContent());
                 break;
         }
 

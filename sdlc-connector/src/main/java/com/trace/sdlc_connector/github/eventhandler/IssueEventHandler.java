@@ -32,35 +32,27 @@ public class IssueEventHandler extends GithubEventHandler {
         switch (action) {
             case "assigned", "unassigned":
                 // optional and nullable
-                if (payload.has("assignee")) {
-                    message.getContent().put("assignee_id", JsonNodeUtils.nullableMap(payload, "assignee", a -> a.get("id").asText()));
-                    message.getContent().put("assignee_login", JsonNodeUtils.nullableMap(payload, "assignee", a -> a.get("login").asText()));
-                }
+                JsonNodeUtils.putTextAtInMap(payload, "assignee/id", message.getContent());
+                JsonNodeUtils.putTextAtInMap(payload, "assignee/login", message.getContent());
                 break;
             case "demilestoned", "milestoned":
-                if (payload.has("milestone")) {
-                    message.getContent().put("milestone_id", JsonNodeUtils.nullableMap(payload, "milestone", m -> m.get("id").asText()));
-                    message.getContent().put("milestone_title", JsonNodeUtils.nullableMap(payload, "milestone", m -> m.get("title").asText()));
-                }
+                JsonNodeUtils.putTextAtInMap(payload, "milestone/id", message.getContent());
+                JsonNodeUtils.putTextAtInMap(payload, "milestone/title", message.getContent());
                 break;
             case "edited":
                 message.getContent().put("changes", payload.get("changes").asText());
                 // intended fall-through to handle "label"
             case "labeled", "unlabeled":
                 // optional
-                JsonNodeUtils.optional(payload, "label", label -> {
-                    message.getContent().put("label_id", label.get("id").asText());
-                    message.getContent().put("label_name", label.get("name").asText());
-                });
+                JsonNodeUtils.putTextAtInMap(payload, "label/id", message.getContent());
+                JsonNodeUtils.putTextAtInMap(payload, "label/name", message.getContent());
                 break;
             case "opened", "transferred":
-                if (payload.has("changes")) {
-                    message.getContent().put("changes", payload.get("changes").asText());
-                }
+                JsonNodeUtils.putTextAtInMap(payload, "changes", message.getContent());
                 break;
             case "typed":
                 // required nullable field
-                message.getContent().put("type", JsonNodeUtils.nullableMap(payload, "type", t -> t.asText()));
+                JsonNodeUtils.putTextAtInMap(payload, "type", message.getContent());
                 break;
         }
 

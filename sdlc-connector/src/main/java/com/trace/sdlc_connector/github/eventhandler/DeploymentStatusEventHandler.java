@@ -25,17 +25,11 @@ public class DeploymentStatusEventHandler extends GithubEventHandler {
         message.getContent().put("deployment_status", payload.get("deployment_status").asText());
 
         // optional and possibly null fields
-        if (payload.has("check_run")) {
-            message.getContent().put("check_run", JsonNodeUtils.nullableMap(payload, "check_run", cr -> cr.asText()));
-        }
-        if (payload.has("workflow")) {
-            message.getContent().put("workflow_id", JsonNodeUtils.nullableMap(payload, "workflow", wf -> wf.get("id").asText()));
-            message.getContent().put("workflow_name", JsonNodeUtils.nullableMap(payload, "workflow", wf -> wf.get("name").asText()));
-        }
-        if (payload.has("workflow_run")) {
-            message.getContent().put("workflow_run_id", JsonNodeUtils.nullableMap(payload, "workflow_run", wr -> wr.get("id").asText()));
-            message.getContent().put("workflow_run_name", JsonNodeUtils.nullableMap(payload, "workflow_run", wr -> wr.get("name").asText()));
-        }
+        JsonNodeUtils.putTextAtInMap(payload, "check_run", message.getContent());
+        JsonNodeUtils.putTextAtInMap(payload, "workflow/id", message.getContent());
+        JsonNodeUtils.putTextAtInMap(payload, "workflow/name", message.getContent());
+        JsonNodeUtils.putTextAtInMap(payload, "workflow_run/id", message.getContent());
+        JsonNodeUtils.putTextAtInMap(payload, "workflow_run/name", message.getContent());
 
         return message;
     }

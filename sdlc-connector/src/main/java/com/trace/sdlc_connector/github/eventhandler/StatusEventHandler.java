@@ -9,7 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-public class StatusEventHandler extends GithubEventHandler{
+public class StatusEventHandler extends GithubEventHandler {
 
     private static final String EVENT_TYPE = "status";
 
@@ -38,8 +38,8 @@ public class StatusEventHandler extends GithubEventHandler{
         message.getContent().put("branches", branches.toString());
 
         // required but nullable fields
-        message.getContent().put("description", JsonNodeUtils.nullableMap(payload, "description", JsonNode::asText));
-        message.getContent().put("target_url", JsonNodeUtils.nullableMap(payload, "target_url", JsonNode::asText));
+        JsonNodeUtils.putTextAtInMap(payload, "description", message.getContent());
+        JsonNodeUtils.putTextAtInMap(payload, "target_url", message.getContent());
 
         return message;
     }

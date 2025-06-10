@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-public class PullRequestEventHandler extends GithubEventHandler{
+public class PullRequestEventHandler extends GithubEventHandler {
 
     private static final String EVENT_TYPE = "pull_request";
 
@@ -31,8 +31,8 @@ public class PullRequestEventHandler extends GithubEventHandler{
         switch (action) {
             case "assigned", "unassigned":
                 // required but nullable
-                message.getContent().put("assignee_id", JsonNodeUtils.nullableMap(payload, "assignee", a -> a.get("id").asText()));
-                message.getContent().put("assignee_login", JsonNodeUtils.nullableMap(payload, "assignee", a -> a.get("login").asText()));
+                JsonNodeUtils.putTextAtInMap(payload, "assignee/id", message.getContent());
+                JsonNodeUtils.putTextAtInMap(payload, "assignee/login", message.getContent());
                 break;
             case "auto_merge_disabled", "auto_merge_enabled":
                 // required
@@ -40,10 +40,8 @@ public class PullRequestEventHandler extends GithubEventHandler{
                 break;
             case "demilestoned", "milestoned":
                 // optional
-                JsonNodeUtils.optional(payload, "milestone", milestone -> {
-                    message.getContent().put("milestone_id", milestone.get("id").asText());
-                    message.getContent().put("milestone_title", milestone.get("title").asText());
-                });
+                JsonNodeUtils.putTextAtInMap(payload, "milestone/id", message.getContent());
+                JsonNodeUtils.putTextAtInMap(payload, "milestone/title", message.getContent());
                 break;
             case "dequeued":
                 // required
@@ -55,15 +53,13 @@ public class PullRequestEventHandler extends GithubEventHandler{
                 break;
             case "labeled", "unlabeled":
                 // optional
-                JsonNodeUtils.optional(payload, "label", label -> {
-                    message.getContent().put("label_id", label.get("id").asText());
-                    message.getContent().put("label_name", label.get("name").asText());
-                });
+                JsonNodeUtils.putTextAtInMap(payload, "label/id", message.getContent());
+                JsonNodeUtils.putTextAtInMap(payload, "label/name", message.getContent());
                 break;
             case "review_request_removed", "review_requested":
                 // required but nullable
-                message.getContent().put("requested_reviewer_id", JsonNodeUtils.nullableMap(payload, "requested_reviewer", r -> r.get("id").asText()));
-                message.getContent().put("requested_reviewer_login", JsonNodeUtils.nullableMap(payload, "requested_reviewer", r -> r.get("login").asText()));
+                JsonNodeUtils.putTextAtInMap(payload, "requested_reviewer/id", message.getContent());
+                JsonNodeUtils.putTextAtInMap(payload, "requested_reviewer/login", message.getContent());
                 break;
             case "synchronize":
                 // required

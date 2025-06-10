@@ -27,9 +27,7 @@ public class WorkflowJobEventHandler extends GithubEventHandler{
         message.getContent().put("workflow_job", payload.get("workflow_job").asText());
 
         // optional fields
-        JsonNodeUtils.optional(payload, "deployment", d -> {
-            message.getContent().put("deployment", d.asText());
-        });
+        JsonNodeUtils.putTextAtInMap(payload, "deployment", message.getContent());
 
         return message;
     }

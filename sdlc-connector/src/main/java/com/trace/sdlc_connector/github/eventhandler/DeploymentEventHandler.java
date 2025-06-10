@@ -22,9 +22,9 @@ public class DeploymentEventHandler extends GithubEventHandler {
 
         message.getContent().put("deployment", payload.get("deployment").asText());
         // required but nullable fields
-        message.getContent().put("workflow_id", JsonNodeUtils.nullableMap(payload, "workflow", wf -> wf.get("id").asText()));
-        message.getContent().put("workflow_name", JsonNodeUtils.nullableMap(payload, "workflow", wf -> wf.get("name").asText()));
-        message.getContent().put("workflow_run_id", JsonNodeUtils.nullableMap(payload, "workflow_run", wr -> wr.get("id").asText()));
+        JsonNodeUtils.putTextAtInMap(payload,"workflow/id", message.getContent());
+        JsonNodeUtils.putTextAtInMap(payload,"workflow/name", message.getContent());
+        JsonNodeUtils.putTextAtInMap(payload,"workflow_run/id", message.getContent());
 
         return message;
     }
