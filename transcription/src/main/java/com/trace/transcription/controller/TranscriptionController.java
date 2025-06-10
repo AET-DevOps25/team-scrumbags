@@ -8,22 +8,29 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.context.request.async.DeferredResult;
 import org.springframework.web.multipart.MultipartFile;
 import jep.JepException;
 import jep.SharedInterpreter;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
+import java.util.stream.Stream;
 
 
 @RestController
 public class TranscriptionController {
 
     public static final Logger logger = LoggerFactory.getLogger(TranscriptionController.class);
+    private final ThreadPoolTaskExecutor executor;
 
     private final String coreServiceUrl; // e.g. "http://core-service:8080"
     private final RestTemplate restTemplate = new RestTemplate();
@@ -31,7 +38,8 @@ public class TranscriptionController {
     private final SpeakerRepository speakerRepository;
     private final TranscriptRepository transcriptRepository;
 
-    public TranscriptionController(@Value("${core.service.url}") String coreServiceUrl, SpeakerRepository speakerRepository, TranscriptRepository transcriptRepository) {
+    public TranscriptionController(ThreadPoolTaskExecutor executor, @Value("${core.service.url}") String coreServiceUrl, SpeakerRepository speakerRepository, TranscriptRepository transcriptRepository) {
+        this.executor = executor;
         this.coreServiceUrl = coreServiceUrl;
         this.speakerRepository = speakerRepository;
         this.transcriptRepository = transcriptRepository;
@@ -113,113 +121,105 @@ public class TranscriptionController {
     }
 
     /**
-     * POST /{projectId}/receive
+     * POST projects/{projectId}/receive
      * <p>
      * Request (multipart/form-data):
      *   - file: MultipartFile
      * <p>
-     * 1. stores uploaded file into temp folder
-     * 2. copies all speaker audio blobs to created temp folder
-     * 3. JEP calls transcriber python script, passes temp folder path
-     * 4. Transcriber returns JSON-formatted transcript
-     * 5. sends transcript to core service //todo change send to genai service instead, when genai service ready
+     * Receives an audio file, processes it to generate a transcript, and sends the transcript to the core service.
      */
     @PostMapping("projects/{projectId}/receive")
-    public ResponseEntity<String> receiveMediaAndSendTranscript(
+    public DeferredResult<ResponseEntity<String>> receiveMediaAndSendTranscript(
             @PathVariable("projectId") UUID projectId,
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "timestamp", required = false) Date timestamp
     ) {
 
-        Path tempDir;
+        DeferredResult<ResponseEntity<String>> deferredResult = new DeferredResult<>();
 
-        try {
-            tempDir = Files.createTempDirectory("media-" + projectId + "-");
-        } catch (IOException e) {
-            logger.error("Failed to create temp directory for project {}: {}", projectId, e.getMessage());
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Could not create temp directory: " + e.getMessage());
-        }
+        executor.execute(() -> {
+            try {
+                String transcriptJson = transcriptAsync(projectId, file);
 
+                // Forward JSON to core service
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                HttpEntity<String> entity = new HttpEntity<>(transcriptJson, headers);
+                String endpoint = coreServiceUrl + "projects/" + projectId + "/transcripts";
+                ResponseEntity<String> coreResponse = restTemplate.postForEntity(endpoint, entity, String.class);
+
+                if (!coreResponse.getStatusCode().is2xxSuccessful()) {
+                    logger.error("Core service returned {} when posting transcript: {}",
+                            coreResponse.getStatusCode(), coreResponse.getBody());
+                    deferredResult.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .body("Failed to send transcript: " + coreResponse.getBody()));
+                } else {
+                    deferredResult.setResult(ResponseEntity.ok("Transcript successfully created and sent."));
+                }
+            } catch (Exception ex) {
+                logger.error("Error processing audio for project {}: {}", projectId, ex.getMessage());
+                deferredResult.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Processing error: " + ex.getMessage()));
+            }
+        });
+
+        return deferredResult;
+    }
+
+    private String transcriptAsync(UUID projectId, MultipartFile file) throws IOException, InterruptedException {
+        Path tempDir = Files.createTempDirectory("media-" + projectId + "-");
         try {
-            // save incoming file to tempDir
+            // Save incoming file
             String cleanFileName = Paths.get(Objects.requireNonNull(file.getOriginalFilename()))
-                    .getFileName()
-                    .toString();
+                    .getFileName().toString();
             Path incomingPath = tempDir.resolve(cleanFileName);
             Files.copy(file.getInputStream(), incomingPath, StandardCopyOption.REPLACE_EXISTING);
             logger.info("Stored incoming file: {} for project {}", cleanFileName, projectId);
 
-            // copy all speaker audio blobs to tempDir
-            List<SpeakerEntity> speakerList = speakerRepository.findAllByProjectId(projectId);
-            for (SpeakerEntity speaker : speakerList) {
-                byte[] audioBytes = speaker.getSpeakingSample(); // BLOB column
-                String sampleExt = speaker.getSampleExtension(); // e.g. "mp3", "wav"
-                if (audioBytes != null && audioBytes.length > 0) {
-                    // Give each file a unique filename, e.g. "<speakerId>.<sampleExt>"
-                    Path speakerPath = tempDir.resolve(speaker.getId() + sampleExt);
-                    Files.write(speakerPath, audioBytes, StandardOpenOption.CREATE);
+            // Dump speaker samples
+            List<SpeakerEntity> speakers = speakerRepository.findAllByProjectId(projectId);
+            for (SpeakerEntity speaker : speakers) {
+                byte[] audio = speaker.getSpeakingSample();
+                String ext = speaker.getSampleExtension();
+                if (audio != null && audio.length > 0) {
+                    Path spath = tempDir.resolve("sample-" + speaker.getId() + "." + ext);
+                    Files.write(spath, audio, StandardOpenOption.CREATE);
                 }
             }
 
-            // use JEP to call transcriber.py script
-            String transcriptJson;
-            try (SharedInterpreter interp = new SharedInterpreter()) {
-                // Add the directory containing my_transcriber.py to sys.path
-                interp.exec("import sys; print(sys.executable)");
-                interp.exec("sys.path.append('scripts')"); // Make sure 'scripts/' is in PYTHONPATH
+            // Launch Python process
+            String pythonPath = Paths.get(".venv", "bin", "python").toAbsolutePath().toString();
+            ProcessBuilder pb = new ProcessBuilder("/opt/venv/bin/python", "transcriber.py", tempDir.toString())
+                    .redirectErrorStream(true);
 
-                // Bind the tempDir path into Python as a variable
-                interp.set("input_dir", tempDir.toString());
+            Process proc = pb.start();
 
-                // Import and call the function. Replace package name if needed.
-                interp.exec("import transcriber");
-                Object result = interp.getValue("transcriber.process_audio(input_dir)");
-
-                if (result == null) {
-                    throw new JepException("Python returned null transcript");
+            // Capture output
+            StringBuilder output = new StringBuilder();
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(proc.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    output.append(line);
                 }
-                transcriptJson = result.toString();
-            } catch (JepException e) {
-                logger.error("JEP error processing audio for project {}: {}", projectId, e.getMessage());
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body("Error processing audio: " + e.getMessage());
             }
 
-            // Step 4: Forward the JSON to the core service
-            HttpHeaders jsonHeaders = new HttpHeaders();
-            jsonHeaders.setContentType(MediaType.APPLICATION_JSON);
-            HttpEntity<String> coreRequest = new HttpEntity<>(transcriptJson, jsonHeaders);
-
-            String coreEndpoint = coreServiceUrl + "/" + projectId + "/transcripts";
-            ResponseEntity<String> coreResponse = restTemplate.postForEntity(
-                    coreEndpoint, coreRequest, String.class);
-
-            if (!coreResponse.getStatusCode().is2xxSuccessful()) {
-                logger.error("Core service returned status {} when posting transcript",
-                        coreResponse.getStatusCode());
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body("Failed to send transcript to core service: " + coreResponse.getBody());
+            int exitCode = proc.waitFor();
+            if (exitCode != 0) {
+                throw new RuntimeException("Python exited with code " + exitCode + ": " + output);
             }
-
-            return ResponseEntity.ok("Transcript successfully created and sent to core service.");
-
-        } catch (IOException | JepException ex) {
-            logger.error("Error processing audio for project {}: {}", projectId, ex.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Processing error: " + ex.getMessage());
+            String transcriptJson = output.toString();
+            if (transcriptJson.isEmpty()) {
+                throw new RuntimeException("Empty transcript from Python script");
+            }
+            return transcriptJson;
         } finally {
-            //clean up temp directory
-            try {
-                Files.walk(tempDir)
-                        .sorted(Comparator.reverseOrder())
-                        .map(Path::toFile)
-                        .forEach(File::delete);
-                logger.info("Cleaned up temp directory: {}", tempDir);
-            } catch (IOException e) {
-                logger.error("Failed to clean up temp directory {}: {}", tempDir, e.getMessage());
-            }
+            // Cleanup
+            Files.walk(tempDir)
+                    .sorted(Comparator.reverseOrder())
+                    .map(Path::toFile)
+                    .forEach(File::delete);
+            logger.info("Cleaned up temp directory: {}", tempDir);
         }
     }
 
@@ -327,7 +327,9 @@ public class TranscriptionController {
         return ResponseEntity.ok(transcripts);
     }
 
+
     //include timestamp in transcript, extract from audio file metadata if available, else request timestamp / current time
     //launch processing in thread to not block
+    //todo add transcripts to db with timestamp
 
 }
