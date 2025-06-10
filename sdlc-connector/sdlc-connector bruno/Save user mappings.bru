@@ -1,15 +1,19 @@
 meta {
   name: Save user mappings
   type: http
-  seq: 6
+  seq: 5
 }
 
 post {
-  url: {{base_url}}/projects/c8bcfd02-1065-4532-a414-b48107968dcc/users/GITHUB/githubuserid1?userId=149519f7-23d0-466e-a2b1-8e236b86c8b3
-  body: none
+  url: {{base_url}}/projects/c8bcfd02-1065-4532-a414-b48107968dcc/users
+  body: json
   auth: inherit
 }
 
-params:query {
-  userId: 149519f7-23d0-466e-a2b1-8e236b86c8b3
+body:json {
+  {
+    "platform": "GITHUB",
+    "platformUserId": "githubuserid1",
+    "userId": "149519f7-23d0-466e-a2b1-8e236b86c8b3"
+  }
 }

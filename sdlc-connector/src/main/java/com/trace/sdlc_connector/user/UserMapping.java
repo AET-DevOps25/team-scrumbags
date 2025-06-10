@@ -53,6 +53,10 @@ public class UserMapping {
         return projectId;
     }
 
+    public void setProjectId(UUID projectId) {
+        this.projectId = projectId;
+    }
+
     public SupportedSystem getPlatform() {
         return platform;
     }

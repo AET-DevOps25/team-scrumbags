@@ -4,8 +4,10 @@ import com.trace.sdlc_connector.SupportedSystem;
 import com.trace.sdlc_connector.token.TokenEntity;
 import com.trace.sdlc_connector.token.TokenService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -18,40 +20,30 @@ public class UserController {
         this.userMappingRepo = userMappingRepo;
     }
 
-    @PostMapping("projects/{projectId}/users/{platform}/{platformUserId}")
+    @PostMapping("projects/{projectId}/users")
     public ResponseEntity<?> saveUserMapping(@PathVariable UUID projectId,
-                                             @PathVariable SupportedSystem platform,
-                                             @PathVariable String platformUserId,
-                                             @RequestParam(required = true, name = "userId") UUID userId
+                                             @RequestBody UserMapping userMapping
     ) {
-        if (platformUserId.isEmpty()) {
-            return ResponseEntity.badRequest().body("platform user id is empty");
+        if (userMapping.getPlatform() == null || !StringUtils.hasText(userMapping.getPlatformUserId()) || userMapping.getUserId() == null) {
+            return ResponseEntity.badRequest().body("Invalid user mapping data. Platform, platformUserId, and userId are required.");
         }
 
-        var userMapping = userMappingRepo.save(new UserMapping(
-                projectId,
-                platform,
-                platformUserId,
-                userId
-        ));
-
+        userMapping.setProjectId(projectId);
+        userMapping = userMappingRepo.save(userMapping);
 
         return ResponseEntity.ok(userMapping);
     }
 
     @GetMapping("projects/{projectId}/users")
-    public ResponseEntity<?> getUserMappingByPlatform(@PathVariable UUID projectId) {
+    public ResponseEntity<?> getUserMapping(@PathVariable UUID projectId,
+                                            @RequestParam(required = false) SupportedSystem platform) {
 
-        var userMappings = userMappingRepo.findAllByProjectId(projectId);
-
-        return ResponseEntity.ok(userMappings);
-    }
-
-    @GetMapping("projects/{projectId}/users/{platform}")
-    public ResponseEntity<?> getUserMappingByPlatform(@PathVariable UUID projectId,
-                                                      @PathVariable SupportedSystem platform) {
-
-        var userMappings = userMappingRepo.findAllByProjectIdAndPlatform(projectId, platform);
+        List<UserMapping> userMappings;
+        if(platform != null){
+            userMappings = userMappingRepo.findAllByProjectIdAndPlatform(projectId, platform);
+        } else {
+            userMappings = userMappingRepo.findAllByProjectId(projectId);
+        }
 
         return ResponseEntity.ok(userMappings);
     }

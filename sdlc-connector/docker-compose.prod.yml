@@ -36,11 +36,11 @@ services:
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.server.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.server.rule=Host(`${DOMAIN}`) && PathPrefix(`/sdlc`)"
       - "traefik.http.services.server.loadbalancer.server.port=8080"
       - "traefik.http.routers.server.entrypoints=websecure"
       - "traefik.http.routers.server.tls.certresolver=letsencrypt"
-      - "traefik.http.middlewares.strip-api.stripprefix.prefixes=/api"
+      - "traefik.http.middlewares.strip-api.stripprefix.prefixes=/sdlc"
       - "traefik.http.routers.server.middlewares=strip-api"
 
   db:

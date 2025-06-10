@@ -64,7 +64,7 @@ public class GithubConnector {
 
     }
 
-    @PostMapping("projects/{projectId}/github")
+    @PostMapping("projects/{projectId}/webhook/github")
     public ResponseEntity<?> webhookHandler(
             @PathVariable UUID projectId,
             @RequestBody String payload,
