@@ -27,7 +27,8 @@ public abstract class GithubEventHandler {
     }
 
     public Message handleEvent(UUID projectId, JsonNode payload, Long now) {
-        Map<String, Object> content = Map.of("platform", SupportedSystem.GITHUB);
+        Map<String, Object> content = new HashMap<>();
+        content.put("platform", SupportedSystem.GITHUB);
 
         UUID userId = userMappingRepo.findById(new UserMapping.UserMappingId(
                 projectId, SupportedSystem.GITHUB, payload.get("sender").get("id").asText()
