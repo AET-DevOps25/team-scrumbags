@@ -1,6 +1,7 @@
 package com.trace.transcription.controller;
 
 import com.trace.transcription.model.SpeakerEntity;
+import com.trace.transcription.model.TranscriptEntity;
 import com.trace.transcription.repository.SpeakerRepository;
 import com.trace.transcription.repository.TranscriptRepository;
 import org.apache.commons.io.FilenameUtils;
@@ -320,11 +321,13 @@ public class TranscriptionController {
      */
     @GetMapping("projects/{projectId}/transcripts")
     public ResponseEntity<List<String>> getAllTranscripts(@PathVariable("projectId") UUID projectId) {
-        List<String> transcripts = transcriptRepository.findAllByProjectId(projectId);
+        List<TranscriptEntity> transcripts = transcriptRepository.findAllByProjectId(projectId);
         if (transcripts.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
-        return ResponseEntity.ok(transcripts);
+        return ResponseEntity.ok(transcripts.stream()
+                .map(TranscriptEntity::getContent)
+                .toList());
     }
 
 
