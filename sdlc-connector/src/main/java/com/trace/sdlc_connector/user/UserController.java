@@ -36,11 +36,18 @@ public class UserController {
 
     @GetMapping("projects/{projectId}/users")
     public ResponseEntity<?> getUserMapping(@PathVariable UUID projectId,
-                                            @RequestParam(required = false) SupportedSystem platform) {
+                                            @RequestParam(required = false) SupportedSystem platform,
+                                            @RequestParam(required = false) String platformUserId
+                                            ) {
 
         List<UserMapping> userMappings;
         if(platform != null){
-            userMappings = userMappingRepo.findAllByProjectIdAndPlatform(projectId, platform);
+            if(StringUtils.hasText(platformUserId)) {
+                userMappings = userMappingRepo.findById(new UserMapping.UserMappingId(projectId, platform, platformUserId))
+                        .stream().toList();
+            } else {
+                userMappings = userMappingRepo.findAllByProjectIdAndPlatform(projectId, platform);
+            }
         } else {
             userMappings = userMappingRepo.findAllByProjectId(projectId);
         }

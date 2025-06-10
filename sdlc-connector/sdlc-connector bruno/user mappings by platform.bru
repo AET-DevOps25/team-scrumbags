@@ -5,11 +5,12 @@ meta {
 }
 
 get {
-  url: {{base_url}}/projects/c8bcfd02-1065-4532-a414-b48107968dcc/users
+  url: {{base_url}}/projects/c8bcfd02-1065-4532-a414-b48107968dcc/users?platformUserId=githubuserid1&platform=GITHUB
   body: none
   auth: inherit
 }
 
 params:query {
-  ~platform: GITHUB
+  platformUserId: githubuserid1
+  platform: GITHUB
 }
