@@ -183,7 +183,7 @@ public class TranscriptionController {
                 byte[] audio = speaker.getSpeakingSample();
                 String ext = speaker.getSampleExtension();
                 if (audio != null && audio.length > 0) {
-                    Path spath = tempDir.resolve("sample-" + speaker.getName() + "." + ext);
+                    Path spath = tempDir.resolve("sample-" + speaker.getName() + "_" + speaker.getId() + "." + ext);
                     Files.write(spath, audio, StandardOpenOption.CREATE);
                 }
             }
@@ -194,25 +194,28 @@ public class TranscriptionController {
 
             Process proc = pb.start();
 
-            // Capture output
-            StringBuilder output = new StringBuilder();
+            // Log output
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(proc.getInputStream(), StandardCharsets.UTF_8))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    output.append(line);
+                    logger.info("[Transcriber] {}", line);
                 }
             }
 
             int exitCode = proc.waitFor();
             if (exitCode != 0) {
-                throw new RuntimeException("Python exited with code " + exitCode + ": " + output);
+                throw new RuntimeException("Python exited with code " + exitCode + ". Check logs for details.");
             }
-            String transcriptJson = output.toString();
-            if (transcriptJson.isEmpty()) {
-                throw new RuntimeException("Empty transcript from Python script");
+
+            // Read JSON output from file
+            Path resultPath = tempDir.resolve("transcription_result.json");
+            if (!Files.exists(resultPath)) {
+                throw new RuntimeException("Transcription result file not found: " + resultPath);
             }
-            logger.info("Received transcript JSON: {}", transcriptJson);
+
+            String transcriptJson = Files.readString(resultPath, StandardCharsets.UTF_8);
+            logger.info("Read transcript from file: {}", resultPath);
             return transcriptJson;
         } finally {
             // Cleanup
@@ -331,8 +334,9 @@ public class TranscriptionController {
     }
 
 
-    //include timestamp in transcript, extract from audio file metadata if available, else request timestamp / current time
-    //launch processing in thread to not block
+    //todo include timestamp in transcript, extract from audio file metadata if available, else request timestamp / current time
     //todo add transcripts to db with timestamp
+    //todo adjust transcript object structure to be compatible with genai
+    //todo fix offset
 
 }
