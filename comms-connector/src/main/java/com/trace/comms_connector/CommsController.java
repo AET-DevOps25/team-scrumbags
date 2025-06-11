@@ -16,6 +16,10 @@ public class CommsController {
     @Autowired
     private final CommsService commsService;
 
+    /*
+     * TODO: Maybe change some path variables to query parameters
+     */
+
     @GetMapping("/{platform}/users")
     public ResponseEntity<?> getPlatformUsers(@PathVariable UUID projectId, @PathVariable Platform platform) {
         var userList = commsService.getUsersByProjectId(projectId, platform);
@@ -23,11 +27,6 @@ public class CommsController {
         return ResponseEntity.ok(userList);
     }
 
-    /** 
-     * 
-     * TODO: Add integrations without specifying channel and user IDs (get these from Discord and core)
-     *
-     */
     @PostMapping("/{platform}/add")
     public ResponseEntity<?> addCommsIntegration(
         @PathVariable UUID projectId,
@@ -35,19 +34,20 @@ public class CommsController {
         @RequestParam(required = true, name = "channelIdList") List<String> channelIdList,
         @RequestParam(required = true, name = "userIdList") List<UUID> userIdList
     ) {
+        // TODO: Add integrations without specifying channel and user IDs (get these from Discord and core)
         var connectionList = commsService.addCommIntegration(projectId, platform, channelIdList, userIdList);
 
         return ResponseEntity.ok(connectionList);
     }
 
-    @PatchMapping("/{platform}/users/save/{userId}/{platformUserId}")
-    public ResponseEntity<?> addPlatformUserId(
+    @PatchMapping("/{platform}/users/save/{userId}/{platformUsername}")
+    public ResponseEntity<?> addPlatformUsername(
         @PathVariable UUID projectId,
         @PathVariable Platform platform,
         @PathVariable UUID userId,
-        @PathVariable String platformUserId
+        @PathVariable String platformUsername
     ) {
-        var userEntity = commsService.saveUser(projectId, userId, platform, platformUserId);
+        var userEntity = commsService.saveUser(projectId, userId, platform, platformUsername);
 
         return ResponseEntity.ok(userEntity);
     }

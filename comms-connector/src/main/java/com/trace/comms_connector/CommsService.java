@@ -70,9 +70,9 @@ public class CommsService {
         @NonNull UUID projectId,
         @NonNull UUID userId,
         @NonNull Platform platform,
-        @Nullable String platformUserId
+        @Nullable String platformUsername
     ) {
-        UserEntity userEntity = new UserEntity(projectId, userId, platform, platformUserId);
+        UserEntity userEntity = new UserEntity(projectId, userId, platform, platformUsername);
         userEntity = userRepo.save(userEntity);
         return userEntity;
     }
@@ -142,17 +142,13 @@ public class CommsService {
      * @param userIdList
      * @return
      */
-    /** 
-     * 
-     * TODO: Add integrations without specifying channel and user IDs (get these from Discord and core)
-     *
-     */
     public List<ConnectionEntity> addCommIntegration(
         @NonNull UUID projectId,
         @NonNull Platform platform,
         @NonNull List<String> channelIdList,
         @NonNull List<UUID> userIdList
     ) {
+        // TODO: Add integrations without specifying channel and user IDs (get these from Discord and core)
         ArrayList<ConnectionEntity> connections = new ArrayList<ConnectionEntity>(); 
         for (String channel : channelIdList) {
             var connection = this.saveConnection(projectId, channel, platform, null); 
