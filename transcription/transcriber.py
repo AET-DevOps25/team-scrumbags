@@ -12,13 +12,12 @@ def find_speakers_and_inputs(directory):
     ids = {}  # maps uuid -> name
     empty_ids = {} # maps name -> ""
     input_media = []
+    to_be_transcribed = None
 
     # Matches: sample-<name>_<uuid>.<ext>
     sample_pattern = re.compile(r"sample-(\w+)_([^_]+)\.\w+$", re.IGNORECASE)
 
     media_extensions = (".mp3", ".wav", ".m4a", ".flac", ".aac", ".ogg", ".mp4", ".mov", "opus")
-
-    to_be_transcribed = ""
 
     for filename in os.listdir(directory):
         file_path = os.path.join(directory, filename)
@@ -31,9 +30,9 @@ def find_speakers_and_inputs(directory):
                 ids[speaker_id] = speaker_name
                 empty_ids[speaker_id] = ""
                 input_media.append(file_path)
-            else:
+            elif filename != "file-separator.wav":
                 to_be_transcribed = file_path
-    
+
     input_media.append(to_be_transcribed)
     return empty_ids, ids, input_media
 
@@ -53,36 +52,49 @@ def merge_wav_files(wav_paths, output_path):
     combined.export(output_path, format="wav")
 
 def convert_and_merge(inputs, output, directory):
-    """
-    Converts each input to WAV, sums the durations of all samples EXCEPT
-    the last one, merges everything into `output`, then returns the samples-duration.
-    """
-    # convert all to WAV
-    wavs = []
-    for idx, inp in enumerate(inputs):
-        out = os.path.join(directory, f"tmp_{idx}.wav")
+    sample_inputs = inputs[:-1]
+    real_input = inputs[-1]
+
+    sample_wavs = []
+    for idx, inp in enumerate(sample_inputs):
+        out = os.path.join(directory, f"tmp_sample_{idx}.wav")
         convert_to_wav(inp, out)
-        wavs.append(out)
+        sample_wavs.append(out)
 
-    # compute offset = total duration of sample clips
-    sample_durations = [
-        AudioSegment.from_wav(w).duration_seconds
-        for w in wavs[:-1]
-    ]
-    offset = sum(sample_durations)
+    sample_wavs.append(os.path.join(directory, "file-separator.wav"))
 
-    # merge into single WAV
-    merge_wav_files(wavs, output)
+    # Convert real input
+    real_wav = os.path.join(directory, "tmp_real.wav")
+    convert_to_wav(real_input, real_wav)
 
-    for wav_file in wavs:
+    # Calculate total sample duration
+    sample_duration = sum(AudioSegment.from_wav(w).duration_seconds for w in sample_wavs)
+    print(f"Total sample duration: {sample_duration:.2f} seconds")
+
+    # Define a fixed silence gap between samples and the real input
+    silence_gap = 2.0  # seconds
+    silence = AudioSegment.silent(duration=int(silence_gap * 1000))  # in ms
+
+    # Merge: [samples] + [silence] + [real audio]
+    combined = AudioSegment.empty()
+    for w in sample_wavs:
+        combined += AudioSegment.from_wav(w)
+        combined += silence  # Add silence after each sample
+    combined += AudioSegment.from_wav(real_wav)
+
+    combined.export(output, format="wav")
+
+    # Clean up temp files
+    for wav_file in sample_wavs:
         try:
-            os.remove(wav_file)
-            print(f"Deleted temporary file: {wav_file}")
+            if wav_file.startswith("tmp_sample_"):
+                os.remove(wav_file)
+                print(f"Deleted temporary file: {wav_file}")
         except OSError as e:
             print(f"Error deleting {wav_file}: {e}")
 
-    print(f"Merged WAV with offset {offset:.2f}s → {output}")
-    return offset
+    # Total offset is sample_duration
+    return sample_duration + silence_gap * (len(sample_wavs) - 1)
 
 if __name__ == "__main__":
     load_dotenv()
@@ -111,7 +123,7 @@ if __name__ == "__main__":
     # --- LOAD MODEL ---
     print("Loading WhisperX...")
     model_dir = "whisper_model/"
-    model = whisperx.load_model("turbo", device, compute_type=compute_type)
+    model = whisperx.load_model("turbo", device, compute_type=compute_type, download_root=model_dir)
 
     # --- PROCESS FILE ---
     print(f"Transcribing {merged}...")
@@ -164,14 +176,19 @@ if __name__ == "__main__":
         print(f"{segment['speaker']}\t{segment['speaker_id']}\t{segment['start']:.2f}\t{segment['end']:.2f}\t{segment['text']}")
 
     # --- FILTER & REBASE ---
+    offset = convert_and_merge(inputs, merged, args.directory)
+    TOLERANCE = 0.1  # Optional: very small tolerance now that separation is clean
+
     real_segments = []
+    index = 0
     for seg in result["segments"]:
-        if seg["start"] >= offset:
-            # clone & shift times
+        if seg["start"] >= offset - TOLERANCE:
             rebased = seg.copy()
+            rebased["index"] = index
             rebased["start"] -= offset
             rebased["end"]   -= offset
             real_segments.append(rebased)
+            index += 1
 
     # create result json structure with each segment containing speaker, start, end, and text
     result_json = []
