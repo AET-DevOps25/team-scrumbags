@@ -1,6 +1,6 @@
 package com.trace.sdlc_connector.github.eventhandler;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.jayway.jsonpath.DocumentContext;
 import com.trace.sdlc_connector.*;
 import com.trace.sdlc_connector.user.UserMappingRepo;
 
@@ -15,15 +15,14 @@ public class SubIssueEventHandler extends GithubEventHandler{
     }
 
     @Override
-    public Message handleEvent(UUID projectId, UUID eventId, JsonNode payload, Long now) {
+    public Message handleEvent(UUID projectId, UUID eventId, DocumentContext payload, Long now) {
         var message = super.handleEvent(projectId, eventId, payload, now);
 
-        message.getMetadata().setType(EVENT_TYPE + " " + payload.get("action").asText());
+        message.getMetadata().setType(EVENT_TYPE + " " + payload.read("$.action", String.class));
 
-        // required fields
-        message.getContent().put("parent_issue_id", payload.get("parent_issue_id").asText());
-        message.getContent().put("sub_issue_id", payload.get("sub_issue_id").asText());
-        message.getContent().put("sub_issue", payload.get("sub_issue").asText());
+        message.getContent().putAll(
+                JsonUtils.extract(payload, "$.parent_issue.id", "$.sub_issue.id", "$.sub_issue.title")
+        );
 
         return message;
     }

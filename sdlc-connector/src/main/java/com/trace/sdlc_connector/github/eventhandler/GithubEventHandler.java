@@ -1,6 +1,6 @@
 package com.trace.sdlc_connector.github.eventhandler;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.jayway.jsonpath.DocumentContext;
 import com.trace.sdlc_connector.Message;
 import com.trace.sdlc_connector.Metadata;
 import com.trace.sdlc_connector.SupportedSystem;
@@ -25,12 +25,12 @@ public abstract class GithubEventHandler {
         return eventType;
     }
 
-    public Message handleEvent(UUID projectId, UUID eventId, JsonNode payload, Long now) {
+    public Message handleEvent(UUID projectId, UUID eventId, DocumentContext payload, Long now) {
         Map<String, Object> content = new HashMap<>();
         content.put("platform", SupportedSystem.GITHUB);
 
         UUID userId = userMappingRepo.findById(new UserMapping.UserMappingId(
-                projectId, SupportedSystem.GITHUB, payload.get("sender").get("id").asText()
+                projectId, SupportedSystem.GITHUB, payload.read("$.sender.id", String.class)
         )).orElseThrow().getUserId();
 
         return new Message(

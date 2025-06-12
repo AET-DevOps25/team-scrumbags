@@ -1,9 +1,12 @@
 package com.trace.sdlc_connector.github.eventhandler;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.jayway.jsonpath.DocumentContext;
 import com.trace.sdlc_connector.*;
 import com.trace.sdlc_connector.user.UserMappingRepo;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public class StatusEventHandler extends GithubEventHandler {
@@ -15,28 +18,22 @@ public class StatusEventHandler extends GithubEventHandler {
     }
 
     @Override
-    public Message handleEvent(UUID projectId, UUID eventId, JsonNode payload, Long now) {
+    public Message handleEvent(UUID projectId, UUID eventId, DocumentContext payload, Long now) {
         var message = super.handleEvent(projectId, eventId, payload, now);
 
         message.getMetadata().setType(EVENT_TYPE);
 
-        // required fields
-        message.getContent().put("id", payload.get("id").asText());
-        message.getContent().put("name", payload.get("name").asText());
-        message.getContent().put("context", payload.get("context").asText());
-        message.getContent().put("state", payload.get("state").asText());
-        message.getContent().put("commit_sha", payload.get("sha").asText());
-        message.getContent().put("created_at", payload.get("created_at").asText());
-        message.getContent().put("updated_at", payload.get("updated_at").asText());
+        message.getContent().putAll(
+                JsonUtils.extract(payload, "$.id", "$.name", "$.context", "$.state",
+                        "$.sha", "$.description", "$.target_url", "$.created_at", "$.updated_at")
+        );
 
-        StringBuilder branches = new StringBuilder();
-        payload.get("branches").forEach(branch ->
-                branches.append(branch.asText()).append(","));
-        message.getContent().put("branches", branches.toString());
-
-        // required but nullable fields
-        JsonNodeUtils.putTextAtInMap(payload, "description", message.getContent());
-        JsonNodeUtils.putTextAtInMap(payload, "target_url", message.getContent());
+        List<Map<String, Object>> branches = payload.read("$.branches", List.class);
+        if (branches != null) {
+            message.getContent().put(
+                    "branches", branches
+            );
+        }
 
         return message;
     }

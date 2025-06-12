@@ -1,9 +1,12 @@
 package com.trace.sdlc_connector.github.eventhandler;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.jayway.jsonpath.DocumentContext;
 import com.trace.sdlc_connector.*;
 import com.trace.sdlc_connector.user.UserMappingRepo;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public class DeploymentReviewEventHandler extends GithubEventHandler {
@@ -15,51 +18,52 @@ public class DeploymentReviewEventHandler extends GithubEventHandler {
     }
 
     @Override
-    public Message handleEvent(UUID projectId, UUID eventId, JsonNode payload, Long now) {
+    public Message handleEvent(UUID projectId, UUID eventId, DocumentContext payload, Long now) {
         var message = super.handleEvent(projectId, eventId, payload, now);
 
-        var action = payload.get("action").asText();
-        message.getMetadata().setType(EVENT_TYPE + " " + action);
-        // required field
-        message.getContent().put("since", payload.get("since").asText());
+        message.getMetadata().setType(EVENT_TYPE + " " + payload.read("$.action", String.class));
 
-        StringBuilder reviewers = new StringBuilder();
-        if (payload.has("reviewers")) {
-            payload.get("reviewers").forEach(reviewer ->
-                    reviewers.append(
-                            "{" +
-                                    reviewer.get("reviewer_id").get("id").asText() +
-                                    reviewer.get("reviewer_login").get("login").asText()
-                                    + "}"
-                    ).append(","));
-            message.getContent().put("reviewers", reviewers.toString());
+        message.getContent().putAll(
+                JsonUtils.extract(payload, "$.since", "$.workflow_run.id", "$.comment",
+                        "$.approver.id", "$.approver.login",
+                        "$.environment", "$.requestor.id", "$.requestor.login"
+                )
+        );
+
+        // extract array fields
+        List<Map<String, Object>> reviewers = payload.read("$.reviewers", List.class);
+        if (reviewers != null) {
+            message.getContent().put(
+                    "reviewers", new ArrayList<Map<String, Object>>()
+            );
+
+            List<Map<String, Object>> list = (List<Map<String, Object>>) message.getContent().get("reviewers");
+
+            for (Map<String, Object> reviewer : reviewers) {
+                list.add(
+                        Map.of(
+                                "id", reviewer.get("id"),
+                                "login", reviewer.get("login")
+                        )
+                );
+            }
         }
 
-        // required field which can be null
-        JsonNodeUtils.putTextAtInMap(payload, "workflow_run/id", message.getContent());
+        List<Map<String, Object>> workflowJobRuns = payload.read("$.workflow_job_runs", List.class);
+        if (workflowJobRuns != null) {
+            message.getContent().put(
+                    "workflow_job_runs", new ArrayList<Map<String, Object>>()
+            );
 
-        // optional field
-        if (payload.has("workflow_job_runs")) {
-            StringBuilder workflowJobRuns = new StringBuilder();
-            payload.get("workflow_job_runs").forEach(workflowJobRun ->
-                    workflowJobRuns.append(workflowJobRun.get("id").asText()).append(","));
-            message.getContent().put("workflow_job_runs_ids", workflowJobRuns.toString());
-        }
+            List<Map<String, Object>> list = (List<Map<String, Object>>) message.getContent().get("workflow_job_runs");
 
-
-        switch (action) {
-            case "approved", "rejected":
-                JsonNodeUtils.putTextAtInMap(payload, "comment", message.getContent());
-
-                JsonNodeUtils.putTextAtInMap(payload, "approver/id", message.getContent());
-                JsonNodeUtils.putTextAtInMap(payload, "approver/login", message.getContent());
-                break;
-            case "requested":
-                message.getContent().put("environment", payload.get("environment").asText());
-
-                JsonNodeUtils.putTextAtInMap(payload, "requestor/id", message.getContent());
-                JsonNodeUtils.putTextAtInMap(payload, "requestor/login", message.getContent());
-                break;
+            for (Map<String, Object> workflowJobRun : workflowJobRuns) {
+                list.add(
+                        Map.of(
+                                "id", workflowJobRun.get("id")
+                        )
+                );
+            }
         }
 
         return message;

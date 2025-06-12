@@ -1,6 +1,6 @@
 package com.trace.sdlc_connector.github.eventhandler;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.jayway.jsonpath.DocumentContext;
 import com.trace.sdlc_connector.*;
 import com.trace.sdlc_connector.user.UserMappingRepo;
 
@@ -15,42 +15,15 @@ public class IssueEventHandler extends GithubEventHandler {
     }
 
     @Override
-    public Message handleEvent(UUID projectId, UUID eventId, JsonNode payload, Long now) {
+    public Message handleEvent(UUID projectId, UUID eventId, DocumentContext payload, Long now) {
         var message = super.handleEvent(projectId, eventId, payload, now);
 
-        var action = payload.get("action").asText();
-        message.getMetadata().setType(EVENT_TYPE + " " + action);
+        message.getMetadata().setType(EVENT_TYPE + " " + payload.read("$.action", String.class));
 
-        message.getContent().put("issue_id", payload.get("issue").get("id").asText());
-        message.getContent().put("issue_title", payload.get("issue").get("title").asText());
-
-        // optional fields
-        switch (action) {
-            case "assigned", "unassigned":
-                // optional and nullable
-                JsonNodeUtils.putTextAtInMap(payload, "assignee/id", message.getContent());
-                JsonNodeUtils.putTextAtInMap(payload, "assignee/login", message.getContent());
-                break;
-            case "demilestoned", "milestoned":
-                JsonNodeUtils.putTextAtInMap(payload, "milestone/id", message.getContent());
-                JsonNodeUtils.putTextAtInMap(payload, "milestone/title", message.getContent());
-                break;
-            case "edited":
-                message.getContent().put("changes", payload.get("changes").asText());
-                // intended fall-through to handle "label"
-            case "labeled", "unlabeled":
-                // optional
-                JsonNodeUtils.putTextAtInMap(payload, "label/id", message.getContent());
-                JsonNodeUtils.putTextAtInMap(payload, "label/name", message.getContent());
-                break;
-            case "opened", "transferred":
-                JsonNodeUtils.putTextAtInMap(payload, "changes", message.getContent());
-                break;
-            case "typed":
-                // required nullable field
-                JsonNodeUtils.putTextAtInMap(payload, "type", message.getContent());
-                break;
-        }
+        message.getContent().putAll(
+                JsonUtils.extract(payload, "$.issue.id", "$.issue.title", "$.assignee.id", "$.assignee.login",
+                        "$.milestone.id", "$.milestone.title", "$.label.id", "$.label.name", "$.changes", "$.type")
+        );
 
         return message;
     }

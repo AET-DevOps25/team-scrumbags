@@ -1,6 +1,6 @@
 package com.trace.sdlc_connector.github.eventhandler;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.jayway.jsonpath.DocumentContext;
 import com.trace.sdlc_connector.*;
 import com.trace.sdlc_connector.user.UserMappingRepo;
 
@@ -15,24 +15,14 @@ public class IssueCommentEventHandler extends GithubEventHandler{
     }
 
     @Override
-    public Message handleEvent(UUID projectId, UUID eventId, JsonNode payload, Long now) {
+    public Message handleEvent(UUID projectId, UUID eventId, DocumentContext payload, Long now) {
         var message = super.handleEvent(projectId, eventId, payload, now);
 
-        var action = payload.get("action").asText();
+        message.getMetadata().setType(EVENT_TYPE + " " + payload.read("$.action", String.class));
 
-        message.getMetadata().setType(EVENT_TYPE + " " + action);
-
-        // required fields
-        message.getContent().put("comment", payload.get("comment").asText());
-        message.getContent().put("issue_id", payload.get("issue").get("id").asText());
-        message.getContent().put("issue_title", payload.get("title").get("id").asText());
-
-        switch (action) {
-            case "edited":
-                // required field
-                message.getContent().put("changes", payload.get("changes").asText());
-                break;
-        }
+        message.getContent().putAll(
+                JsonUtils.extract(payload, "$.comment", "$.issue.id", "$.issue.title", "$.changes")
+        );
 
         return message;
     }

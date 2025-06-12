@@ -1,6 +1,6 @@
 package com.trace.sdlc_connector.github.eventhandler;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.jayway.jsonpath.DocumentContext;
 import com.trace.sdlc_connector.*;
 import com.trace.sdlc_connector.user.UserMappingRepo;
 
@@ -15,21 +15,15 @@ public class DeploymentStatusEventHandler extends GithubEventHandler {
     }
 
     @Override
-    public Message handleEvent(UUID projectId, UUID eventId, JsonNode payload, Long now) {
+    public Message handleEvent(UUID projectId, UUID eventId, DocumentContext payload, Long now) {
         var message = super.handleEvent(projectId, eventId, payload, now);
 
-        message.getMetadata().setType(EVENT_TYPE + " " + payload.get("action").asText());
+        message.getMetadata().setType(EVENT_TYPE + " " + payload.read("$.action", String.class));
 
-        // required fields
-        message.getContent().put("deployment", payload.get("deployment").asText());
-        message.getContent().put("deployment_status", payload.get("deployment_status").asText());
-
-        // optional and possibly null fields
-        JsonNodeUtils.putTextAtInMap(payload, "check_run", message.getContent());
-        JsonNodeUtils.putTextAtInMap(payload, "workflow/id", message.getContent());
-        JsonNodeUtils.putTextAtInMap(payload, "workflow/name", message.getContent());
-        JsonNodeUtils.putTextAtInMap(payload, "workflow_run/id", message.getContent());
-        JsonNodeUtils.putTextAtInMap(payload, "workflow_run/name", message.getContent());
+        message.getContent().putAll(
+                JsonUtils.extract(payload, "$.deployment", "$.deployment_status", "$.check_run",
+                        "$.workflow.id", "$.workflow.name", "$.workflow_run.id", "$.workflow_run.name")
+        );
 
         return message;
     }

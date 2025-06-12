@@ -1,6 +1,6 @@
 package com.trace.sdlc_connector.github.eventhandler;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.jayway.jsonpath.DocumentContext;
 import com.trace.sdlc_connector.*;
 import com.trace.sdlc_connector.user.UserMappingRepo;
 
@@ -15,25 +15,16 @@ public class PushEventHandler extends GithubEventHandler {
     }
 
     @Override
-    public Message handleEvent(UUID projectId, UUID eventId, JsonNode payload, Long now) {
+    public Message handleEvent(UUID projectId, UUID eventId, DocumentContext payload, Long now) {
         var message = super.handleEvent(projectId, eventId, payload, now);
 
         message.getMetadata().setType(EVENT_TYPE);
 
-        // required fields
-        message.getContent().put("after", payload.get("after").asText());
-        message.getContent().put("before", payload.get("before").asText());
-        message.getContent().put("commits", payload.get("commits").asText());
-        message.getContent().put("compare", payload.get("compare").asText());
-        message.getContent().put("created", payload.get("created").asText());
-        message.getContent().put("deleted", payload.get("deleted").asText());
-        message.getContent().put("forced", payload.get("forced").asText());
-        message.getContent().put("pusher", payload.get("pusher").asText());
-        message.getContent().put("ref", payload.get("ref").asText());
-
-        // required but nullable fields
-        JsonNodeUtils.putTextAtInMap(payload, "base_ref", message.getContent());
-        JsonNodeUtils.putTextAtInMap(payload, "head_commit", message.getContent());
+        message.getContent().putAll(
+                JsonUtils.extract(payload, "$.after", "$.before", "$.commits",
+                        "$.compare", "$.created", "$.deleted", "$.forced", "$.pusher", "$.ref",
+                        "$.base_ref", "$.head_commit")
+        );
 
         return message;
     }

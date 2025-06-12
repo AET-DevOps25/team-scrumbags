@@ -1,6 +1,6 @@
 package com.trace.sdlc_connector.github.eventhandler;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.jayway.jsonpath.DocumentContext;
 import com.trace.sdlc_connector.*;
 import com.trace.sdlc_connector.user.UserMappingRepo;
 
@@ -15,15 +15,14 @@ public class CreateEventHandler extends GithubEventHandler {
     }
 
     @Override
-    public Message handleEvent(UUID projectId, UUID eventId, JsonNode payload, Long now) {
+    public Message handleEvent(UUID projectId, UUID eventId, DocumentContext payload, Long now) {
         var message = super.handleEvent(projectId, eventId, payload, now);
 
-        message.getMetadata().setType(EVENT_TYPE + " " + payload.get("ref_type").asText());
+        message.getMetadata().setType(EVENT_TYPE + " " + payload.read("$.ref_type", String.class));
 
-        message.getContent().put("description", payload.get("description").asText());
-        message.getContent().put("master_branch", payload.get("master_branch").asText());
-        message.getContent().put("pusher_type", payload.get("pusher_type").asText());
-        message.getContent().put("ref", payload.get("ref").asText());
+        message.getContent().putAll(
+                JsonUtils.extract(payload, "$.description", "$.master_branch", "$.pusher_type", "$.ref")
+        );
 
         return message;
     }

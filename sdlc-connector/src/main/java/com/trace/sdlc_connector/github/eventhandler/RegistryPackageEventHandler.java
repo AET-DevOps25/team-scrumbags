@@ -1,6 +1,6 @@
 package com.trace.sdlc_connector.github.eventhandler;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.jayway.jsonpath.DocumentContext;
 import com.trace.sdlc_connector.*;
 import com.trace.sdlc_connector.user.UserMappingRepo;
 
@@ -15,12 +15,14 @@ public class RegistryPackageEventHandler extends GithubEventHandler{
     }
 
     @Override
-    public Message handleEvent(UUID projectId, UUID eventId, JsonNode payload, Long now) {
+    public Message handleEvent(UUID projectId, UUID eventId, DocumentContext payload, Long now) {
         var message = super.handleEvent(projectId, eventId, payload, now);
 
-        message.getMetadata().setType(EVENT_TYPE + " " + payload.get("action").asText());
+        message.getMetadata().setType(EVENT_TYPE + " " + payload.read("$.action", String.class));
 
-        message.getContent().put("registry_package", payload.get("registry_package").asText());
+        message.getContent().putAll(
+                JsonUtils.extract(payload, "$.registry_package")
+        );
 
         return message;
     }

@@ -1,13 +1,14 @@
 package com.trace.sdlc_connector.github;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.jayway.jsonpath.Configuration;
+import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.Option;
 import com.trace.sdlc_connector.*;
 import com.trace.sdlc_connector.github.eventhandler.*;
 import com.trace.sdlc_connector.token.TokenRepo;
 import com.trace.sdlc_connector.user.UserMappingRepo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -89,19 +90,7 @@ public class GithubConnector {
             return ResponseEntity.badRequest().body("No valid secret for signature");
         }
 
-        JsonNode jsonPayload;
-        try {
-            // Convert payload string to JsonNode
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            jsonPayload = mapper.readTree(payload);
-
-        } catch (Exception e) {
-            logger.error("Error processing webhook payload", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error processing webhook payload");
-        }
-
-        Message message = processWebhookEvent(eventType, eventId, projectId, jsonPayload, now);
+        Message message = processWebhookEvent(eventType, eventId, projectId, payload, now);
 
         messageRepo.save(new MessageEntity(message));
 
@@ -117,7 +106,7 @@ public class GithubConnector {
         return ResponseEntity.ok(entities);
     }
 
-    public Message processWebhookEvent(String eventType, UUID eventId, UUID projectId, JsonNode payload, Long now) {
+    public Message processWebhookEvent(String eventType, UUID eventId, UUID projectId, String payload, Long now) {
         logger.info("Processing GitHub webhook event: {}", eventType);
 
         GithubEventHandler handler = eventHandler.getOrDefault(eventType, null);
@@ -127,7 +116,11 @@ public class GithubConnector {
             return null;
         }
 
-        return handler.handleEvent(projectId, eventId, payload, now);
+        var json = JsonPath.using(Configuration.builder()
+                .options(Option.SUPPRESS_EXCEPTIONS).build()
+        ).parse(payload);
+
+        return handler.handleEvent(projectId, eventId, json, now);
     }
 
     /**

@@ -1,6 +1,6 @@
 package com.trace.sdlc_connector.github.eventhandler;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.jayway.jsonpath.DocumentContext;
 import com.trace.sdlc_connector.*;
 import com.trace.sdlc_connector.user.UserMappingRepo;
 
@@ -15,20 +15,14 @@ public class MilestoneEventHandler extends GithubEventHandler {
     }
 
     @Override
-    public Message handleEvent(UUID projectId, UUID eventId, JsonNode payload, Long now) {
+    public Message handleEvent(UUID projectId, UUID eventId, DocumentContext payload, Long now) {
         var message = super.handleEvent(projectId, eventId, payload, now);
 
-        var action = payload.get("action").asText();
-        message.getMetadata().setType(EVENT_TYPE + " " + action);
+        message.getMetadata().setType(EVENT_TYPE + " " + payload.read("$.action", String.class));
 
-        // required fields
-        message.getContent().put("milestone", payload.get("milestone").asText());
-        switch (action) {
-            case "edited":
-                // required field
-                message.getContent().put("changes", payload.get("changes").asText());
-                break;
-        }
+        message.getContent().putAll(
+                JsonUtils.extract(payload, "$.milestone", "$.changes")
+        );
 
         return message;
     }

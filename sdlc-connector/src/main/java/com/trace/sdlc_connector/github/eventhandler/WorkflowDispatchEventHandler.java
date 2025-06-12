@@ -1,6 +1,6 @@
 package com.trace.sdlc_connector.github.eventhandler;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.jayway.jsonpath.DocumentContext;
 import com.trace.sdlc_connector.*;
 import com.trace.sdlc_connector.user.UserMappingRepo;
 
@@ -15,17 +15,14 @@ public class WorkflowDispatchEventHandler extends GithubEventHandler{
     }
 
     @Override
-    public Message handleEvent(UUID projectId, UUID eventId, JsonNode payload, Long now) {
+    public Message handleEvent(UUID projectId, UUID eventId, DocumentContext payload, Long now) {
         var message = super.handleEvent(projectId, eventId, payload, now);
 
         message.getMetadata().setType(EVENT_TYPE);
 
-        // required fields
-        message.getContent().put("ref", payload.get("ref").asText());
-        message.getContent().put("workflow", payload.get("workflow").asText());
-
-        // required but nullable fields
-        JsonNodeUtils.putTextAtInMap(payload, "inputs", message.getContent());
+        message.getContent().putAll(
+                JsonUtils.extract(payload, "$.ref", "$.workflow", "$.inputs")
+        );
 
         return message;
     }
