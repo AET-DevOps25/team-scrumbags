@@ -72,7 +72,7 @@ def convert_and_merge(inputs, output, directory):
     print(f"Total sample duration: {sample_duration:.2f} seconds")
 
     # Define a fixed silence gap between samples and the real input
-    silence_gap = 2.0  # seconds
+    silence_gap = 10  # seconds
     silence = AudioSegment.silent(duration=int(silence_gap * 1000))  # in ms
 
     # Merge: [samples] + [silence] + [real audio]
@@ -94,7 +94,7 @@ def convert_and_merge(inputs, output, directory):
             print(f"Error deleting {wav_file}: {e}")
 
     # Total offset is sample_duration
-    return sample_duration + silence_gap * (len(sample_wavs) - 1)
+    return sample_duration + silence_gap * (len(sample_wavs) - 1) + (int(silence_gap / 2)), silence_gap
 
 if __name__ == "__main__":
     load_dotenv()
@@ -114,7 +114,7 @@ if __name__ == "__main__":
         print("No match for project id found.")
 
     merged = f"{args.directory}/merged.wav"
-    offset = convert_and_merge(inputs, merged, args.directory)
+    offset, silence_gap = convert_and_merge(inputs, merged, args.directory)
 
     device = "cpu"  # or "cpu"
     batch_size = 16
@@ -153,7 +153,10 @@ if __name__ == "__main__":
             if segment.get("speaker") == current_speaker:
                 empty_speaker_ids[actual_id] = current_speaker
                 segment["speaker_id"] = actual_id
-                segment["speaker"] = speaker_ids.get(actual_id, "Unknown Speaker")
+                segment["speaker"] = speaker_ids[actual_id]
+            elif segment.get("speaker") is None:
+                segment["speaker_id"] = "Unknown ID"
+                segment["speaker"] = "Unknown Speaker"
             else:
                 segment_counter = result["segments"].index(segment)
                 break
@@ -161,6 +164,10 @@ if __name__ == "__main__":
     for segment in result["segments"][segment_counter:]:
         segment["index"] = segment_index_counter
         segment_index_counter += 1
+        if segment.get("speaker") is None:
+            segment["speaker_id"] = "Unknown ID"
+            segment["speaker"] = "Unknown Speaker"
+            continue
         key = next((k for k, v in empty_speaker_ids.items() if v == segment["speaker"]), None)
         if key is not None:
             segment["speaker_id"] = key
@@ -176,17 +183,14 @@ if __name__ == "__main__":
         print(f"{segment['speaker']}\t{segment['speaker_id']}\t{segment['start']:.2f}\t{segment['end']:.2f}\t{segment['text']}")
 
     # --- FILTER & REBASE ---
-    offset = convert_and_merge(inputs, merged, args.directory)
-    TOLERANCE = 0.1  # Optional: very small tolerance now that separation is clean
-
     real_segments = []
     index = 0
     for seg in result["segments"]:
-        if seg["start"] >= offset - TOLERANCE:
+        if seg["start"] >= offset:
             rebased = seg.copy()
             rebased["index"] = index
-            rebased["start"] -= offset
-            rebased["end"]   -= offset
+            rebased["start"] -= max(0, offset - (int(silence_gap / 2)))
+            rebased["end"]   -= max(0, offset - (int(silence_gap / 2)))
             real_segments.append(rebased)
             index += 1
 
