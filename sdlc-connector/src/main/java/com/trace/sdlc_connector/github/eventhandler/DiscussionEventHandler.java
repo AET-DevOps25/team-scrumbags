@@ -15,8 +15,8 @@ public class DiscussionEventHandler extends GithubEventHandler {
     }
 
     @Override
-    public Message handleEvent(UUID projectId, JsonNode payload, Long now) {
-        var message = super.handleEvent(projectId, payload, now);
+    public Message handleEvent(UUID projectId, UUID eventId, JsonNode payload, Long now) {
+        var message = super.handleEvent(projectId, eventId, payload, now);
         var action = payload.get("action").asText();
 
         message.getMetadata().setType(EVENT_TYPE + " " + action);

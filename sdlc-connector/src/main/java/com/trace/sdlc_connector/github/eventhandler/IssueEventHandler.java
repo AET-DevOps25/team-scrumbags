@@ -2,12 +2,8 @@ package com.trace.sdlc_connector.github.eventhandler;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.trace.sdlc_connector.*;
-import com.trace.sdlc_connector.user.UserMapping;
 import com.trace.sdlc_connector.user.UserMappingRepo;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 public class IssueEventHandler extends GithubEventHandler {
@@ -19,8 +15,8 @@ public class IssueEventHandler extends GithubEventHandler {
     }
 
     @Override
-    public Message handleEvent(UUID projectId, JsonNode payload, Long now) {
-        var message = super.handleEvent(projectId, payload, now);
+    public Message handleEvent(UUID projectId, UUID eventId, JsonNode payload, Long now) {
+        var message = super.handleEvent(projectId, eventId, payload, now);
 
         var action = payload.get("action").asText();
         message.getMetadata().setType(EVENT_TYPE + " " + action);

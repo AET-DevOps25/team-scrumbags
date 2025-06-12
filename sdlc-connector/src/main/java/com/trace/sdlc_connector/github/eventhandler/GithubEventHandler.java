@@ -6,7 +6,6 @@ import com.trace.sdlc_connector.Metadata;
 import com.trace.sdlc_connector.SupportedSystem;
 import com.trace.sdlc_connector.user.UserMapping;
 import com.trace.sdlc_connector.user.UserMappingRepo;
-import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -26,7 +25,7 @@ public abstract class GithubEventHandler {
         return eventType;
     }
 
-    public Message handleEvent(UUID projectId, JsonNode payload, Long now) {
+    public Message handleEvent(UUID projectId, UUID eventId, JsonNode payload, Long now) {
         Map<String, Object> content = new HashMap<>();
         content.put("platform", SupportedSystem.GITHUB);
 
@@ -35,8 +34,10 @@ public abstract class GithubEventHandler {
         )).orElseThrow().getUserId();
 
         return new Message(
+
                 new Metadata(
-                        null,
+                        eventId,
+                        null, // type will be set later in specific handlers
                         userId,
                         now,
                         projectId

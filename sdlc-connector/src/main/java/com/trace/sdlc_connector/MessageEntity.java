@@ -14,7 +14,6 @@ import java.util.UUID;
 public class MessageEntity {
 
     @Id
-    @GeneratedValue
     private UUID id;
 
     private String type;
@@ -34,6 +33,7 @@ public class MessageEntity {
     }
 
     public MessageEntity(Message message) {
+        this.id = message.getMetadata().getEventId();
         this.type = message.getMetadata().getType();
         this.userId = message.getMetadata().getUserId();
         this.timestamp = new Date(message.getMetadata().getTimestamp());
@@ -42,7 +42,7 @@ public class MessageEntity {
     }
 
     public Message toMessage() {
-        Metadata metadata = new Metadata(this.type, this.userId, this.timestamp.getTime(), this.projectId);
+        Metadata metadata = new Metadata(this.id, this.type, this.userId, this.timestamp.getTime(), this.projectId);
         return new Message(metadata, this.content);
     }
 

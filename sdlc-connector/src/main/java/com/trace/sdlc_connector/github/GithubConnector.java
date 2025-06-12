@@ -68,6 +68,7 @@ public class GithubConnector {
     public ResponseEntity<?> webhookHandler(
             @PathVariable UUID projectId,
             @RequestBody String payload,
+            @RequestHeader("X-GitHub-Delivery") UUID eventId,
             @RequestHeader("X-GitHub-Event") String eventType,
             @RequestHeader("X-Hub-Signature-256") String signature) {
 
@@ -100,7 +101,7 @@ public class GithubConnector {
                     .body("Error processing webhook payload");
         }
 
-        Message message = processWebhookEvent(eventType, projectId, jsonPayload, now);
+        Message message = processWebhookEvent(eventType, eventId, projectId, jsonPayload, now);
 
         messageRepo.save(new MessageEntity(message));
 
@@ -116,7 +117,7 @@ public class GithubConnector {
         return ResponseEntity.ok(entities);
     }
 
-    public Message processWebhookEvent(String eventType, UUID projectId, JsonNode payload, Long now) {
+    public Message processWebhookEvent(String eventType, UUID eventId, UUID projectId, JsonNode payload, Long now) {
         logger.info("Processing GitHub webhook event: {}", eventType);
 
         GithubEventHandler handler = eventHandler.getOrDefault(eventType, null);
@@ -126,7 +127,7 @@ public class GithubConnector {
             return null;
         }
 
-        return handler.handleEvent(projectId, payload, now);
+        return handler.handleEvent(projectId, eventId, payload, now);
     }
 
     /**
