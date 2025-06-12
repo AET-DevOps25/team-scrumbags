@@ -382,6 +382,7 @@ sketch
 ### Audio Test Files ###
 *.mp3
 *.wav
+!file-separator.wav
 *.flac
 *.opus
 *.mkv
