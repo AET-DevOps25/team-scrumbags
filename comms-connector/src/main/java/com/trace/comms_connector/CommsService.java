@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import com.trace.comms_connector.connection.ConnectionEntity;
 import com.trace.comms_connector.connection.ConnectionRepo;
+import com.trace.comms_connector.discord.DiscordRestClient;
 import com.trace.comms_connector.user.UserEntity;
 import com.trace.comms_connector.user.UserRepo;
 
@@ -24,6 +25,8 @@ public class CommsService {
 
     @Autowired
     private final UserRepo userRepo;
+
+
 
     public ConnectionEntity saveConnection(
         @NonNull UUID projectId,
@@ -145,11 +148,19 @@ public class CommsService {
     public List<ConnectionEntity> addCommIntegration(
         @NonNull UUID projectId,
         @NonNull Platform platform,
-        @NonNull List<String> channelIdList,
+        @NonNull String serverId,
         @NonNull List<UUID> userIdList
-    ) {
-        // TODO: Add integrations without specifying channel and user IDs (get these from Discord and core)
+    ) throws Exception {
+        // TODO: get user IDs from server maybe
         ArrayList<ConnectionEntity> connections = new ArrayList<ConnectionEntity>(); 
+        List<String> channelIdList;
+
+        if (platform.equals(Platform.DISCORD)) {
+            channelIdList = DiscordRestClient.getGuildChannelIds(serverId);
+        } else {
+            throw new Exception("Platform not supported.");
+        }
+
         for (String channel : channelIdList) {
             var connection = this.saveConnection(projectId, channel, platform, null); 
             connections.add(connection);

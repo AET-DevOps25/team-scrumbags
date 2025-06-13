@@ -1,6 +1,7 @@
 package com.trace.comms_connector.discord;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -19,12 +20,12 @@ public class DiscordRestClient {
     @Value("${trace.discord.base-uri}")
     private static String baseUri;
 
-    private RestClient getRestClient() {
+    private static RestClient getRestClient() {
         return RestClient.builder().baseUrl(baseUri + "/" + apiVersion).build();
     }
 
-    public List<String> getGuildChannelIds(String guildId) {
-        List<DiscordChannel> channels = this.getRestClient()
+    public static List<String> getGuildChannelIds(String guildId) {
+        List<DiscordChannel> channels = getRestClient()
             .get()
             .uri(uriBuilder -> uriBuilder
                 .path("/guilds/" + guildId + "/channels")
@@ -40,8 +41,8 @@ public class DiscordRestClient {
             .toList();
     }
 
-    public List<String> getGuildMemberNames(String guildId) {
-        List<DiscordUser> users = this.getRestClient()
+    public static List<String> getGuildMemberNames(String guildId) {
+        List<DiscordUser> users = getRestClient()
             .get()
             .uri(uriBuilder -> uriBuilder
                 .path("/guilds/" + guildId + "/members")
@@ -56,21 +57,13 @@ public class DiscordRestClient {
             .toList();
     }
 
-    // TODO: Sending a request with 0 is maybe "hacky", just don't add the parameter instead
-    public List<DiscordMessage> getChannelMessages(String channelId, String lastMessageId) {
-        String last;
-        if (lastMessageId == null) {
-            last = "0";
-        } else {
-            last = lastMessageId;
-        }
-
-        return this.getRestClient()
+    public static List<DiscordMessage> getChannelMessages(String channelId, String lastMessageId) {
+        return getRestClient()
             .get()
             .uri(uriBuilder -> uriBuilder
                 .path("/channels/" + channelId + "/messages")
                 .queryParam("limit", 100)
-                .queryParam("after", last)
+                .queryParamIfPresent("after", Optional.ofNullable(lastMessageId))
                 .build()
             )
             .header("Authorization", token)

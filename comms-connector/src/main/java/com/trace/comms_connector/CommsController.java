@@ -16,10 +16,6 @@ public class CommsController {
     @Autowired
     private final CommsService commsService;
 
-    /*
-     * TODO: Maybe change some path variables to query parameters
-     */
-
     @GetMapping("/{platform}/users")
     public ResponseEntity<?> getPlatformUsers(@PathVariable UUID projectId, @PathVariable Platform platform) {
         var userList = commsService.getUsersByProjectId(projectId, platform);
@@ -27,32 +23,43 @@ public class CommsController {
         return ResponseEntity.ok(userList);
     }
 
-    @PostMapping("/{platform}/add")
+    @PostMapping("/{platform}")
     public ResponseEntity<?> addCommsIntegration(
         @PathVariable UUID projectId,
         @PathVariable Platform platform,
-        @RequestParam(required = true, name = "channelIdList") List<String> channelIdList,
-        @RequestParam(required = true, name = "userIdList") List<UUID> userIdList
+        @RequestParam(required = false) String serverId,
+        @RequestParam(required = true) List<UUID> userIdList
     ) {
-        // TODO: Add integrations without specifying channel and user IDs (get these from Discord and core)
-        var connectionList = commsService.addCommIntegration(projectId, platform, channelIdList, userIdList);
+        // TODO: maybe get user IDs from server
+        if (serverId == null) {
+            return ResponseEntity.badRequest().body("Communication platorm server ID must be specified!"); 
+        }
 
-        return ResponseEntity.ok(connectionList);
+        try {
+            var connectionList = commsService.addCommIntegration(projectId, platform, serverId, userIdList);
+            return ResponseEntity.ok(connectionList);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(e.getMessage());
+        }
     }
 
-    @PatchMapping("/{platform}/users/save/{userId}/{platformUsername}")
-    public ResponseEntity<?> addPlatformUsername(
+    @PostMapping("/{platform}/users/")
+    public ResponseEntity<?> addPlatformUser(
         @PathVariable UUID projectId,
         @PathVariable Platform platform,
-        @PathVariable UUID userId,
-        @PathVariable String platformUsername
+        @RequestParam(required = false) UUID userId,
+        @RequestParam(required = false) String platformUsername
     ) {
+        if (userId == null || platformUsername == null) {
+            return ResponseEntity.badRequest().body("User ID and platform username must be specified!");
+        }
+
         var userEntity = commsService.saveUser(projectId, userId, platform, platformUsername);
 
         return ResponseEntity.ok(userEntity);
     }
 
-    @DeleteMapping("/{platform}/delete")
+    @DeleteMapping("/{platform}")
     public ResponseEntity<?> deleteAllCommIntegrations(@PathVariable UUID projectId, @PathVariable Platform platform) {
         commsService.deleteCommIntegration(projectId, platform);
 
@@ -60,7 +67,7 @@ public class CommsController {
     }
 
 
-    @DeleteMapping("/delete")
+    @DeleteMapping("")
     public ResponseEntity<?> deleteAllCommIntegrations(@PathVariable UUID projectId) {
         commsService.deleteCommIntegration(projectId, null);
 
