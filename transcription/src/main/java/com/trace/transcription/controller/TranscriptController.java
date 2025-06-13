@@ -1,10 +1,12 @@
 package com.trace.transcription.controller;
 
+import com.trace.transcription.service.TranscriptService;
 import com.trace.transcription.model.SpeakerEntity;
 import com.trace.transcription.model.TranscriptEntity;
 import com.trace.transcription.repository.SpeakerRepository;
 import com.trace.transcription.repository.TranscriptRepository;
 import org.apache.commons.io.FilenameUtils;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,23 +16,16 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.request.async.DeferredResult;
 import org.springframework.web.multipart.MultipartFile;
-import jep.JepException;
-import jep.SharedInterpreter;
 
-import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.*;
 import java.util.*;
-import java.util.stream.Stream;
 
 
 @RestController
-public class TranscriptionController {
+public class TranscriptController {
 
-    public static final Logger logger = LoggerFactory.getLogger(TranscriptionController.class);
+    public static final Logger logger = LoggerFactory.getLogger(TranscriptController.class);
+
     private final ThreadPoolTaskExecutor executor;
 
     private final String coreServiceUrl; // e.g. "http://core-service:8080"
@@ -38,12 +33,14 @@ public class TranscriptionController {
 
     private final SpeakerRepository speakerRepository;
     private final TranscriptRepository transcriptRepository;
+    private final TranscriptService transcriptService;
 
-    public TranscriptionController(ThreadPoolTaskExecutor executor, @Value("${core.service.url}") String coreServiceUrl, SpeakerRepository speakerRepository, TranscriptRepository transcriptRepository) {
+    public TranscriptController(ThreadPoolTaskExecutor executor, @Value("${core.service.url}") String coreServiceUrl, SpeakerRepository speakerRepository, TranscriptRepository transcriptRepository, TranscriptService transcriptService) {
         this.executor = executor;
         this.coreServiceUrl = coreServiceUrl;
         this.speakerRepository = speakerRepository;
         this.transcriptRepository = transcriptRepository;
+        this.transcriptService = transcriptService;
     }
 
     @GetMapping("/test")
@@ -99,13 +96,7 @@ public class TranscriptionController {
                 String extension = FilenameUtils.getExtension(file.getOriginalFilename());
 
                 // create and set entity
-                SpeakerEntity speaker = new SpeakerEntity();
-                speaker.setId(speakerId);
-                speaker.setName(speakerName);
-                speaker.setProjectId(projectId);
-
-                speaker.setSpeakingSample(file.getBytes());
-                speaker.setSampleExtension(extension);
+                SpeakerEntity speaker = new SpeakerEntity(speakerId, speakerName, projectId, file.getBytes(), extension);
 
                 toSave.add(speaker);
             }
@@ -133,14 +124,23 @@ public class TranscriptionController {
     public DeferredResult<ResponseEntity<String>> receiveMediaAndSendTranscript(
             @PathVariable("projectId") UUID projectId,
             @RequestParam("file") MultipartFile file,
-            @RequestParam(value = "timestamp", required = false) Date timestamp
+            @RequestParam(value = "timestamp", required = false) Long timestamp
     ) {
 
         DeferredResult<ResponseEntity<String>> deferredResult = new DeferredResult<>(300_000L);
 
+        if (timestamp == null) {
+            timestamp = System.currentTimeMillis(); // Use current time if not provided
+        }
+
+        Long finalTimestamp = timestamp;
         executor.execute(() -> {
             try {
-                String transcriptJson = transcriptAsync(projectId, file);
+
+                String transcriptJson = transcriptService.transcriptAsync(projectId, file, speakerRepository, finalTimestamp);
+
+                // Save transcript to database
+                transcriptService.saveFromJson(transcriptJson);
 
                 // Forward JSON to core service
                 HttpHeaders headers = new HttpHeaders();
@@ -165,66 +165,6 @@ public class TranscriptionController {
         });
 
         return deferredResult;
-    }
-
-    private String transcriptAsync(UUID projectId, MultipartFile file) throws IOException, InterruptedException {
-        Path tempDir = Files.createTempDirectory("media-" + projectId + "_" + UUID.randomUUID() + "-");
-        try {
-            // Save incoming file
-            String cleanFileName = Paths.get(Objects.requireNonNull(file.getOriginalFilename()))
-                    .getFileName().toString();
-            Path incomingPath = tempDir.resolve(cleanFileName);
-            Files.copy(file.getInputStream(), incomingPath, StandardCopyOption.REPLACE_EXISTING);
-            logger.info("Stored incoming file: {} for project {}", cleanFileName, projectId);
-
-            // Dump speaker samples
-            List<SpeakerEntity> speakers = speakerRepository.findAllByProjectId(projectId);
-            for (SpeakerEntity speaker : speakers) {
-                byte[] audio = speaker.getSpeakingSample();
-                String ext = speaker.getSampleExtension();
-                if (audio != null && audio.length > 0) {
-                    Path spath = tempDir.resolve("sample-" + speaker.getName() + "_" + speaker.getId() + "." + ext);
-                    Files.write(spath, audio, StandardOpenOption.CREATE);
-                }
-            }
-
-            // Launch Python process
-            ProcessBuilder pb = new ProcessBuilder("python3", "transcriber.py", tempDir.toString())
-                    .redirectErrorStream(true);
-
-            Process proc = pb.start();
-
-            // Log output
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(proc.getInputStream(), StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    logger.info("[Transcriber] {}", line);
-                }
-            }
-
-            int exitCode = proc.waitFor();
-            if (exitCode != 0) {
-                throw new RuntimeException("Python exited with code " + exitCode + ". Check logs for details.");
-            }
-
-            // Read JSON output from file
-            Path resultPath = tempDir.resolve("transcription_result.json");
-            if (!Files.exists(resultPath)) {
-                throw new RuntimeException("Transcription result file not found: " + resultPath);
-            }
-
-            String transcriptJson = Files.readString(resultPath, StandardCharsets.UTF_8);
-            logger.info("Read transcript from file: {}", resultPath);
-            return transcriptJson;
-        } finally {
-            // Cleanup
-            Files.walk(tempDir)
-                    .sorted(Comparator.reverseOrder())
-                    .map(Path::toFile)
-                    .forEach(File::delete);
-            logger.info("Cleaned up temp directory: {}", tempDir);
-        }
     }
 
 
@@ -323,20 +263,15 @@ public class TranscriptionController {
      * Returns all transcripts for the given project.
      */
     @GetMapping("projects/{projectId}/transcripts")
-    public ResponseEntity<List<String>> getAllTranscripts(@PathVariable("projectId") UUID projectId) {
+    public ResponseEntity<List<TranscriptEntity>> getAllTranscripts(@PathVariable("projectId") UUID projectId) {
         List<TranscriptEntity> transcripts = transcriptRepository.findAllByProjectId(projectId);
         if (transcripts.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
-        return ResponseEntity.ok(transcripts.stream()
-                .map(TranscriptEntity::getContent)
-                .toList());
+        return ResponseEntity.ok(transcripts);
     }
 
-
-    //todo include timestamp in transcript, extract from audio file metadata if available, else request timestamp / current time
-    //todo add transcripts to db with timestamp
-    //todo adjust transcript object structure to be compatible with genai
-    //todo fix offset
+    //request timeout parameterized
+    //make separate controllers for speakers and transcripts?
 
 }

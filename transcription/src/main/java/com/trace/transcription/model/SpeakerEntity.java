@@ -20,6 +20,14 @@ public class SpeakerEntity {
 
     private String sampleExtension;
 
+    public SpeakerEntity(String speakerId, String speakerName, UUID projectId, byte[] bytes, String extension) {
+        this.id = speakerId;
+        this.name = speakerName;
+        this.projectId = projectId;
+        this.speakingSample = bytes;
+        this.sampleExtension = extension;
+    }
+
     public String getId() {
         return id;
     }

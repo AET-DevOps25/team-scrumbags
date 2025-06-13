@@ -3,6 +3,7 @@ package com.trace.transcription.model;
 import jakarta.persistence.*;
 
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -13,12 +14,23 @@ public class TranscriptEntity {
     @GeneratedValue
     private UUID id;
 
-    @Lob
-    private String content;
+    @ElementCollection
+    @CollectionTable(name = "transcript_segments", joinColumns = @JoinColumn(name = "transcript_id"))
+    private List<TranscriptSegment> content;
+
     private UUID projectId;
 
     @Temporal(TemporalType.TIMESTAMP)
     private Date timestamp;
+
+    public TranscriptEntity() {}
+
+    public TranscriptEntity(UUID id, List<TranscriptSegment> content, UUID projectId, long timestamp) {
+        this.id = id;
+        this.content = content;
+        this.projectId = projectId;
+        this.timestamp = new Date(timestamp);
+    }
 
     public UUID getId() {
         return id;
@@ -28,11 +40,11 @@ public class TranscriptEntity {
         this.id = id;
     }
 
-    public String getContent() {
+    public List<TranscriptSegment> getContent() {
         return content;
     }
 
-    public void setContent(String content) {
+    public void setContent(List<TranscriptSegment> content) {
         this.content = content;
     }
 

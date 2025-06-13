@@ -61,7 +61,7 @@ def convert_and_merge(inputs, output, directory):
         convert_to_wav(inp, out)
         sample_wavs.append(out)
 
-    sample_wavs.append(os.path.join(directory, "file-separator.wav"))
+    sample_wavs.append("file-separator.wav")
 
     # Convert real input
     real_wav = os.path.join(directory, "tmp_real.wav")
@@ -98,8 +98,9 @@ def convert_and_merge(inputs, output, directory):
 
 if __name__ == "__main__":
     load_dotenv()
-    parser = argparse.ArgumentParser(description="Process media files in a directory")
+    parser = argparse.ArgumentParser(description="Process media files in a directory with a timestamp.")
     parser.add_argument("directory", help="Directory containing media files")
+    parser.add_argument("timestamp", help="Unix Timestamp for the recording")
     args = parser.parse_args()
 
     empty_speaker_ids, speaker_ids, inputs = find_speakers_and_inputs(args.directory)
@@ -201,7 +202,7 @@ if __name__ == "__main__":
             "metadata": {
                 "type": "transcription",
                 "user": segment["speaker_id"],
-                "timestamp": "todo",
+                "timestamp": args.timestamp,
                 "project_id": project_id
             },
             "content": {

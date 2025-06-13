@@ -31,6 +31,7 @@ COPY --from=python-builder /usr/local/share /usr/local/share
 
 COPY --from=java-builder /app/build/libs/*.jar app.jar
 COPY transcriber.py .
+COPY file-separator.wav .
 
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
