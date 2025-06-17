@@ -24,7 +24,7 @@ public class StatusEventHandler extends GithubEventHandler {
         message.getMetadata().setType(EVENT_TYPE);
 
         message.getContent().putAll(
-                JsonUtils.extract(payload, "$.id", "$.name", "$.context", "$.state",
+                JsonUtils.extract(payload, "$.sender.id", "$.sender.login", "$.id", "$.name", "$.context", "$.state",
                         "$.sha", "$.description", "$.target_url", "$.created_at", "$.updated_at")
         );
 

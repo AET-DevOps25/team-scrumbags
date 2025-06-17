@@ -21,7 +21,7 @@ public class CreateEventHandler extends GithubEventHandler {
         message.getMetadata().setType(EVENT_TYPE + " " + payload.read("$.ref_type", String.class));
 
         message.getContent().putAll(
-                JsonUtils.extract(payload, "$.description", "$.master_branch", "$.pusher_type", "$.ref")
+                JsonUtils.extract(payload, "$.sender.id", "$.sender.login", "$.description", "$.master_branch", "$.pusher_type", "$.ref")
         );
 
         return message;

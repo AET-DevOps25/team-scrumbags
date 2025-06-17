@@ -21,7 +21,7 @@ public class DeleteEventHandler extends GithubEventHandler{
         message.getMetadata().setType(EVENT_TYPE + " " + payload.read("$.ref_type", String.class));
 
         message.getContent().putAll(
-                JsonUtils.extract(payload, "$.pusher_type", "$.ref")
+                JsonUtils.extract(payload, "$.sender.id", "$.sender.login", "$.pusher_type", "$.ref")
         );
 
         return message;

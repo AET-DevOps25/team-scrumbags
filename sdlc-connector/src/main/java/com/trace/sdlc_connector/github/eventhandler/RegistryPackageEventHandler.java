@@ -21,7 +21,7 @@ public class RegistryPackageEventHandler extends GithubEventHandler{
         message.getMetadata().setType(EVENT_TYPE + " " + payload.read("$.action", String.class));
 
         message.getContent().putAll(
-                JsonUtils.extract(payload, "$.registry_package")
+                JsonUtils.extract(payload, "$.sender.id", "$.sender.login", "$.registry_package")
         );
 
         return message;

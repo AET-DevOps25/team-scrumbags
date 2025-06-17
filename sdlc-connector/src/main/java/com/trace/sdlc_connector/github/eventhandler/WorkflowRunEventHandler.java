@@ -21,7 +21,7 @@ public class WorkflowRunEventHandler extends GithubEventHandler {
         message.getMetadata().setType(EVENT_TYPE + " " + payload.read("$.action", String.class));
 
         message.getContent().putAll(
-                JsonUtils.extract(payload, "$.workflow_run", "$.workflow")
+                JsonUtils.extract(payload, "$.sender.id", "$.sender.login", "$.workflow_run", "$.workflow")
         );
 
         return message;

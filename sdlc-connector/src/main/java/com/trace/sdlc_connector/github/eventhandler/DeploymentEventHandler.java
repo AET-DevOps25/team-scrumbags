@@ -21,7 +21,7 @@ public class DeploymentEventHandler extends GithubEventHandler {
         message.getMetadata().setType(EVENT_TYPE + " " + payload.read("$.action", String.class));
 
         message.getContent().putAll(
-                JsonUtils.extract(payload, "$.deployment", "$.workflow.id", "$.workflow.name", "$.workflow_run.id")
+                JsonUtils.extract(payload, "$.sender.id", "$.sender.login", "$.deployment", "$.workflow.id", "$.workflow.name", "$.workflow_run.id")
         );
 
         return message;

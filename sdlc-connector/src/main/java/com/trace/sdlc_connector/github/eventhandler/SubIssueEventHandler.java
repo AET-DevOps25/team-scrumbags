@@ -21,7 +21,7 @@ public class SubIssueEventHandler extends GithubEventHandler{
         message.getMetadata().setType(EVENT_TYPE + " " + payload.read("$.action", String.class));
 
         message.getContent().putAll(
-                JsonUtils.extract(payload, "$.parent_issue.id", "$.sub_issue.id", "$.sub_issue.title")
+                JsonUtils.extract(payload, "$.sender.id", "$.sender.login", "$.parent_issue.id", "$.sub_issue.id", "$.sub_issue.title")
         );
 
         return message;

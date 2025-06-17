@@ -21,7 +21,7 @@ public class DiscussionCommentEventHandler extends GithubEventHandler{
         message.getMetadata().setType(EVENT_TYPE + " " + payload.read("$.action", String.class));
 
         message.getContent().putAll(
-                JsonUtils.extract(payload, "$.comment", "$.discussion.id", "$.discussion.title", "changes")
+                JsonUtils.extract(payload, "$.sender.id", "$.sender.login", "$.comment", "$.discussion.id", "$.discussion.title", "changes")
         );
 
         return message;

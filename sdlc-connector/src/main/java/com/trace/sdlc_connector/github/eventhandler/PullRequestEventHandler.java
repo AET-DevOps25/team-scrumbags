@@ -21,7 +21,7 @@ public class PullRequestEventHandler extends GithubEventHandler {
         message.getMetadata().setType(EVENT_TYPE + " " + payload.read("$.action", String.class));
 
         message.getContent().putAll(
-                JsonUtils.extract(payload, "$.number", "$.pull_request", "$.changes",
+                JsonUtils.extract(payload, "$.sender.id", "$.sender.login", "$.number", "$.pull_request", "$.changes",
                         "$.assignee.id", "$.assignee.login", "$.reason",
                         "$.milestone.id", "$.milestone.title", "$.label.id", "$.label.name",
                         "$.requested_reviewer.id", "$.requested_reviewer.login",

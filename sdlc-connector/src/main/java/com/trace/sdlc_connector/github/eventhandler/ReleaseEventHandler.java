@@ -21,7 +21,7 @@ public class ReleaseEventHandler extends GithubEventHandler {
         message.getMetadata().setType(EVENT_TYPE + " " + payload.read("$.action", String.class));
 
         message.getContent().putAll(
-                JsonUtils.extract(payload, "$.release", "$.changes")
+                JsonUtils.extract(payload, "$.sender.id", "$.sender.login", "$.release", "$.changes")
         );
 
         return message;

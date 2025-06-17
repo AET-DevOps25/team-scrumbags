@@ -21,7 +21,7 @@ public class MilestoneEventHandler extends GithubEventHandler {
         message.getMetadata().setType(EVENT_TYPE + " " + payload.read("$.action", String.class));
 
         message.getContent().putAll(
-                JsonUtils.extract(payload, "$.milestone", "$.changes")
+                JsonUtils.extract(payload, "$.sender.id", "$.sender.login", "$.milestone", "$.changes")
         );
 
         return message;

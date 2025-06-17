@@ -21,7 +21,7 @@ public class IssueEventHandler extends GithubEventHandler {
         message.getMetadata().setType(EVENT_TYPE + " " + payload.read("$.action", String.class));
 
         message.getContent().putAll(
-                JsonUtils.extract(payload, "$.issue.id", "$.issue.title", "$.assignee.id", "$.assignee.login",
+                JsonUtils.extract(payload, "$.sender.id", "$.sender.login", "$.issue.id", "$.issue.title", "$.assignee.id", "$.assignee.login",
                         "$.milestone.id", "$.milestone.title", "$.label.id", "$.label.name", "$.changes", "$.type")
         );
 

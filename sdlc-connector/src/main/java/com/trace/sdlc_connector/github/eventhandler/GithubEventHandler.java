@@ -31,7 +31,7 @@ public abstract class GithubEventHandler {
 
         UUID userId = userMappingRepo.findById(new UserMapping.UserMappingId(
                 projectId, SupportedSystem.GITHUB, payload.read("$.sender.id", String.class)
-        )).orElseThrow().getUserId();
+        )).map(UserMapping::getUserId).orElse(null);
 
         return new Message(
 

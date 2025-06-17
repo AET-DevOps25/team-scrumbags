@@ -21,7 +21,7 @@ public class PushEventHandler extends GithubEventHandler {
         message.getMetadata().setType(EVENT_TYPE);
 
         message.getContent().putAll(
-                JsonUtils.extract(payload, "$.after", "$.before", "$.commits",
+                JsonUtils.extract(payload, "$.sender.id", "$.sender.login", "$.after", "$.before", "$.commits",
                         "$.compare", "$.created", "$.deleted", "$.forced", "$.pusher", "$.ref",
                         "$.base_ref", "$.head_commit")
         );

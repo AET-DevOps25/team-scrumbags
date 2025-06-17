@@ -24,7 +24,7 @@ public class DeploymentReviewEventHandler extends GithubEventHandler {
         message.getMetadata().setType(EVENT_TYPE + " " + payload.read("$.action", String.class));
 
         message.getContent().putAll(
-                JsonUtils.extract(payload, "$.since", "$.workflow_run.id", "$.comment",
+                JsonUtils.extract(payload, "$.sender.id", "$.sender.login", "$.since", "$.workflow_run.id", "$.comment",
                         "$.approver.id", "$.approver.login",
                         "$.environment", "$.requestor.id", "$.requestor.login"
                 )

@@ -21,7 +21,7 @@ public class WorkflowDispatchEventHandler extends GithubEventHandler{
         message.getMetadata().setType(EVENT_TYPE);
 
         message.getContent().putAll(
-                JsonUtils.extract(payload, "$.ref", "$.workflow", "$.inputs")
+                JsonUtils.extract(payload, "$.sender.id", "$.sender.login", "$.ref", "$.workflow", "$.inputs")
         );
 
         return message;

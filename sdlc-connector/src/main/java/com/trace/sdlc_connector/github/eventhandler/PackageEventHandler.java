@@ -21,7 +21,7 @@ public class PackageEventHandler extends GithubEventHandler {
         message.getMetadata().setType(EVENT_TYPE + " " + payload.read("$.action", String.class));
 
         message.getContent().putAll(
-                JsonUtils.extract(payload, "$.package")
+                JsonUtils.extract(payload, "$.sender.id", "$.sender.login", "$.package")
         );
 
         return message;

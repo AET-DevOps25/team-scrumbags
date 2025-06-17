@@ -21,7 +21,7 @@ public class DiscussionEventHandler extends GithubEventHandler {
         message.getMetadata().setType(EVENT_TYPE + " " + payload.read("$.action", String.class));
 
         message.getContent().putAll(
-                JsonUtils.extract(payload, "$.discussion", "$.answer", "$.changes", "$.label",
+                JsonUtils.extract(payload, "$.sender.id", "$.sender.login", "$.discussion", "$.answer", "$.changes", "$.label",
                         "$.old_answer")
         );
 

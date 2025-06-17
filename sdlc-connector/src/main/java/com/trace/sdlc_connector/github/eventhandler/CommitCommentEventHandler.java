@@ -21,7 +21,7 @@ public class CommitCommentEventHandler extends GithubEventHandler {
         message.getMetadata().setType(EVENT_TYPE + " " + payload.read("$.action", String.class));
 
         message.getContent().putAll(
-                JsonUtils.extract(payload, "$.comment")
+                JsonUtils.extract(payload, "$.sender.id", "$.sender.login", "$.comment")
                 );
 
         return message;
