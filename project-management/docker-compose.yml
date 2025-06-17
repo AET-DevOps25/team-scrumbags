@@ -10,16 +10,16 @@ services:
     environment:
       - DEBUG=${DEBUG:-false}
       - DB_URL=jdbc:mysql://db:3306/project-db
-      - DB_USER=user
-      - DB_PASSWORD=test
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
 
   db:
     image: mysql:8
     environment:
-      MYSQL_ROOT_PASSWORD: test
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       MYSQL_DATABASE: project-db
-      MYSQL_USER: user
-      MYSQL_PASSWORD: test
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
     ports:
       - "3306:3306"
     volumes:

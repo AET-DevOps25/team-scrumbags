@@ -1,17 +1,17 @@
 meta {
-  name: Create Project
+  name: Create User
   type: http
-  seq: 5
+  seq: 3
 }
 
 post {
-  url: {{api_url}}/projects
+  url: {{api_url}}/users
   body: json
   auth: inherit
 }
 
 body:json {
   {
-    "name":"newproject"
+    "name": "ich"
   }
 }

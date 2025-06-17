@@ -1,17 +1,11 @@
 meta {
   name: All users
   type: http
-  seq: 3
+  seq: 4
 }
 
 get {
   url: {{api_url}}/users
-  body: json
+  body: none
   auth: inherit
-}
-
-body:json {
-  {
-    "name":"newproject"
-  }
 }
