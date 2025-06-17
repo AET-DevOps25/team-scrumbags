@@ -16,7 +16,7 @@ public class TokenController {
     }
 
     @PostMapping("projects/{projectId}/token")
-    public ResponseEntity<?> saveGithubToken(@PathVariable UUID projectId, @RequestParam(required = false, defaultValue = "github", name = "system") SupportedSystem supportedSystem, @RequestBody String token) {
+    public ResponseEntity<?> savePlatformToken(@PathVariable UUID projectId, @RequestParam(required = false, defaultValue = "github", name = "system") SupportedSystem supportedSystem, @RequestBody String token) {
         if (token == null || token.isEmpty()) {
             return ResponseEntity.badRequest().body("Token is missing or empty");
         }
