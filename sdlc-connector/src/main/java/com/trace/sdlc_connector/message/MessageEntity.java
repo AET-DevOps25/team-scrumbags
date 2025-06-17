@@ -77,4 +77,8 @@ public class MessageEntity {
     public Map<String, Object> getContent() {
         return content;
     }
+
+    public UUID getUserId() {
+        return userId;
+    }
 }

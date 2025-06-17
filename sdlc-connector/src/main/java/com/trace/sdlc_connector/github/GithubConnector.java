@@ -33,6 +33,7 @@ public class GithubConnector {
     private final MessageProcessor messageProcessor;
 
     private final Map<String, GithubEventHandler> eventHandler;
+
     public GithubConnector(TokenRepo tokenRepo, MessageProcessor messageProcessor, UserMappingRepo userMappingRepo) {
         this.tokenRepo = tokenRepo;
         this.messageProcessor = messageProcessor;
@@ -73,23 +74,28 @@ public class GithubConnector {
             @RequestBody String payload,
             @RequestHeader("X-GitHub-Delivery") UUID eventId,
             @RequestHeader("X-GitHub-Event") String eventType,
-            @RequestHeader("X-Hub-Signature-256") String signature) {
+            @RequestHeader(value = "X-Hub-Signature-256", required = false) String signature) {
 
         var now = System.currentTimeMillis();
 
-        var secrets = tokenRepo.findAllByProjectIdAndSupportedSystem(projectId, SupportedSystem.GITHUB);
+        // validate signature header if present
+        if (signature != null && !signature.isEmpty()) {
+            var secrets = tokenRepo.findAllByProjectIdAndSupportedSystem(projectId, SupportedSystem.GITHUB);
 
-        // try all tokens
-        String validSecret = null;
-        for (var secret : secrets) {
-            if (validateWebhookSignature(payload, secret.getToken(), signature)) {
-                validSecret = secret.getToken();
-                break;
+            // try all tokens
+            String validSecret = null;
+            for (var secret : secrets) {
+                if (validateWebhookSignature(payload, secret.getToken(), signature)) {
+                    validSecret = secret.getToken();
+                    break;
+                }
             }
-        }
-        if (validSecret == null) {
-            logger.warn("Invalid webhook signature");
-            return ResponseEntity.badRequest().body("No valid secret for signature");
+
+            // if no valid secret found, return bad request
+            if (validSecret == null) {
+                logger.warn("Invalid webhook signature");
+                return ResponseEntity.badRequest().body("No valid secret for signature");
+            }
         }
 
         Message message = processWebhookEvent(eventType, eventId, projectId, payload, now);
@@ -126,8 +132,8 @@ public class GithubConnector {
      */
     public boolean validateWebhookSignature(String payload, String webhookSecret, String signature) {
         if (webhookSecret == null || webhookSecret.isEmpty()) {
-            logger.warn("Webhook secret not configured - skipping signature validation");
-            return true;
+            logger.warn("Webhook secret not configured");
+            return false;
         }
 
         try {
