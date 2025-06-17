@@ -1,42 +1,52 @@
 package com.trace.project_management.controller;
 
 import com.trace.project_management.entity.Project;
-import com.trace.project_management.repository.ProjectRepository;
+import com.trace.project_management.service.ProjectService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/projects")
 public class ProjectController {
 
-    private final ProjectRepository projectRepository;
+    private final ProjectService projectService;
 
-    public ProjectController(ProjectRepository projectRepository) {
-        this.projectRepository = projectRepository;
+    public ProjectController(ProjectService projectService) {
+        this.projectService = projectService;
     }
 
-    /**
-     * Create a new project.
-     *
-     * @param project the project to create
-     * @return ResponseEntity with the created project
-     */
     @PostMapping
     public ResponseEntity<?> createProject(@RequestBody Project project) {
-        project = projectRepository.save(project);
+        project = projectService.createProject(project);
 
         return ResponseEntity.ok(project);
     }
 
-    /**
-     * Get all projects.
-     *
-     * @return ResponseEntity with the list of projects
-     */
     @GetMapping
     public ResponseEntity<?> getProjects() {
-        var projects = projectRepository.findAll();
+        var projects = projectService.getProjectsOfUser();
 
         return ResponseEntity.ok(projects);
+    }
+
+    /**
+     * Get a specific project by ID.
+     * This endpoint is secured with the ProjectAccess annotation,
+     * which automatically checks if the user has access to the project.
+     *
+     * @param projectId The ID of the project to retrieve
+     * @return ResponseEntity with the project details
+     */
+    @GetMapping("/{projectId}")
+    public ResponseEntity<?> getProjectById(@PathVariable UUID projectId) {
+        Project project = projectService.getProjectById(projectId);
+        if (project == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok(project);
     }
 }

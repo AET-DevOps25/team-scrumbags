@@ -7,6 +7,10 @@ Rather rely on the libraries and their primary colors and styling.
 We use signals and standalone components.
 
 <!-- project management -->
+We use spring boot with keycloak for user management and project management.
+A user will have a role per project, he has access to.
+When a user creates a project, he gets the role of the project.
+Everybody in a project can add new users to the project.
 
 <!-- sdlc-connector -->
 
