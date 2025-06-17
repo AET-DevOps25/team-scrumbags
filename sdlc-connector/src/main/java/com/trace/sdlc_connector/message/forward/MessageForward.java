@@ -1,0 +1,46 @@
+package com.trace.sdlc_connector.message.forward;
+
+import com.trace.sdlc_connector.message.Message;
+import com.trace.sdlc_connector.message.MessageProcessor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
+
+import java.util.UUID;
+
+@Service
+@ConditionalOnProperty(name = "trace.sdlc.mode", havingValue = "forward", matchIfMissing = true)
+public class MessageForward extends MessageProcessor {
+
+    private static final Logger logger = LoggerFactory.getLogger(MessageForward.class);
+
+    private final RestClient restClient;
+
+    @Value("${trace.gen-ai.url}")
+    private String genAiUrl;
+
+    public MessageForward() {
+        super();
+        this.restClient = RestClient.create();
+    }
+
+    public void processMessage(UUID projectId, Message message){
+        try {
+            String response = this.restClient.post()
+                    .uri(genAiUrl + "/projects/" + projectId)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(message)
+                    .retrieve()
+                    .toEntity(String.class)
+                    .getBody();
+
+            logger.info("Message forwarded successfully: {}", message.getMetadata().getEventId());
+        } catch (Exception e) {
+            logger.error("Error forwarding message: {}", message.getMetadata().getEventId(), e);
+        }
+    }
+}

@@ -1,8 +1,8 @@
 package com.trace.sdlc_connector.github.eventhandler;
 
 import com.jayway.jsonpath.DocumentContext;
-import com.trace.sdlc_connector.Message;
-import com.trace.sdlc_connector.Metadata;
+import com.trace.sdlc_connector.message.Message;
+import com.trace.sdlc_connector.message.Metadata;
 import com.trace.sdlc_connector.SupportedSystem;
 import com.trace.sdlc_connector.user.UserMapping;
 import com.trace.sdlc_connector.user.UserMappingRepo;

@@ -1,5 +1,9 @@
 trace:
-    token-secret: ${TOKEN_SECRET}
+    sdlc:
+        token-secret: ${TOKEN_SECRET}
+        mode: ${MODE:forward}
+    gen-ai:
+        url: ${GENAI_URL}
 
 spring:
     application:

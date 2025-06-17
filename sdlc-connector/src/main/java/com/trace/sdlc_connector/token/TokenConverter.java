@@ -21,7 +21,7 @@ public class TokenConverter implements AttributeConverter<String, String> {
     private static final int GCM_TAG_LENGTH = 128;
     private static final String ALGORITHM = "AES/GCM/NoPadding";
 
-    @Value("${trace.token-secret}")
+    @Value("${trace.sdlc.token-secret}")
     private String secretKey;
 
     private final Logger logger = LoggerFactory.getLogger(getClass());

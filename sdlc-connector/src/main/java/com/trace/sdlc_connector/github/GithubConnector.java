@@ -5,6 +5,8 @@ import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
 import com.trace.sdlc_connector.*;
 import com.trace.sdlc_connector.github.eventhandler.*;
+import com.trace.sdlc_connector.message.Message;
+import com.trace.sdlc_connector.message.MessageProcessor;
 import com.trace.sdlc_connector.token.TokenRepo;
 import com.trace.sdlc_connector.user.UserMappingRepo;
 import org.slf4j.Logger;
@@ -28,12 +30,12 @@ public class GithubConnector {
     private static final Logger logger = LoggerFactory.getLogger(GithubConnector.class);
 
     private final TokenRepo tokenRepo;
-    private final MessageRepo messageRepo;
+    private final MessageProcessor messageProcessor;
 
     private final Map<String, GithubEventHandler> eventHandler;
-    public GithubConnector(TokenRepo tokenRepo, MessageRepo messageRepo, UserMappingRepo userMappingRepo) {
+    public GithubConnector(TokenRepo tokenRepo, MessageProcessor messageProcessor, UserMappingRepo userMappingRepo) {
         this.tokenRepo = tokenRepo;
-        this.messageRepo = messageRepo;
+        this.messageProcessor = messageProcessor;
 
         this.eventHandler = Stream.of(
                         new CreateEventHandler(userMappingRepo),
@@ -92,18 +94,10 @@ public class GithubConnector {
 
         Message message = processWebhookEvent(eventType, eventId, projectId, payload, now);
 
-        messageRepo.save(new MessageEntity(message));
+        messageProcessor.processMessage(projectId, message);
 
-        // dont return data entity as github will receive the response
+        // dont return data as github will receive the response
         return ResponseEntity.ok("Webhook received");
-    }
-
-    @GetMapping("projects/{projectId}/github")
-    public ResponseEntity<?> retrieveAllData(
-            @PathVariable UUID projectId) {
-        var entities = messageRepo.findAllByProjectId(projectId);
-
-        return ResponseEntity.ok(entities);
     }
 
     public Message processWebhookEvent(String eventType, UUID eventId, UUID projectId, String payload, Long now) {

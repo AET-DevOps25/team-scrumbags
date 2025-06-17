@@ -1,4 +1,4 @@
-package com.trace.sdlc_connector;
+package com.trace.sdlc_connector.message;
 
 import java.util.UUID;
 

@@ -2,9 +2,9 @@ package com.trace.sdlc_connector.github.eventhandler;
 
 import com.jayway.jsonpath.DocumentContext;
 import com.trace.sdlc_connector.*;
+import com.trace.sdlc_connector.message.Message;
 import com.trace.sdlc_connector.user.UserMappingRepo;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
