@@ -7,14 +7,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 
 @RestController
 @RequestMapping("/projects/{projectId}/comms")
-@AllArgsConstructor
+@NoArgsConstructor
 public class CommsController {
     @Autowired
-    private final CommsService commsService;
+    private CommsService commsService;
 
     @GetMapping("/{platform}/users")
     public ResponseEntity<?> getPlatformUsers(@PathVariable UUID projectId, @PathVariable Platform platform) {
@@ -48,13 +48,13 @@ public class CommsController {
         @PathVariable UUID projectId,
         @PathVariable Platform platform,
         @RequestParam(required = false) UUID userId,
-        @RequestParam(required = false) String platformUsername
+        @RequestParam(required = false) String platformUserId
     ) {
-        if (userId == null || platformUsername == null) {
+        if (userId == null || platformUserId == null) {
             return ResponseEntity.badRequest().body("User ID and platform username must be specified!");
         }
 
-        var userEntity = commsService.saveUser(projectId, userId, platform, platformUsername);
+        var userEntity = commsService.saveUser(projectId, userId, platform, platformUserId);
 
         return ResponseEntity.ok(userEntity);
     }

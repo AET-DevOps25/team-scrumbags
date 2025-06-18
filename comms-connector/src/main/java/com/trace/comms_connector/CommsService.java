@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.trace.comms_connector.connection.ConnectionEntity;
 import com.trace.comms_connector.connection.ConnectionRepo;
@@ -15,19 +16,19 @@ import com.trace.comms_connector.discord.DiscordRestClient;
 import com.trace.comms_connector.user.UserEntity;
 import com.trace.comms_connector.user.UserRepo;
 
-import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 
 @Service
-@AllArgsConstructor
+@NoArgsConstructor
 public class CommsService {
     @Autowired
-    private final ConnectionRepo connectionRepo;
+    private ConnectionRepo connectionRepo;
 
     @Autowired
-    private final UserRepo userRepo;
+    private UserRepo userRepo;
 
-
-
+    // Save connection to the connection database
+    @Transactional
     public ConnectionEntity saveConnection(
         @NonNull UUID projectId,
         @NonNull String platformChannelId,
@@ -39,13 +40,7 @@ public class CommsService {
         return connectionEntity;
     }
 
-    /**
-     * Get communication integration connections for a project ID (optionally only in given platform)
-     * 
-     * @param projectId
-     * @param platform
-     * @return ConnectionEntity list
-     */
+    // Get communication integration connections for a project ID (optionally only in given platform)
     public List<ConnectionEntity> getConnections(@NonNull UUID projectId, @Nullable Platform platform) {
         List<ConnectionEntity> connections;
         if (platform != null) {
@@ -56,12 +51,8 @@ public class CommsService {
         return connections;
     }
 
-    /**
-     * Delete communication integration communications for a project ID (optionally only in given platform)
-     * 
-     * @param projectId
-     * @param platform
-     */
+    // Delete communication integration communications for a project ID (optionally only in given platform)     
+    @Transactional
     public void deleteConnections(@NonNull UUID projectId, @Nullable Platform platform) {
         if (platform != null) {
             connectionRepo.deleteInBulkByProjectIdAndPlatform(projectId, platform);
@@ -69,24 +60,21 @@ public class CommsService {
             connectionRepo.deleteInBulkByProjectID(projectId);
         }
     }
+
+    // Save user to the user database, is also used when adding userId to a platformUserId
+    @Transactional
     public UserEntity saveUser(
         @NonNull UUID projectId,
         @NonNull UUID userId,
         @NonNull Platform platform,
-        @Nullable String platformUsername
+        @Nullable String platformUserId
     ) {
-        UserEntity userEntity = new UserEntity(projectId, userId, platform, platformUsername);
+        UserEntity userEntity = new UserEntity(projectId, userId, platform, platformUserId);
         userEntity = userRepo.save(userEntity);
         return userEntity;
     }
 
-    /**
-     * Get communication integration user entries of a project (optionally only in given platform)
-     * 
-     * @param projectId
-     * @param platform
-     * @return UserEntity list
-     */
+    // Get communication integration user entries of a project (optionally only in given platform)
     public List<UserEntity> getUsersByProjectId(@NonNull UUID projectId, @Nullable Platform platform) {
         List<UserEntity> users;
         if (platform != null) {
@@ -97,12 +85,8 @@ public class CommsService {
         return users;
     }
 
-    /**
-     * Delete all communication integration user entries of a project (optionally only in given platform)
-     * 
-     * @param projectId
-     * @param platform
-     */
+    // Delete all communication integration user entries of a project (optionally only in given platform)
+    @Transactional
     public void deleteUsersByProjectId(@NonNull UUID projectId, @Nullable Platform platform) {
         if (platform != null) {
             userRepo.deleteInBulkByProjectIdAndPlatform(projectId, platform);
@@ -111,12 +95,8 @@ public class CommsService {
         }
     }
 
-    /**
-     * Delete communication integration user entries for a given user ID (optionally only in given project ID)
-     * 
-     * @param userId
-     * @param projectId
-     */
+    // Delete communication integration user entries for a given user ID (optionally only in given project ID)
+    @Transactional
     public void deleteUsersByUserId(@NonNull UUID userId, @Nullable UUID projectId) {
         if (projectId != null) {
             userRepo.deleteInBulkByProjectIdAndUserId(projectId, userId);
@@ -125,26 +105,15 @@ public class CommsService {
         }
     }
 
-    /**
-     * Delete communication integrations for a given project (optionally only in given platform)
-     * 
-     * @param projectId
-     * @param platform
-     */
+    // Delete communication integrations for a given project (optionally only in given platform)
+    @Transactional
     public void deleteCommIntegration(@NonNull UUID projectId, @Nullable Platform platform) {
         this.deleteConnections(projectId, platform);
         this.deleteUsersByProjectId(projectId, platform);
     }
 
-    /**
-     * Add a communication integration to a project by saving the corresponding channel and user IDs in the repos
-     * 
-     * @param projectId
-     * @param platform
-     * @param channelIdList
-     * @param userIdList
-     * @return
-     */
+    // Add a communication integration to a project by saving the corresponding channel and user IDs in the repos
+    @Transactional
     public List<ConnectionEntity> addCommIntegration(
         @NonNull UUID projectId,
         @NonNull Platform platform,
@@ -156,7 +125,8 @@ public class CommsService {
         List<String> channelIdList;
 
         if (platform.equals(Platform.DISCORD)) {
-            channelIdList = DiscordRestClient.getGuildChannelIds(serverId);
+            DiscordRestClient client = new DiscordRestClient();
+            channelIdList = client.getGuildChannelIds(serverId);
         } else {
             throw new Exception("Platform not supported.");
         }
@@ -169,5 +139,16 @@ public class CommsService {
             this.saveUser(projectId, user, platform, null);
         }
         return connections;
+    }
+
+    // Get all connections, used for the thread that periodically pulls messages
+    public List<ConnectionEntity> getAllConnections() {
+        return connectionRepo.findAll();
+    }
+
+    // Get the trace user ID for a user in the communication channel, user while creating
+    // the JSON to send to the gen AI microservice
+    public UUID getUserIdByProjectIdAndPlatformDetails(UUID projectId, Platform platform, String platformUserId) {
+        return userRepo.findByProjectIdAndPlatformAndPlatformUserId(projectId, platform, platformUserId);
     }
 }
