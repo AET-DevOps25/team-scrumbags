@@ -5,7 +5,9 @@ import com.trace.project_management.service.ProjectService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -18,6 +20,12 @@ public class ProjectController {
         this.projectService = projectService;
     }
 
+    /**
+     * Create a new project and assign the user to the project.
+     *
+     * @param project The project details to create
+     * @return ResponseEntity with the created project
+     */
     @PostMapping
     public ResponseEntity<?> createProject(@RequestBody Project project) {
         project = projectService.createProject(project);
@@ -25,6 +33,11 @@ public class ProjectController {
         return ResponseEntity.ok(project);
     }
 
+    /**
+     * Get all projects associated with the user.
+     *
+     * @return ResponseEntity with a list of projects
+     */
     @GetMapping
     public ResponseEntity<?> getProjects() {
         var projects = projectService.getProjectsOfUser();
@@ -34,8 +47,6 @@ public class ProjectController {
 
     /**
      * Get a specific project by ID.
-     * This endpoint is secured with the ProjectAccess annotation,
-     * which automatically checks if the user has access to the project.
      *
      * @param projectId The ID of the project to retrieve
      * @return ResponseEntity with the project details
@@ -51,16 +62,21 @@ public class ProjectController {
     }
 
     /**
-     * Get a specific project by ID.
-     * This endpoint is secured with the ProjectAccess annotation,
-     * which automatically checks if the user has access to the project.
+     * Get the users associated with a specific project.
      *
-     * @param projectId The ID of the project to retrieve
-     * @return ResponseEntity with the project details
+     * @param projectId The ID of the project
+     * @return ResponseEntity with a list of users in the project
      */
     @GetMapping("/{projectId}/users")
     public ResponseEntity<?> getUsersOfProject(@PathVariable UUID projectId) {
         var users = projectService.getUsersOfProject(projectId);
+
+        return ResponseEntity.ok(users);
+    }
+
+    @PostMapping("/{projectId}/users")
+    public ResponseEntity<?> assignUsersToProject(@PathVariable UUID projectId, @RequestBody Set<UUID> userIds) {
+        var users = projectService.assignUsersToProject(projectId, userIds);
 
         return ResponseEntity.ok(users);
     }

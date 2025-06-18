@@ -12,18 +12,32 @@ import org.springframework.web.context.WebApplicationContext;
 @Scope(value = WebApplicationContext.SCOPE_REQUEST, proxyMode = ScopedProxyMode.TARGET_CLASS)
 public class UserContext {
     private final String userId;
+    private final String email;
+    private final String username;
 
     public UserContext() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof Jwt) {
             Jwt jwt = (Jwt) authentication.getPrincipal();
             this.userId = jwt.getClaimAsString("sub");
+            this.email = jwt.getClaimAsString("email");
+            this.username = jwt.getClaimAsString("preferred_username");
         } else {
             this.userId = null;
+            this.email = null;
+            this.username = null;
         }
     }
 
     public String getUserId() {
         return userId;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getEmail() {
+        return email;
     }
 }

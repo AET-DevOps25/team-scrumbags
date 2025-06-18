@@ -1,9 +1,9 @@
 package com.trace.project_management.config;
 
+import com.trace.project_management.entity.Project;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
-import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -105,7 +105,7 @@ public class SecurityConfig {
         }
 
         // Check for project-specific role
-        String projectRole = "ROLE_project-" + projectId.toString();
+        String projectRole = "ROLE_" + Project.projectIdToRoleName(projectId);
 
         return authorities.stream()
                 .map(GrantedAuthority::getAuthority)
@@ -116,8 +116,8 @@ public class SecurityConfig {
     public static List<UUID> getUserProjectIds(Collection<? extends GrantedAuthority> authorities) {
         return authorities.stream()
                 .map(GrantedAuthority::getAuthority)
-                .filter(authority -> authority.startsWith("ROLE_project-"))
-                .map(authority -> UUID.fromString(authority.substring("ROLE_project-".length())))
+                .filter(authority -> authority.startsWith("ROLE_" + Project.ROLE_PREFIX))
+                .map(authority -> UUID.fromString(authority.substring(("ROLE_" + Project.ROLE_PREFIX).length())))
                 .collect(Collectors.toList());
     }
 

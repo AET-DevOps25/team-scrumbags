@@ -50,4 +50,19 @@ public class Project {
     public void setDescription(String description) {
         this.description = description;
     }
+
+    public static String ROLE_PREFIX = "project-";
+
+    public static String projectIdToRoleName(UUID projectId) {
+        return ROLE_PREFIX + projectId.toString();
+    }
+
+    public static UUID roleNameToProjectId(String roleName) {
+        if (roleName.startsWith(ROLE_PREFIX)) {
+            String idPart = roleName.substring(ROLE_PREFIX.length());
+            return UUID.fromString(idPart);
+        }
+
+        return null; // or throw an exception if invalid
+    }
 }

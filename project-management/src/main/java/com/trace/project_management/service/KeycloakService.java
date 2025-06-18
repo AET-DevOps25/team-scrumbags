@@ -15,7 +15,9 @@ import jakarta.annotation.PostConstruct;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class KeycloakService {
@@ -51,13 +53,11 @@ public class KeycloakService {
     /**
      * Create a project-specific role in Keycloak
      */
-    public String createProjectRole(UUID projectId) {
-        String roleName = "project-" + projectId.toString();
-
+    public String createRole(String roleName, String description) {
         try {
             RoleRepresentation role = new RoleRepresentation();
             role.setName(roleName);
-            role.setDescription("Role for project " + projectId);
+            role.setDescription(description);
 
             realmResource.roles().create(role);
             return roleName;
@@ -79,14 +79,14 @@ public class KeycloakService {
         }
     }
 
-    public List<UUID> getUsersWithRole(String roleName) {
+    public Set<UUID> getUsersWithRole(String roleName) {
         try {
             return realmResource.roles()
                     .get(roleName)
                     .getUserMembers()
                     .stream()
                     .map(user -> UUID.fromString(user.getId()))
-                    .toList();
+                    .collect(Collectors.toSet());
         } catch (Exception e) {
             throw new RuntimeException("Failed to fetch users with role in Keycloak", e);
         }

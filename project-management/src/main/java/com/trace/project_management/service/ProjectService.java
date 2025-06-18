@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -39,7 +40,7 @@ public class ProjectService {
         project = projectRepository.save(project);
 
         // create a role in Keycloak for the project
-        var roleName = keycloakService.createProjectRole(project.getId());
+        var roleName = keycloakService.createRole(Project.projectIdToRoleName(project.getId()), "Role for project " + project.getId());
 
         // assign role to user
         keycloakService.assignRoleToUser(userContext.getUserId(), roleName);
@@ -49,7 +50,7 @@ public class ProjectService {
 
     public List<Project> getProjectsOfUser() {
         // This method should return all projects associated with the user
-        if(securityService.isAdmin()){
+        if (securityService.isAdmin()) {
             return projectRepository.findAll();
         }
 
@@ -66,7 +67,7 @@ public class ProjectService {
         return projectRepository.findById(projectId).orElse(null);
     }
 
-    public List<UUID> getUsersOfProject(UUID projectId) {
+    public Set<UUID> getUsersOfProject(UUID projectId) {
         // Check if the user has access to the project
         if (!securityService.hasProjectAccess(projectId)) {
             throw new SecurityException("Access denied to project with ID: " + projectId);
@@ -74,5 +75,19 @@ public class ProjectService {
 
         // Fetch users associated with the project
         return keycloakService.getUsersWithRole("project-" + projectId.toString());
+    }
+
+    public Set<UUID> assignUsersToProject(UUID projectId, Set<UUID> userIds) {
+        // Check if the user has access to the project
+        if (!securityService.hasProjectAccess(projectId)) {
+            throw new SecurityException("Access denied to project with ID: " + projectId);
+        }
+
+        // Assign users to the project in Keycloak
+        for (UUID userId : userIds) {
+            keycloakService.assignRoleToUser(userId.toString(), Project.projectIdToRoleName(projectId));
+        }
+
+        return userIds;
     }
 }
