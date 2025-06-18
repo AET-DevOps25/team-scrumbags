@@ -79,6 +79,16 @@ public class KeycloakService {
         }
     }
 
+    public void removeRoleFromUser(String userId, String roleName) {
+        try {
+            UserResource userResource = realmResource.users().get(userId);
+            RoleRepresentation role = realmResource.roles().get(roleName).toRepresentation();
+            userResource.roles().realmLevel().remove(Collections.singletonList(role));
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to remove role from user in Keycloak", e);
+        }
+    }
+
     public Set<UUID> getUsersWithRole(String roleName) {
         try {
             return realmResource.roles()

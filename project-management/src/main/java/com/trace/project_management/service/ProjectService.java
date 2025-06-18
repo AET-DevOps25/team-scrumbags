@@ -90,4 +90,18 @@ public class ProjectService {
 
         return userIds;
     }
+
+    public Set<UUID> removeUsersFromProject(UUID projectId, Set<UUID> userIds) {
+        // Check if the user has access to the project
+        if (!securityService.hasProjectAccess(projectId)) {
+            throw new SecurityException("Access denied to project with ID: " + projectId);
+        }
+
+        // Remove users from the project in Keycloak
+        for (UUID userId : userIds) {
+            keycloakService.removeRoleFromUser(userId.toString(), Project.projectIdToRoleName(projectId));
+        }
+
+        return userIds;
+    }
 }
