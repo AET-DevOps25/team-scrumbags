@@ -11,7 +11,7 @@ public class TranscriptSegment implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    private String index;
+    private String segmentIndex;
     private String text;
     private String start;
     private String end;
@@ -21,7 +21,7 @@ public class TranscriptSegment implements Serializable {
     public TranscriptSegment() {}
 
     public TranscriptSegment(String index, String text, String start, String end, String speakerId, String speakerName) {
-        this.index = index;
+        this.segmentIndex = index;
         this.text = text;
         this.start = start;
         this.end = end;
@@ -29,12 +29,12 @@ public class TranscriptSegment implements Serializable {
         this.speakerName = speakerName;
     }
 
-    public String getIndex() {
-        return index;
+    public String getSegmentIndex() {
+        return segmentIndex;
     }
 
-    public void setIndex(String index) {
-        this.index = index;
+    public void setSegmentIndex(String segmentIndex) {
+        this.segmentIndex = segmentIndex;
     }
 
     public String getText() {

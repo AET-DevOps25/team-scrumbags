@@ -1,6 +1,3 @@
 python-dotenv
 whisperx
-faiss-cpu
-scikit-learn
-matplotlib
 pydub
