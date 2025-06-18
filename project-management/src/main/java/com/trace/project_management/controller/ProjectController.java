@@ -49,4 +49,19 @@ public class ProjectController {
 
         return ResponseEntity.ok(project);
     }
+
+    /**
+     * Get a specific project by ID.
+     * This endpoint is secured with the ProjectAccess annotation,
+     * which automatically checks if the user has access to the project.
+     *
+     * @param projectId The ID of the project to retrieve
+     * @return ResponseEntity with the project details
+     */
+    @GetMapping("/{projectId}/users")
+    public ResponseEntity<?> getUsersOfProject(@PathVariable UUID projectId) {
+        var users = projectService.getUsersOfProject(projectId);
+
+        return ResponseEntity.ok(users);
+    }
 }

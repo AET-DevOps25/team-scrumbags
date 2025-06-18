@@ -65,4 +65,14 @@ public class ProjectService {
 
         return projectRepository.findById(projectId).orElse(null);
     }
+
+    public List<UUID> getUsersOfProject(UUID projectId) {
+        // Check if the user has access to the project
+        if (!securityService.hasProjectAccess(projectId)) {
+            throw new SecurityException("Access denied to project with ID: " + projectId);
+        }
+
+        // Fetch users associated with the project
+        return keycloakService.getUsersWithRole("project-" + projectId.toString());
+    }
 }

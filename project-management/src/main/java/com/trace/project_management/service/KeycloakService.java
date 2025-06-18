@@ -12,6 +12,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -43,7 +44,7 @@ public class KeycloakService {
                 .password(adminPassword)
                 .clientId("admin-cli")
                 .build();
-        
+
         this.realmResource = keycloak.realm(realm);
     }
 
@@ -52,12 +53,12 @@ public class KeycloakService {
      */
     public String createProjectRole(UUID projectId) {
         String roleName = "project-" + projectId.toString();
-        
+
         try {
             RoleRepresentation role = new RoleRepresentation();
             role.setName(roleName);
             role.setDescription("Role for project " + projectId);
-            
+
             realmResource.roles().create(role);
             return roleName;
         } catch (Exception e) {
@@ -75,6 +76,19 @@ public class KeycloakService {
             userResource.roles().realmLevel().add(Collections.singletonList(role));
         } catch (Exception e) {
             throw new RuntimeException("Failed to assign role to user in Keycloak", e);
+        }
+    }
+
+    public List<UUID> getUsersWithRole(String roleName) {
+        try {
+            return realmResource.roles()
+                    .get(roleName)
+                    .getUserMembers()
+                    .stream()
+                    .map(user -> UUID.fromString(user.getId()))
+                    .toList();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to fetch users with role in Keycloak", e);
         }
     }
 }
