@@ -9,7 +9,7 @@ QUEUE_NAME = 'items'
 @app.post('/items/')
 async def create_item(item: Item):
     try:
-        body = json.dumps(item.dict()).encode()
+        body = json.dumps(item.model_dump()).encode()
         await publish_message(QUEUE_NAME, body)
         return {'status': 'queued'}
     except Exception as e:

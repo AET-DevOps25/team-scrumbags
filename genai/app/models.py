@@ -1,28 +1,28 @@
-import weaviate
 import os
+from weaviate import WeaviateClient
 
-class WeaviateClient:
-    _client = None
+class WeaviateClientSingleton:
+    _client: WeaviateClient = None
 
     @classmethod
-    def get(cls):
+    def get(cls) -> WeaviateClient:
         if cls._client is None:
-            cls._client = weaviate.Client(
-                url=os.getenv('WEAVIATE_URL', 'http://weaviate:8080')
+            cls._client = WeaviateClient(
+                url=os.getenv('WEAVIATE_URL', 'http://weaviate:8080'),
             )
-            # Ensure class exists
-            schema = {
+            # Define class schema
+            class_schema = {
                 'class': 'MicroContent',
                 'properties': [
                     {'name': 'type', 'dataType': ['string']},
                     {'name': 'user', 'dataType': ['string']},
                     {'name': 'timestamp', 'dataType': ['int']},
                     {'name': 'projectId', 'dataType': ['string']},
-                    {'name': 'content', 'dataType': ['text']}
+                    {'name': 'content', 'dataType': ['text']},
                 ]
             }
             try:
-                cls._client.schema.create_class(schema)
-            except weaviate.exceptions.SchemaException:
-                pass
+                cls._client.collections.create(class_schema)
+            except Exception as e:
+                print(f"Error creating Weaviate class: {e}")
         return cls._client
