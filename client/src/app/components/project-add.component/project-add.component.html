@@ -1,53 +1,51 @@
-<div class="w-full max-w-3xl mx-auto p-4">
-  <div mat-dialog-title class="flex items-center">
-    <h2 class="text-xl font-semibold">Add New Project</h2>
-  </div>
+<div mat-dialog-title>
+  <h2 class="text-xl font-semibold">Add New Project</h2>
+</div>
 
-  <div mat-dialog-content class="py-4">
-    <form [formGroup]="projectForm" class="flex flex-col gap-4">
-      <mat-form-field appearance="outline">
-        <mat-label>Project Name</mat-label>
-        <input
-          matInput
-          formControlName="name"
-          placeholder="Enter project name"
-          maxlength="100"
-        />
-        @if (projectForm.get('name')?.invalid &&
-        projectForm.get('name')?.touched) {
-        <mat-error>{{ getErrorMessage("name") }}</mat-error>
-        }
-      </mat-form-field>
+<div mat-dialog-content>
+  <form [formGroup]="projectForm" class="flex flex-col gap-4">
+    <mat-form-field appearance="outline">
+      <mat-label>Project Name</mat-label>
+      <input
+        matInput
+        formControlName="name"
+        placeholder="Enter project name"
+        maxlength="100"
+      />
+      @if (projectForm.get('name')?.invalid && projectForm.get('name')?.touched)
+      {
+      <mat-error>{{ getErrorMessage("name") }}</mat-error>
+      }
+    </mat-form-field>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Description</mat-label>
-        <textarea
-          matInput
-          formControlName="description"
-          placeholder="Enter project description"
-          rows="4"
-          maxlength="500"
-        >
-        </textarea>
-        @if (projectForm.get('description')?.invalid &&
-        projectForm.get('description')?.touched) {
-        <mat-error>{{ getErrorMessage("description") }}</mat-error>
-        }
-      </mat-form-field>
-    </form>
-  </div>
+    <mat-form-field appearance="outline">
+      <mat-label>Description</mat-label>
+      <textarea
+        matInput
+        formControlName="description"
+        placeholder="Enter project description"
+        rows="4"
+        maxlength="500"
+      >
+      </textarea>
+      @if (projectForm.get('description')?.invalid &&
+      projectForm.get('description')?.touched) {
+      <mat-error>{{ getErrorMessage("description") }}</mat-error>
+      }
+    </mat-form-field>
+  </form>
+</div>
 
-  <div mat-dialog-actions class="flex justify-end gap-2 pt-4">
-    <button mat-button (click)="onCancel()" [disabled]="isSubmitting()">
-      Cancel
-    </button>
-    <button
-      mat-raised-button
-      color="primary"
-      (click)="onSubmit()"
-      [disabled]="!projectForm.valid || isSubmitting()"
-    >
-      @if (isSubmitting()) { Creating... } @else { Create Project }
-    </button>
-  </div>
+<div mat-dialog-actions class="flex justify-end gap-2 pt-4">
+  <button mat-button (click)="onCancel()" [disabled]="isSubmitting()">
+    Cancel
+  </button>
+  <button
+    mat-raised-button
+    color="primary"
+    (click)="onSubmit()"
+    [disabled]="!projectForm.valid || isSubmitting()"
+  >
+    @if (isSubmitting()) { Creating... } @else { Create Project }
+  </button>
 </div>
