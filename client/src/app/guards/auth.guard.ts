@@ -16,8 +16,8 @@ const isAuthenticated = async (
   return authData.authenticated;
 };
 
-// Pokemon-specific role guard - checks authentication and Pokemon-specific role
-const hasPokemonAccess = async (
+// Project-specific role guard - checks authentication and Project-specific role
+const hasProjectAccess = async (
   route: ActivatedRouteSnapshot,
   state: RouterStateSnapshot,
   authData: AuthGuardData
@@ -28,15 +28,15 @@ const hasPokemonAccess = async (
     return false;
   }
 
-  // Get the Pokemon ID from the route parameters
-  const pokemonId = route.params['id'];
-  if (!pokemonId) {
+  // Get the Project ID from the route parameters
+  const projectId = route.params['id'];
+  if (!projectId) {
     return false;
   }
 
-  // Check if user has access to this specific Pokemon
+  // Check if user has access to this specific Project
   // You can customize this logic based on your role naming convention
-  const requiredRole = `pokemon-${pokemonId}`;
+  const requiredRole = `project-${projectId}`;
 
   // Check in resource roles (assuming your Keycloak client has resource roles)
   const hasResourceRole = Object.values(grantedRoles.resourceRoles).some(
@@ -46,11 +46,11 @@ const hasPokemonAccess = async (
   // Check in realm roles as fallback
   const hasRealmRole = grantedRoles.realmRoles.includes(requiredRole);
 
-  // Also allow if user has a general 'pokemon-admin' role
+  // Also allow if user has admin role
   const isAdmin =
-    grantedRoles.realmRoles.includes('pokemon-admin') ||
+    grantedRoles.realmRoles.includes('admin') ||
     Object.values(grantedRoles.resourceRoles).some((roles) =>
-      roles.includes('pokemon-admin')
+      roles.includes('admin')
     );
 
   const hasAccess = hasResourceRole || hasRealmRole || isAdmin;
@@ -60,7 +60,7 @@ const hasPokemonAccess = async (
     const snackBar = inject(MatSnackBar);
 
     snackBar.open(
-      `Access denied: You don't have permission to view Pokemon #${pokemonId}`,
+      `Access denied: You don't have permission to view Project #${projectId}`,
       '',
       {
         duration: 5000,
@@ -74,5 +74,5 @@ const hasPokemonAccess = async (
 };
 
 export const canActivateAuth = createAuthGuard<CanActivateFn>(isAuthenticated);
-export const canActivatePokemon =
-  createAuthGuard<CanActivateFn>(hasPokemonAccess);
+export const canActivateProject =
+  createAuthGuard<CanActivateFn>(hasProjectAccess);
