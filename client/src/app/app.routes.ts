@@ -2,7 +2,8 @@ import { Routes } from '@angular/router';
 import { canActivateAuth, canActivateProject } from './guards/auth.guard';
 import { ProjectOverviewView } from './views/project-overview/project-overview.view';
 import { ProjectDetailView } from './views/project-detail/project-detail.view';
-import { SidebarComponent } from './components/sidebar/sidebar.component';
+import { SidebarComponent } from './views/sidebar/sidebar.component';
+import { ProjectSettingsView } from './views/project-settings/project-settings.view';
 
 export const routes: Routes = [
   {
@@ -22,6 +23,11 @@ export const routes: Routes = [
       {
         path: 'projects/:id',
         loadComponent: () => ProjectDetailView,
+        canActivate: [canActivateProject],
+      },
+      {
+        path: 'projects/:id/settings',
+        loadComponent: () => ProjectSettingsView,
         canActivate: [canActivateProject],
       },
     ],

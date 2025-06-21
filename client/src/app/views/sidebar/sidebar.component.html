@@ -6,9 +6,15 @@
     class="flex flex-col transition-all duration-300 !outline !w-70"
   >
     <mat-toolbar color="primary" class="flex justify-between items-center px-2">
+      @if(service.selectedProject()) {
+      <button mat-icon-button (click)="navigateToSettings()" class="mr-1">
+        <mat-icon>settings</mat-icon>
+      </button>
+      } @else {
       <button mat-icon-button (click)="openAddProjectDialog()" class="mr-1">
         <mat-icon>add</mat-icon>
       </button>
+      }
 
       <span
         class="font-semibold flex-1 text-center cursor-pointer hover:underline"
@@ -29,6 +35,7 @@
       @for (project of state.projectList(); track project.id) {
       <mat-list-item
         (click)="navigateToProject(project.id)"
+        [activated]="service.selectedProjectId() === project.id"
         class="cursor-pointer"
       >
         <span matListItemTitle>{{ project.name }}</span>
@@ -50,7 +57,7 @@
       <mat-icon>chevron_right</mat-icon>
     </button>
     }
-    <div class="container py-4 mx-auto px-2">
+    <div class="container py-4 mx-auto {{sidebarOpened() ? 'px-8' : 'px-0'}}">
       <router-outlet></router-outlet>
     </div>
   </mat-sidenav-content>

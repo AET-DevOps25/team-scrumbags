@@ -3,6 +3,7 @@ import {
   computed,
   inject,
   input,
+  OnInit,
   Signal,
   signal,
 } from '@angular/core';
@@ -15,8 +16,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { ProjectState } from '../../states/project.state';
-import { ProjectApi } from '../../services/project.api';
 import { ProjectAddDialog } from '../../components/project-add/project-add.component';
+import { ProjectService } from '../../services/project.service';
 
 @Component({
   selector: 'project-overview',
@@ -31,13 +32,13 @@ import { ProjectAddDialog } from '../../components/project-add/project-add.compo
   templateUrl: './project-overview.view.html',
   styleUrl: './project-overview.view.scss',
 })
-export class ProjectOverviewView {
+export class ProjectOverviewView{
   protected state = inject(ProjectState);
-  protected api = inject(ProjectApi);
+  private service = inject(ProjectService);
   private router = inject(Router);
   private dialog = inject(MatDialog);
 
-  loading = computed(() => this.api.isLoadingProjectList());
+  loading = computed(() => this.service.isLoadingProjectList());
 
   navigateToProject(projectId: string): void {
     this.router.navigate(['/projects', projectId]);

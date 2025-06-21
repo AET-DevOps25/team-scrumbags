@@ -1,7 +1,7 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { map, catchError, finalize } from 'rxjs/operators';
+import { catchError } from 'rxjs/operators';
 import { environment } from '../environment';
 import { Project } from '../models/project.model';
 
@@ -12,16 +12,10 @@ export class ProjectApi {
   private readonly baseUrl = environment.apiUrl;
   private http = inject(HttpClient);
 
-
-  private _isLoadingProjectList = signal<boolean>(false);
-  public isLoadingProjectList = this._isLoadingProjectList.asReadonly();
-
   getProjectList(): Observable<Project[]> {
-    this._isLoadingProjectList.set(true);
-    return this.http.get<Project[]>(`${this.baseUrl}/projects`).pipe(
-      catchError(this.handleError('Error fetching project list')),
-      finalize(() => this._isLoadingProjectList.set(false))
-    );
+    return this.http
+      .get<Project[]>(`${this.baseUrl}/projects`)
+      .pipe(catchError(this.handleError('Error fetching project list')));
   }
 
   createProject(project: Project): Observable<Project> {
