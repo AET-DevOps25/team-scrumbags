@@ -16,12 +16,12 @@ export const routes: Routes = [
       },
       {
         path: 'projects',
-        component: ProjectOverviewView,
+        loadComponent: () => ProjectOverviewView,
         canActivate: [canActivateAuth],
       },
       {
         path: 'projects/:id',
-        component: ProjectDetailView,
+        loadComponent: () => ProjectDetailView,
         canActivate: [canActivateProject],
       },
     ],

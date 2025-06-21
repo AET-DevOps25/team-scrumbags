@@ -1,1 +1,14 @@
-<p>project-detail.view works!</p>
+<div class="flex justify-between items-center align-center mb-8">
+  <h1 class="text-3xl font-bold">Project {{project()?.name ?? ""}}</h1>
+  <button mat-raised-button color="primary" (click)="openSettingsDialog()">
+    <mat-icon>settings</mat-icon>
+    Settings
+  </button>
+</div>
+
+<!-- Loading spinner -->
+@if (loading()) {
+<div class="flex justify-center items-center py-16">
+  <mat-spinner color="primary"></mat-spinner>
+</div>
+}

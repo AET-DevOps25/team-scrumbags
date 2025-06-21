@@ -13,11 +13,11 @@ export class ProjectState {
     this._projectList.set(projectList);
   }
 
-  findProjectById(id: number): Project | null {
+  findProjectById(id: string): Project | null {
     return this._projectList().find(project => project.id === id) || null;
   }
 
-  setProjectById(id: number, project: Project): void {
+  setProjectById(id: string, project: Project): void {
     const currentList = this._projectList();
     const index = currentList.findIndex(p => p.id === id);
     if (index !== -1) {

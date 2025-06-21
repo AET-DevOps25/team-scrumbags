@@ -1,5 +1,12 @@
-import { Component, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import {
+  Component,
+  computed,
+  inject,
+  input,
+  Signal,
+  signal,
+} from '@angular/core';
+import { Router, ROUTER_OUTLET_DATA } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -19,45 +26,27 @@ import { ProjectAddDialog } from '../../components/project-add/project-add.compo
     MatProgressSpinnerModule,
     MatGridListModule,
     MatButtonModule,
-    MatIconModule
+    MatIconModule,
   ],
   templateUrl: './project-overview.view.html',
   styleUrl: './project-overview.view.scss',
 })
 export class ProjectOverviewView {
   protected state = inject(ProjectState);
-  private api = inject(ProjectApi);
+  protected api = inject(ProjectApi);
   private router = inject(Router);
   private dialog = inject(MatDialog);
 
-  readonly loading = signal<boolean>(false);
+  loading = computed(() => this.api.isLoadingProjectList());
 
-  ngOnInit(): void {
-    // load project list from API
-    this.loading.set(true);
-    this.api.getProjectList().subscribe({
-      next: (projectList) => {
-        this.loading.set(false);
-        console.log(projectList);
-        this.state.setProjectList(projectList);
-      },
-      error: (error) => {
-        this.loading.set(false);
-        console.error('Error loading project list:', error);
-      },
-    });
-  }
-
-  navigateToProject(projectId: number): void {
+  navigateToProject(projectId: string): void {
     this.router.navigate(['/projects', projectId]);
   }
 
   openAddProjectDialog(): void {
-    this.dialog.open(ProjectAddDialog,
-      {
-        maxWidth: "80rem",
-        minWidth: "50rem",
-      }
-    );
+    this.dialog.open(ProjectAddDialog, {
+      maxWidth: '80rem',
+      minWidth: '50rem',
+    });
   }
 }

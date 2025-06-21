@@ -10,10 +10,11 @@
         <mat-icon>add</mat-icon>
       </button>
 
-      <span 
-        class="font-semibold flex-1 text-center cursor-pointer hover:underline" 
+      <span
+        class="font-semibold flex-1 text-center cursor-pointer hover:underline"
         (click)="navigateToProjectOverview()"
-        >Projects</span>
+        >Projects</span
+      >
 
       <button
         mat-icon-button
@@ -49,7 +50,7 @@
       <mat-icon>chevron_right</mat-icon>
     </button>
     }
-    <div class="py-4">
+    <div class="container py-4 mx-auto px-2">
       <router-outlet></router-outlet>
     </div>
   </mat-sidenav-content>
