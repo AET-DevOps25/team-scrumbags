@@ -17,6 +17,8 @@
       }
 
       <span
+        tabindex="0" 
+        (keydown.enter)="navigateToProjectOverview()"
         class="font-semibold flex-1 text-center cursor-pointer hover:underline"
         (click)="navigateToProjectOverview()"
         >Projects</span

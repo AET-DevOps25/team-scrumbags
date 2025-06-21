@@ -2,12 +2,8 @@ import {
   Component,
   computed,
   inject,
-  input,
-  OnInit,
-  Signal,
-  signal,
 } from '@angular/core';
-import { Router, ROUTER_OUTLET_DATA } from '@angular/router';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -20,7 +16,7 @@ import { ProjectAddDialog } from '../../components/project-add/project-add.compo
 import { ProjectService } from '../../services/project.service';
 
 @Component({
-  selector: 'project-overview',
+  selector: 'app-project-overview',
   imports: [
     CommonModule,
     MatCardModule,

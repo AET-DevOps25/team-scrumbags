@@ -1,7 +1,5 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import {
-  ActivatedRoute,
-  NavigationEnd,
   Router,
   RouterOutlet,
 } from '@angular/router';
@@ -15,7 +13,6 @@ import { MatDialog } from '@angular/material/dialog';
 import { ProjectState } from '../../states/project.state';
 import { ProjectAddDialog } from '../../components/project-add/project-add.component';
 import { ProjectService } from '../../services/project.service';
-import { filter } from 'rxjs';
 
 @Component({
   selector: 'app-sidebar',
@@ -32,7 +29,7 @@ import { filter } from 'rxjs';
   templateUrl: './sidebar.component.html',
   styleUrls: ['./sidebar.component.scss'],
 })
-export class SidebarComponent {
+export class SidebarComponent implements OnInit{
   protected state = inject(ProjectState);
   protected service = inject(ProjectService);
   private router = inject(Router);

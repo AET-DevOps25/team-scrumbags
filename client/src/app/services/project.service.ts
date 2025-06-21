@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal, Signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { ProjectApi } from './project.api';
 import { ProjectState } from '../states/project.state';
 import { filter, finalize, Observable } from 'rxjs';
@@ -25,10 +25,10 @@ export class ProjectService {
 
   constructor() {
     this.router.events
-      .pipe(filter(event => event instanceof NavigationEnd))
+      .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe(() => {
         const url = this.router.url;
-        const match = url.match(/^\/projects\/([^\/]+)/);
+        const match = url.match(/^\/projects\/([^/]+)/);
         const projectId = match ? match[1] : null;
         this.selectProject(projectId);
       });

@@ -15,7 +15,7 @@ import { ProjectService } from '../../services/project.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
-  selector: 'project-add',
+  selector: 'app-project-add',
   imports: [
     CommonModule,
     ReactiveFormsModule,
@@ -49,7 +49,7 @@ export class ProjectAddDialog {
           this.isSubmitting.set(false);
           this.dialogRef.close();
         },
-        error: (error) => {
+        error: () => {
           this.isSubmitting.set(false);
           const snackBar = inject(MatSnackBar);
           snackBar.open('Error creating project. Please try again.', 'Close', {
