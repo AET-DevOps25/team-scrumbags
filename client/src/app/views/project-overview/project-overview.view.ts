@@ -9,7 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { ProjectState } from '../../states/project.state';
 import { ProjectApi } from '../../services/project.api';
-import { ProjectAddDialog } from '../../components/project-add.component/project-add.component';
+import { ProjectAddDialog } from '../../components/project-add/project-add.component';
 
 @Component({
   selector: 'project-overview',
