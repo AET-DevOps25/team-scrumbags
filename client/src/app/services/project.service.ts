@@ -4,6 +4,7 @@ import { ProjectState } from '../states/project.state';
 import { filter, finalize, Observable } from 'rxjs';
 import { Project } from '../models/project.model';
 import { NavigationEnd, Router } from '@angular/router';
+import Keycloak from 'keycloak-js';
 
 @Injectable({
   providedIn: 'root',
@@ -12,6 +13,8 @@ export class ProjectService {
   private api = inject(ProjectApi);
   private state = inject(ProjectState);
   private router = inject(Router);
+
+  private keycloak = inject(Keycloak);
 
   private _isLoadingProjectList = signal<boolean>(false);
   public isLoadingProjectList = this._isLoadingProjectList.asReadonly();
@@ -42,7 +45,6 @@ export class ProjectService {
 
     observable.subscribe({
       next: (projectList) => {
-        console.log('Project list loaded:', projectList);
         this.state.setProjectList(projectList);
       },
       error: (error) => {
@@ -77,7 +79,7 @@ export class ProjectService {
 
     const observable = this.loadProject(projectId);
 
-    this.loadProject(projectId).subscribe({
+    observable.subscribe({
       next: () => {
         this._selectedProjectId.set(projectId);
       },
@@ -90,8 +92,10 @@ export class ProjectService {
     const observable = this.api.createProject(project);
     observable.subscribe({
       next: (newProject) => {
+        // force refresh token to contain new project role
+        this.keycloak.updateToken(Number.MAX_VALUE) 
+        // Update the state with the new project
         this.state.setProjectById(newProject.id, newProject);
-        console.log('Project created:', newProject);
       },
       error: (error) => {
         console.error('Error creating project:', error);
