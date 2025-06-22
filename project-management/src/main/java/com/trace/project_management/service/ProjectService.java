@@ -4,10 +4,6 @@ import com.trace.project_management.entity.Project;
 import com.trace.project_management.repository.ProjectRepository;
 import com.trace.project_management.security.SecurityService;
 import com.trace.project_management.security.UserContext;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

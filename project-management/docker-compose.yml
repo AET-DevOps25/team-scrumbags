@@ -3,20 +3,20 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    ports:
-      - "8080:8080"
+    network_mode: host
     depends_on:
       - db
       - keycloak
     environment:
       - DEBUG=${DEBUG:-false}
-      - DB_URL=jdbc:mysql://db:3306/project-db
+      - DB_URL=jdbc:mysql://localhost:3306/project-db
       - DB_USER=${DB_USER:-user}
       - DB_PASSWORD=${DB_PASSWORD:-test}
       - KEYCLOAK_REALM=${KEYCLOAK_REALM:-trace}
-      - KEYCLOAK_AUTH_URL=http://keycloak:8080
+      - KEYCLOAK_AUTH_URL=http://localhost:8081
       - KEYCLOAK_ADMIN_USERNAME=${KEYCLOAK_ADMIN_USERNAME:-admin}
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      - SERVER_PORT=8080
     restart: always
 
   keycloak:
@@ -24,9 +24,13 @@ services:
     command:
       - start-dev
       - --import-realm
-    ports:
-      - "8081:8080"
+      - --http-port=8081
+    network_mode: host
     environment:
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_PORT: 8081
+      KC_HOSTNAME_STRICT: false
+      KC_HTTP_ENABLED: true
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
     volumes:
@@ -34,15 +38,15 @@ services:
 
   db:
     image: mysql:8
+    network_mode: host
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-test}
       MYSQL_DATABASE: project-db
       MYSQL_USER: ${DB_USER:-user}
       MYSQL_PASSWORD: ${DB_PASSWORD:-test}
-    ports:
-      - "3306:3306"
+      MYSQL_TCP_PORT: 3306
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - db_data:/var/lib/mysql
 
 volumes:
   db_data:
