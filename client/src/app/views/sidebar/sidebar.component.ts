@@ -40,7 +40,7 @@ export class SidebarComponent implements OnInit{
 
   ngOnInit(): void {
     // load project list from API
-    this.service.loadProjectList();
+    this.service.loadProjectList().subscribe();
   }
 
   toggleSidebar(): void {

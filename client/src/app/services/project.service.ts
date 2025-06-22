@@ -1,7 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { ProjectApi } from './project.api';
 import { ProjectState } from '../states/project.state';
-import { filter, finalize, Observable } from 'rxjs';
+import { filter, finalize, Observable, tap } from 'rxjs';
 import { Project } from '../models/project.model';
 import { NavigationEnd, Router } from '@angular/router';
 import Keycloak from 'keycloak-js';
@@ -33,39 +33,27 @@ export class ProjectService {
         const url = this.router.url;
         const match = url.match(/^\/projects\/([^/]+)/);
         const projectId = match ? match[1] : null;
-        this.selectProject(projectId);
+        this.selectProject(projectId).subscribe();
       });
   }
 
   public loadProjectList(): Observable<Project[]> {
     this._isLoadingProjectList.set(true);
-    const observable = this.api
-      .getProjectList()
-      .pipe(finalize(() => this._isLoadingProjectList.set(false)));
-
-    observable.subscribe({
-      next: (projectList) => {
+    return this.api.getProjectList().pipe(
+      tap((projectList) => {
         this.state.setProjectList(projectList);
-      },
-      error: (error) => {
-        console.error('Error loading project list:', error);
-      },
-    });
-    return observable;
+      }),
+      finalize(() => this._isLoadingProjectList.set(false))
+    );
   }
 
   private loadProject(projectId: string): Observable<Project> {
-    const observable = this.api.getProjectById(projectId);
-    observable.subscribe({
-      next: (project) => {
-        console.log(project);
+    return this.api.getProjectById(projectId).pipe(
+      tap((project) => {
+        // Update the state with the loaded project
         this.state.setProjectById(projectId, project);
-      },
-      error: (error) => {
-        console.error('Error loading project list:', error);
-      },
-    });
-    return observable;
+      })
+    );
   }
 
   private selectProject(projectId: string | null): Observable<Project | null> {
@@ -77,30 +65,21 @@ export class ProjectService {
       });
     }
 
-    const observable = this.loadProject(projectId);
-
-    observable.subscribe({
-      next: () => {
+    return this.loadProject(projectId).pipe(
+      tap((project) => {
         this._selectedProjectId.set(projectId);
-      },
-    });
-
-    return observable;
+      })
+    );
   }
 
   public createProject(project: Project): Observable<Project> {
-    const observable = this.api.createProject(project);
-    observable.subscribe({
-      next: (newProject) => {
+    return this.api.createProject(project).pipe(
+      tap((newProject) => {
         // force refresh token to contain new project role
-        this.keycloak.updateToken(Number.MAX_VALUE) 
+        this.keycloak.updateToken(Number.MAX_VALUE);
         // Update the state with the new project
         this.state.setProjectById(newProject.id, newProject);
-      },
-      error: (error) => {
-        console.error('Error creating project:', error);
-      },
-    });
-    return observable;
+      })
+    );
   }
 }

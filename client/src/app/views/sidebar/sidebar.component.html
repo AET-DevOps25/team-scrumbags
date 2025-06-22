@@ -6,15 +6,9 @@
     class="flex flex-col transition-all duration-300 !outline !w-70"
   >
     <mat-toolbar color="primary" class="flex justify-between items-center px-2">
-      @if(service.selectedProject()) {
-      <button mat-icon-button (click)="navigateToSettings()" class="mr-1">
-        <mat-icon>settings</mat-icon>
-      </button>
-      } @else {
       <button mat-icon-button (click)="openAddProjectDialog()" class="mr-1">
         <mat-icon>add</mat-icon>
       </button>
-      }
 
       <span
         tabindex="0" 
