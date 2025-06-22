@@ -45,7 +45,7 @@ services:
       POSTGRES_DB: project-db
       POSTGRES_PORT: 5432
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - db_data:/var/lib/mysql
 
 volumes:
   db_data:
