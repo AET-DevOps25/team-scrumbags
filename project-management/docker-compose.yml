@@ -9,7 +9,7 @@ services:
       - keycloak
     environment:
       - DEBUG=${DEBUG:-false}
-      - DB_URL=jdbc:mysql://localhost:3306/project-db
+      - DB_URL=jdbc:postgresql://localhost:5432/project-db
       - DB_USER=${DB_USER:-user}
       - DB_PASSWORD=${DB_PASSWORD:-test}
       - KEYCLOAK_REALM=${KEYCLOAK_REALM:-trace}
@@ -37,16 +37,15 @@ services:
       - ./keycloak/:/opt/keycloak/data/import/
 
   db:
-    image: mysql:8
+    image: postgres:latest
     network_mode: host
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-test}
-      MYSQL_DATABASE: project-db
-      MYSQL_USER: ${DB_USER:-user}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-test}
-      MYSQL_TCP_PORT: 3306
+      POSTGRES_USER: ${DB_USER:-user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-test}
+      POSTGRES_DB: project-db
+      POSTGRES_PORT: 5432
     volumes:
-      - db_data:/var/lib/mysql
+      - db_data:/var/lib/postgresql/data
 
 volumes:
   db_data:
