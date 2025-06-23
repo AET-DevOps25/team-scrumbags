@@ -28,7 +28,7 @@
     </mat-toolbar>
 
     <mat-nav-list>
-      @for (project of state.projectList(); track project.id) {
+      @for (project of state.allProjects().values(); track project.id) {
       <mat-list-item
         (click)="navigateToProject(project.id)"
         [activated]="service.selectedProjectId() === project.id"

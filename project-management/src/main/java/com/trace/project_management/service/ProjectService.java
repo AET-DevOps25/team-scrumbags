@@ -1,5 +1,6 @@
 package com.trace.project_management.service;
 
+import com.trace.project_management.domain.User;
 import com.trace.project_management.entity.Project;
 import com.trace.project_management.repository.ProjectRepository;
 import com.trace.project_management.security.SecurityService;
@@ -39,7 +40,7 @@ public class ProjectService {
         var roleName = keycloakService.createRole(Project.projectIdToRoleName(project.getId()), "Role for project " + project.getId());
 
         // assign role to user
-        keycloakService.assignRoleToUser(userContext.getUserId(), roleName);
+        keycloakService.assignRoleToUser(userContext.getUser().id(), roleName);
 
         return project;
     }
@@ -63,7 +64,7 @@ public class ProjectService {
         return projectRepository.findById(projectId).orElse(null);
     }
 
-    public Set<UUID> getUsersOfProject(UUID projectId) {
+    public Set<User> getUsersOfProject(UUID projectId) {
         // Check if the user has access to the project
         if (!securityService.hasProjectAccess(projectId)) {
             throw new SecurityException("Access denied to project with ID: " + projectId);

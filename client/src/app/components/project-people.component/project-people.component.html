@@ -1,0 +1,48 @@
+<div class="flex flex-col gap-6">
+  <!-- Project Users List -->
+  <section>
+    <h2 class="text-lg font-medium mb-2">Project Members</h2>
+    @if (projectsUser().length > 0) {
+      <mat-list>
+        @for (user of projectsUser(); track user.id) {
+          <mat-list-item>
+            <div class="flex flex-row items-center justify-between w-full">
+              <div>
+                <span class="mat-body-1 mat-primary">{{ user.username }}</span>
+                <span class="mat-caption mat-accent ml-2">{{ user.email }}</span>
+              </div>
+              <button mat-icon-button color="warn" aria-label="Remove user" (click)="removeUserFromProject(user.id)">
+                <mat-icon>remove_circle</mat-icon>
+              </button>
+            </div>
+          </mat-list-item>
+        }
+      </mat-list>
+    } @else {
+      <div class="mat-caption mat-accent">No users in this project.</div>
+    }
+  </section>
+
+  <!-- Add User Autocomplete -->
+  <section>
+    <h2 class="text-lg font-medium mb-2">Add User</h2>
+    <mat-form-field class="w-full" appearance="outline">
+      <mat-label>Search users</mat-label>
+      <input
+        type="text"
+        matInput
+        [matAutocomplete]="auto"
+        [(ngModel)]="userSearch"
+        placeholder="Type name or email"
+      />
+      <mat-autocomplete #auto="matAutocomplete" (optionSelected)="addUserToProject($event.option.value)">
+        @for (user of usersToAdd(); track user.id) {
+          <mat-option [value]="user">
+            <span class="mat-body-1 mat-primary">{{ user.username }}</span>
+            <span class="mat-caption mat-accent ml-2">{{ user.email }}</span>
+          </mat-option>
+        }
+      </mat-autocomplete>
+    </mat-form-field>
+  </section>
+</div>

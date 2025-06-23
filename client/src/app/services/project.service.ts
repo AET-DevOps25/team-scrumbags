@@ -5,6 +5,7 @@ import { filter, finalize, Observable, tap } from 'rxjs';
 import { Project } from '../models/project.model';
 import { NavigationEnd, Router } from '@angular/router';
 import Keycloak from 'keycloak-js';
+import { User } from '../models/user.model';
 
 @Injectable({
   providedIn: 'root',
@@ -23,7 +24,7 @@ export class ProjectService {
   public readonly selectedProjectId = this._selectedProjectId.asReadonly();
   public selectedProject = computed<Project | null>(() => {
     const projectId = this._selectedProjectId();
-    return projectId ? this.state.findProjectById(projectId) : null;
+    return projectId ? this.state.allProjects().get(projectId) ?? null : null;
   });
 
   constructor() {
@@ -79,6 +80,41 @@ export class ProjectService {
         this.keycloak.updateToken(Number.MAX_VALUE);
         // Update the state with the new project
         this.state.setProjectById(newProject.id, newProject);
+      })
+    );
+  }
+
+  public loadUsersOfProject(projectId: string) {
+    return this.api.getUsersInProject(projectId).pipe(
+      tap((user) => {
+        this.state.setUsersOfProject(projectId, user);
+      })
+    );
+  }
+
+  public assignUserToProject(projectId: string, users: User[]) {
+    const userIds = users.map((u) => u.id);
+    return this.api.assignUserToProject(projectId, userIds).pipe(
+      tap((assignedUserIds) => {
+        // Update the state by adding users to the project
+        assignedUserIds.forEach((userId) => {
+          const user = users.find((u) => u.id === userId);
+          if (!user) {
+            return; // continue in for each
+          }
+          this.state.addUserToProject(projectId, user);
+        });
+      })
+    );
+  }
+
+  public removeUserFromProject(projectId: string, userIds: string[]) {
+    return this.api.removeUserFromProject(projectId, userIds).pipe(
+      tap(() => {
+        // Update the state by removing users from the project
+        userIds.forEach((userId) => {
+          this.state.removeUserFromProject(projectId, userId);
+        });
       })
     );
   }
