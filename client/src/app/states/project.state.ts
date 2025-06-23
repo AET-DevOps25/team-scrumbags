@@ -26,22 +26,26 @@ export class ProjectState {
   }
 
   setUsersOfProject(id: string, users: User[]) {
-    const project = this.allProjects().get(id);
+    let project = this.allProjects().get(id);
     if (!project) {
       return;
     }
+
     project.users = users;
-    this.setProjectById(id, project);
+    this.setProjectById(id, { ...project });
   }
 
   addUserToProject(id: string, user: User) {
-    const project = this.allProjects().get(id);
+    let project = this.allProjects().get(id);
     if (!project) {
       return;
     }
+    if (!project.users) {
+      project.users = [];
+    }
 
     project.users.push(user);
-    this.setProjectById(id, project);
+    this.setProjectById(id, { ...project });
   }
 
   removeUserFromProject(id: string, userId: string) {
@@ -50,6 +54,6 @@ export class ProjectState {
       return;
     }
     project.users = project.users.filter((u) => u.id !== userId);
-    this.setProjectById(id, project);
+    this.setProjectById(id, { ...project });
   }
 }

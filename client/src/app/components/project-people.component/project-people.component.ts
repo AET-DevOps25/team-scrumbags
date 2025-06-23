@@ -44,15 +44,7 @@ export class ProjectPeopleComponent implements OnInit {
   projectApi = inject(ProjectApi);
 
   projectsUser = computed<User[]>(() => {
-    const project = this.projectService.selectedProject();
-    console.log('selectedProject', project);
-    console.log(
-      'project users property exists:',
-      project && 'users' in project
-    );
-    console.log('users value:', project?.users);
-    console.log('users type:', typeof project?.users);
-    return project?.users ?? [];
+    return this.projectService.selectedProject()?.users ?? [];
   });
 
   usersToAdd = computed<User[]>(() => {
