@@ -36,7 +36,7 @@ export class ProjectState {
   }
 
   addUserToProject(id: string, user: User) {
-    let project = this.allProjects().get(id);
+    const project = this.allProjects().get(id);
     if (!project) {
       return;
     }
@@ -44,7 +44,7 @@ export class ProjectState {
       project.users = [];
     }
 
-    project.users.push(user);
+    project.users = [...project.users, user]
     this.setProjectById(id, { ...project });
   }
 

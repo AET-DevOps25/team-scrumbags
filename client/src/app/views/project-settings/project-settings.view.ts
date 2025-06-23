@@ -16,5 +16,5 @@ export class ProjectSettingsView {
   protected state = inject(ProjectState);
   private service = inject(ProjectService);
 
-  project = computed<Project | null>(() => this.service.selectedProject());
+  project = computed<Project | undefined>(() => this.service.selectedProject());
 }

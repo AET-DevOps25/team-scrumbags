@@ -20,11 +20,11 @@ export class ProjectService {
   private _isLoadingProjectList = signal<boolean>(false);
   public isLoadingProjectList = this._isLoadingProjectList.asReadonly();
 
-  private readonly _selectedProjectId = signal<string | null>(null);
+  private readonly _selectedProjectId = signal<string | undefined>(undefined);
   public readonly selectedProjectId = this._selectedProjectId.asReadonly();
-  public selectedProject = computed<Project | null>(() => {
+  public selectedProject = computed<Project | undefined>(() => {
     const projectId = this._selectedProjectId();
-    return projectId ? this.state.allProjects().get(projectId) ?? null : null;
+    return projectId ? this.state.allProjects().get(projectId) ?? undefined : undefined;
   });
 
   constructor() {
@@ -33,7 +33,7 @@ export class ProjectService {
       .subscribe(() => {
         const url = this.router.url;
         const match = url.match(/^\/projects\/([^/]+)/);
-        const projectId = match ? match[1] : null;
+        const projectId = match ? match[1] : undefined;
         this.selectProject(projectId).subscribe();
       });
   }
@@ -57,11 +57,11 @@ export class ProjectService {
     );
   }
 
-  private selectProject(projectId: string | null): Observable<Project | null> {
+  private selectProject(projectId: string | undefined): Observable<Project | undefined> {
     if (!projectId) {
-      this._selectedProjectId.set(null);
-      return new Observable<null>((observer) => {
-        observer.next(null);
+      this._selectedProjectId.set(undefined);
+      return new Observable<undefined>((observer) => {
+        observer.next(undefined);
         observer.complete();
       });
     }

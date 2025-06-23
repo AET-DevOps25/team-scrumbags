@@ -8,9 +8,6 @@ import {
 } from '@angular/core';
 import { User } from '../../models/user.model';
 import { ProjectService } from '../../services/project.service';
-import { UserApi } from '../../services/user.api';
-import { ProjectApi } from '../../services/project.api';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { UserService } from '../../services/user.service';
 import { UserState } from '../../states/user.state';
 import { ProjectState } from '../../states/project.state';
@@ -20,7 +17,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { tap } from 'rxjs';
 
 @Component({
   selector: 'app-project-people',
@@ -31,6 +29,7 @@ import { FormsModule } from '@angular/forms';
     MatFormFieldModule,
     MatInputModule,
     MatAutocompleteModule,
+    ReactiveFormsModule,
     FormsModule,
   ],
   templateUrl: './project-people.component.html',
@@ -41,21 +40,23 @@ export class ProjectPeopleComponent implements OnInit {
   projectState = inject(ProjectState);
   userService = inject(UserService);
   userState = inject(UserState);
-  projectApi = inject(ProjectApi);
 
+  loadingProjectsUser = signal(false);
+  signedInUser = signal<User | undefined>(undefined);
   projectsUser = computed<User[]>(() => {
     return this.projectService.selectedProject()?.users ?? [];
   });
 
-  usersToAdd = computed<User[]>(() => {
+  userSearch = signal('');
+  private usersToAdd = computed<User[]>(() => {
     const allUsers = Array.from(this.userState.allUser().values());
     return allUsers.filter(
       (user) => !this.projectsUser().some((u) => u.id === user.id)
     );
   });
-
-  loadingProjectsUser = signal(false);
-  userSearch = '';
+  filteredUsersToAdd = computed(() =>
+    this.filterOptions(this.userSearch(), this.usersToAdd())
+  );
 
   constructor() {
     effect(() => {
@@ -67,7 +68,19 @@ export class ProjectPeopleComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.signedInUser.set(this.userService.getSignedInUser() ?? undefined);
     this.loadAllUsers();
+  }
+
+  private filterOptions(searchInput: string, users: User[]): User[] {
+    searchInput = searchInput.toLowerCase();
+    return users.filter(
+      (u) => u.username?.includes(searchInput) || u.email?.includes(searchInput)
+    );
+  }
+
+  displayFn(user: User): string {
+    return user && user.username ? user.username : '';
   }
 
   private loadUsersOfProject(projectId: string) {
@@ -86,12 +99,17 @@ export class ProjectPeopleComponent implements OnInit {
   addUserToProject(user: User) {
     this.projectService
       .assignUserToProject(this.projectService.selectedProjectId()!, [user])
-      .subscribe();
+      .subscribe({ next: () => this.userSearch.set('') });
   }
 
   removeUserFromProject(userId: string) {
     this.projectService
       .removeUserFromProject(this.projectService.selectedProjectId()!, [userId])
       .subscribe();
+  }
+
+  onUserSelected(user: User) {
+    this.addUserToProject(user);
+    this.userSearch.set('');
   }
 }
