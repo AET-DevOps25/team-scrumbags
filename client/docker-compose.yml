@@ -1,0 +1,13 @@
+services:
+  # Add this client service
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    network_mode: host
+    environment:
+      - API_URL=${API_URL:-http://localhost:8080}
+      - KEYCLOAK_URL=${KEYCLOAK_URL:-http://localhost:8081}
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM:-trace}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-trace-api}
+      - DEBUG=${DEBUG:-false}

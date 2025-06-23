@@ -32,7 +32,8 @@ export const appConfig: ApplicationConfig = {
       initOptions: {
         onLoad: 'login-required',
         checkLoginIframe: false, // Disable iframe checking
-        flow: 'standard'
+        flow: 'standard',
+        redirectUri: window.env?.redirectUrl || window.location.origin,
       }
     }),
     {
