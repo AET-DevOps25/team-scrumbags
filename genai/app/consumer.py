@@ -3,7 +3,7 @@ import json
 import os
 import aio_pika
 import weaviate
-from .models import WeaviateClient
+from .models import WeaviateClientSingleton
 
 RABBIT_URL = os.getenv('RABBIT_URL', 'amqp://guest:guest@rabbitmq/')
 QUEUE_NAME = 'items'
@@ -12,7 +12,7 @@ async def handle_message(message: aio_pika.IncomingMessage):
     async with message.process():
         payload = json.loads(message.body)
         # Insert into Weaviate
-        client = WeaviateClient.get()
+        client = WeaviateClientSingleton.get()
         client.data_object.create(
             data_object={
                 **payload['metadata'],
