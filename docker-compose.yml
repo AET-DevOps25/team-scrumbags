@@ -1,68 +1,126 @@
 services:
-  mysql:
-    container_name: mysql
-    image: mysql:8.0
-    restart: always
-    environment:
-      - "MYSQL_DATABASE=${MYSQL_DATABASE}"
-      - "MYSQL_PASSWORD=${MYSQL_PASSWORD}"
-      - "MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}"
-      - "MYSQL_USER=${MYSQL_USER}"
+  reverse-proxy:
+    image: traefik:v3.4
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedByDefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=test@test.de"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    restart: unless-stopped
     ports:
-      - "3306:3306"
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "mysql"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  server:
-    container_name: team-scrumbags-server
-    build:
-      context: ./server
-    ports:
-      - "8080:8080"
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
-      SPRING_DATASOURCE_USERNAME: ${MYSQL_ROOT_USER}
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    depends_on:
-      mysql:
-        condition: service_healthy
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./letsencrypt:/letsencrypt
 
   client:
     build:
       context: ./client
-    command: sh -c "npm start"
+      dockerfile: Dockerfile
     ports:
       - "4200:80"
-    working_dir: /home/node/app
-    volumes:
-      - ./client:/home/node/app
-      - node_modules:/home/node/app/node_modules
-    depends_on:
-      - server
+    environment:
+      - API_URL=${API_URL:-http://localhost/project-management}
+      - KEYCLOAK_URL=${KEYCLOAK_URL:-http://localhost/keycloak}
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM:-trace}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-trace-api}
+      - KEYCLOAK_REDIRECT_URL=${KEYCLOAK_REDIRECT_URL:-https://localhost}
+      - DEBUG=${DEBUG:-false}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.client.rule=Host(`${DOMAIN:-localhost}`)"
+      - "traefik.http.services.client.loadbalancer.server.port=80"
+      - "traefik.http.routers.client.entrypoints=websecure"
+      - "traefik.http.routers.client.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.client-compress.compress=true"
+      - "traefik.http.routers.client.middlewares=client-compress"
 
-  prometheus:
-    image: prom/prometheus
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+  project-management:
+    build:
+      context: ./project-management
+      dockerfile: Dockerfile
     ports:
-      - "9090:9090"
+      - "8080:8080"
     depends_on:
-      - server
+      - project-db
+    environment:
+      - DEBUG=${DEBUG:-false}
+      - DB_URL=jdbc:mysql://project-db:3306/project-db
+      - DB_USER=${PROJECT_DB_USER:-user}
+      - DB_PASSWORD=${PROJECT_DB_PASSWORD:-test}
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM:-trace}
+      - KEYCLOAK_AUTH_URL=http://keycloak:8081
+      - KEYCLOAK_ADMIN_USERNAME=${KEYCLOAK_ADMIN_USERNAME:-admin}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      - SERVER_PORT=8080
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.project-management.rule=Host(`${DOMAIN:-localhost}`) && PathPrefix(`/project-management`)"
+      - "traefik.http.services.project-management.loadbalancer.server.port=8080"
+      - "traefik.http.routers.server.entrypoints=websecure"
+      - "traefik.http.routers.server.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.strip-project-management.stripprefix.prefixes=/project-management"
+      - "traefik.http.routers.project-management.middlewares=strip-project-management"
 
-  grafana:
-    image: grafana/grafana
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.2.5
+    command:
+      - start-dev
+      - --import-realm
     ports:
-      - "3000:3000"
-    depends_on:
-      - prometheus
+      - "8081:8080"
+    environment:
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_STRICT: false
+      KC_HTTP_ENABLED: true
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+    volumes:
+      - ./project-management/keycloak/:/opt/keycloak/data/import/
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.keycloak.rule=Host(`${DOMAIN:-localhost}`) && PathPrefix(`/keycloak`)"
+      - "traefik.http.services.keycloak.loadbalancer.server.port=8081"
+      - "traefik.http.routers.server.entrypoints=websecure"
+      - "traefik.http.routers.server.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.strip-keycloak.stripprefix.prefixes=/keycloak"
+      - "traefik.http.routers.keycloak.middlewares=strip-keycloak"
+      
+  project-db:
+    image: mysql:8
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${PROJECT_DB_PASSWORD:-test}
+      MYSQL_DATABASE: project-db
+      MYSQL_USER: ${PROJECT_DB_USER:-user}
+      MYSQL_PASSWORD: ${PROJECT_DB_PASSWORD:-test}
+    volumes:
+      - project_db_data:/var/lib/mysql
+
+  # prometheus:
+  #   image: prom/prometheus
+  #   volumes:
+  #     - ./prometheus.yml:/etc/prometheus/prometheus.yml
+  #   ports:
+  #     - "9090:9090"
+  #   depends_on:
+  #     - project-management
+
+  # grafana:
+  #   image: grafana/grafana
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - prometheus
 
 volumes:
-  node_modules:
+  project_db_data:
