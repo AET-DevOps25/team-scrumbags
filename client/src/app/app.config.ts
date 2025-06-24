@@ -14,7 +14,7 @@ import { routes } from './app.routes';
 
 // Configure which URLs should include the Bearer token
 const urlCondition = createInterceptorCondition<IncludeBearerTokenCondition>({
-  urlPattern: /^(http:\/\/localhost:8080)(\/.*)?$/i,
+  urlPattern: /^(https?:\/\/localhost(:\d+)?)(\/.*)?$/i,
   bearerPrefix: 'Bearer'
 });
 
