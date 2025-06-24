@@ -14,7 +14,7 @@ declare global {
 
 export const environment = {
   production: window.env?.production ?? true,
-  apiUrl: window.env?.apiUrl ?? 'localhost:8080',
+  apiUrl: window.env?.apiUrl ?? 'http://localhost:8080',
   keycloakUrl: window.env?.keycloakUrl ?? 'http://localhost:8081',
   keycloakRealm: window.env?.keycloakRealm ?? 'trace',
   keycloakClient: window.env?.keycloakClient ?? 'trace-api',
