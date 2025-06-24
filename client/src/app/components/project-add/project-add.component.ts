@@ -31,6 +31,7 @@ export class ProjectAddDialog {
   private fb = inject(FormBuilder);
   private dialogRef = inject(MatDialogRef<ProjectAddDialog>);
   private service = inject(ProjectService);
+  private snackBar = inject(MatSnackBar);
 
   readonly isSubmitting = signal<boolean>(false);
 
