@@ -100,6 +100,10 @@ public class GithubConnector {
 
         Message message = processWebhookEvent(eventType, eventId, projectId, payload, now);
 
+        if (message == null) {
+            logger.warn("Unhandled GitHub event type: {}", eventType);
+            return ResponseEntity.badRequest().body("Unhandled event type: " + eventType);
+        }
         messageProcessor.processMessage(projectId, message);
 
         // dont return data as github will receive the response
