@@ -51,8 +51,7 @@ export class ProjectAddDialog {
         },
         error: () => {
           this.isSubmitting.set(false);
-          const snackBar = inject(MatSnackBar);
-          snackBar.open('Error creating project. Please try again.', 'Close', {
+          this.snackBar.open('Error creating project. Please try again.', 'Close', {
             duration: 3000,
           });
         },
