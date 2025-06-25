@@ -17,7 +17,7 @@ services:
       - KEYCLOAK_ADMIN_USERNAME=${KEYCLOAK_ADMIN_USERNAME:-admin}
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
       - SERVER_PORT=8080
-    restart: always
+    restart: unless-stopped
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.2.5
