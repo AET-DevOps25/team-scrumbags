@@ -105,7 +105,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - project_db_data:/var/lib/mysql
+      - project_db_data:/var/lib/postgresql/data
 
   # prometheus:
   #   image: prom/prometheus
