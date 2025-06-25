@@ -34,7 +34,8 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
     volumes:
       - ./keycloak/:/opt/keycloak/data/import/
-      
+    restart: unless-stopped
+
   db:
     image: postgres:latest
     network_mode: host
@@ -45,6 +46,7 @@ services:
       POSTGRES_PORT: ${DB_PORT:-5432}
     volumes:
       - db_data:/var/lib/postgresql/data
+    restart: unless-stopped
 
 volumes:
   db_data:
