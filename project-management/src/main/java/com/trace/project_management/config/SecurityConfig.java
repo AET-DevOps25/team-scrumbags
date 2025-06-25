@@ -40,6 +40,10 @@ public class SecurityConfig {
                 }))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/public/**").permitAll() // public routes
+                        .anyRequest().authenticated() // all others require auth
+                )
                 .oauth2ResourceServer(resourceServer -> {
                     resourceServer.jwt(jwtConfigurer -> {
                         jwtConfigurer.jwtAuthenticationConverter(jwtAuthenticationConverter());
