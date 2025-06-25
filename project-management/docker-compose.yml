@@ -6,17 +6,16 @@ services:
     network_mode: host
     depends_on:
       - db
-      - keycloak
     environment:
       - DEBUG=${DEBUG:-false}
-      - DB_URL=jdbc:postgresql://localhost:5432/project-db
+      - DB_URL=jdbc:postgresql://localhost:${DB_PORT:-5432}/project-db
       - DB_USER=${DB_USER:-user}
       - DB_PASSWORD=${DB_PASSWORD:-test}
       - KEYCLOAK_REALM=${KEYCLOAK_REALM:-trace}
-      - KEYCLOAK_AUTH_URL=http://localhost:8081
+      - KEYCLOAK_AUTH_URL=http://localhost:${KEYCLOAK_PORT:-8081}
       - KEYCLOAK_ADMIN_USERNAME=${KEYCLOAK_ADMIN_USERNAME:-admin}
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
-      - SERVER_PORT=8080
+      - SERVER_PORT=${PROJECT_MANAGEMENT_PORT:-8080}
     restart: unless-stopped
 
   keycloak:
@@ -24,18 +23,18 @@ services:
     command:
       - start-dev
       - --import-realm
-      - --http-port=8081
     network_mode: host
     environment:
       KC_HOSTNAME: localhost
-      KC_HOSTNAME_PORT: 8081
       KC_HOSTNAME_STRICT: false
+      KC_HOSTNAME_PORT: ${KEYCLOAK_PORT:-8081}
       KC_HTTP_ENABLED: true
+      KC_HTTP_PORT: ${KEYCLOAK_PORT:-8081}
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
     volumes:
       - ./keycloak/:/opt/keycloak/data/import/
-
+      
   db:
     image: postgres:latest
     network_mode: host
@@ -43,7 +42,7 @@ services:
       POSTGRES_USER: ${DB_USER:-user}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-test}
       POSTGRES_DB: project-db
-      POSTGRES_PORT: 5432
+      POSTGRES_PORT: ${DB_PORT:-5432}
     volumes:
       - db_data:/var/lib/postgresql/data
 
