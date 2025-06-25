@@ -31,6 +31,7 @@ export class ProjectAddDialog {
   private fb = inject(FormBuilder);
   private dialogRef = inject(MatDialogRef<ProjectAddDialog>);
   private service = inject(ProjectService);
+  private snackBar = inject(MatSnackBar);
 
   readonly isSubmitting = signal<boolean>(false);
 
@@ -45,14 +46,13 @@ export class ProjectAddDialog {
       const formValue = this.projectForm.value;
 
       this.service.createProject(formValue as Project).subscribe({
-        next: () => {
+        next: (newProject: Project) => {
           this.isSubmitting.set(false);
-          this.dialogRef.close();
+          this.dialogRef.close(newProject);
         },
         error: () => {
           this.isSubmitting.set(false);
-          const snackBar = inject(MatSnackBar);
-          snackBar.open('Error creating project. Please try again.', 'Close', {
+          this.snackBar.open('Error creating project. Please try again.', 'Close', {
             duration: 3000,
           });
         },

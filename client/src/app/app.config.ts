@@ -11,10 +11,11 @@ import {
 } from 'keycloak-angular';
 
 import { routes } from './app.routes';
+import { environment } from './environment';
 
 // Configure which URLs should include the Bearer token
 const urlCondition = createInterceptorCondition<IncludeBearerTokenCondition>({
-  urlPattern: /^(http:\/\/localhost:8080)(\/.*)?$/i,
+  urlPattern: new RegExp(`^(${environment.apiUrl.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})(\\/.*)?$`, 'i'),
   bearerPrefix: 'Bearer'
 });
 
@@ -32,7 +33,8 @@ export const appConfig: ApplicationConfig = {
       initOptions: {
         onLoad: 'login-required',
         checkLoginIframe: false, // Disable iframe checking
-        flow: 'standard'
+        flow: 'standard',
+        redirectUri: window.env?.redirectUrl || window.location.origin,
       }
     }),
     {

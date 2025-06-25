@@ -10,7 +10,7 @@ import { ProjectPeopleComponent } from '../../components/project-people.componen
     ProjectPeopleComponent
   ],
   templateUrl: './project-settings.view.html',
-  styleUrl: './project-settings.view.scss',
+  styleUrls: ['./project-settings.view.scss'],
 })
 export class ProjectSettingsView {
   protected state = inject(ProjectState);
