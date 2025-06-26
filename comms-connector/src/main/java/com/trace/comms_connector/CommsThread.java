@@ -5,12 +5,17 @@ import java.time.Instant;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
 
 import com.trace.comms_connector.connection.ConnectionEntity;
 import com.trace.comms_connector.discord.DiscordRestClient;
 
+import jakarta.annotation.PreDestroy;
 import lombok.NoArgsConstructor;
 
+@Component
 @NoArgsConstructor
 public class CommsThread extends Thread {
     @Autowired
@@ -22,6 +27,8 @@ public class CommsThread extends Thread {
      */
     @Override
     public void run() {
+        System.out.println("Comms thread running!");
+        
         GenAiRestClient client = new GenAiRestClient();
 
         while (true) {
@@ -31,6 +38,10 @@ public class CommsThread extends Thread {
 
             // TODO: maybe abstract this switch case logic to an interface which all platforms' classes implement
             for (ConnectionEntity connection : connections) {
+                if (interrupted()) {
+                    return;
+                }
+
                 switch (connection.getPlatform()) {
                     case DISCORD:
                         DiscordRestClient discordClient = new DiscordRestClient();
@@ -51,12 +62,22 @@ public class CommsThread extends Thread {
                 // TODO: possibly allow custom waiting time instead of default 1 day
                 sleep(Duration.ofDays(1).minus(timeSpent).abs());
             } catch (InterruptedException e) {
-                break;
+                return;
             }
         }
     }
 
     public void cancel() {
         interrupt();
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void runCommsThreadOnStartup() {
+        this.start();
+    }
+
+    @PreDestroy
+    public void stopCommsThreadOnDestroy() {
+        this.cancel();
     }
 }
