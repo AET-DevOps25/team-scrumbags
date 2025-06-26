@@ -68,7 +68,7 @@ export class ProjectService {
 
     return this.loadProject(projectId).pipe(
       tap((project) => {
-        this._selectedProjectId.set(projectId);
+        this._selectedProjectId.set(project.id);
       })
     );
   }

@@ -1,0 +1,16 @@
+meta {
+  name: user mappings by platform
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{base_url}}/projects/c8bcfd02-1065-4532-a414-b48107968dcc/users?platform=GITHUB
+  body: none
+  auth: inherit
+}
+
+params:query {
+  platform: GITHUB
+  ~platformUserId: githubuserid1
+}
