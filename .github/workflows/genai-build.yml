@@ -35,12 +35,20 @@ jobs:
           pip install -r requirements.txt
 
       - name: Lint with flake8
+        id: flake8
+        continue-on-error: true
         run: |
           pip install flake8
-          flake8 app --max-line-length=100
+          flake8 app --count --max-complexity=15 --max-line-length=127 --statistics
 
       - name: Run tests
         env:
           RABBITMQ_URL: amqp://guest:guest@localhost:5672/
         run: |
           pytest
+
+      - name: Check if 'Lint with flake8' step failed
+        if: steps.flake8.outcome != 'success'
+        run: |
+          echo "flake8 fails"
+          exit 1
