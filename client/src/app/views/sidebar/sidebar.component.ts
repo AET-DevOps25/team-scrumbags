@@ -27,7 +27,7 @@ import { ProjectService } from '../../services/project.service';
     RouterOutlet,
   ],
   templateUrl: './sidebar.component.html',
-  styleUrls: ['./sidebar.component.scss'],
+  styleUrl: './sidebar.component.scss',
 })
 export class SidebarComponent implements OnInit{
   protected state = inject(ProjectState);

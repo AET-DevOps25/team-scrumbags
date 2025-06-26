@@ -7,7 +7,7 @@ import { ProjectService } from '../../services/project.service';
   selector: 'app-project-settings',
   imports: [],
   templateUrl: './project-settings.view.html',
-  styleUrls: ['./project-settings.view.scss'],
+  styleUrl: './project-settings.view.scss',
 })
 export class ProjectSettingsView {
   protected state = inject(ProjectState);

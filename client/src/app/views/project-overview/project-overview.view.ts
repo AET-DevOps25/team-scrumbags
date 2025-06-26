@@ -24,7 +24,6 @@ import { ProjectService } from '../../services/project.service';
     MatGridListModule,
     MatButtonModule,
     MatIconModule,
-    ProjectAddDialog,
   ],
   templateUrl: './project-overview.view.html',
   styleUrl: './project-overview.view.scss',

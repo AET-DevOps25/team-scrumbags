@@ -1,4 +1,8 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZonelessChangeDetection } from '@angular/core';
+import {
+  ApplicationConfig,
+  provideBrowserGlobalErrorListeners,
+  provideZonelessChangeDetection,
+} from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
@@ -7,7 +11,7 @@ import {
   includeBearerTokenInterceptor,
   INCLUDE_BEARER_TOKEN_INTERCEPTOR_CONFIG,
   createInterceptorCondition,
-  IncludeBearerTokenCondition
+  IncludeBearerTokenCondition,
 } from 'keycloak-angular';
 
 import { routes } from './app.routes';
@@ -15,8 +19,8 @@ import { environment } from './environment';
 
 // Configure which URLs should include the Bearer token
 const urlCondition = createInterceptorCondition<IncludeBearerTokenCondition>({
-  urlPattern: new RegExp(`^(${environment.apiUrl.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})(\\/.*)?$`, 'i'),
-  bearerPrefix: 'Bearer'
+  urlPattern: new RegExp(`^(${environment.apiUrl})(/.*)?$`, 'i'),
+  bearerPrefix: 'Bearer',
 });
 
 export const appConfig: ApplicationConfig = {
@@ -28,20 +32,20 @@ export const appConfig: ApplicationConfig = {
       config: {
         url: window.env?.keycloakUrl || 'http://localhost:8081',
         realm: window.env?.keycloakRealm || 'trace',
-        clientId: window.env?.keycloakClient || 'trace-api'
+        clientId: window.env?.keycloakClient || 'trace-api',
       },
       initOptions: {
         onLoad: 'login-required',
         checkLoginIframe: false, // Disable iframe checking
         flow: 'standard',
         redirectUri: window.env?.redirectUrl || window.location.origin,
-      }
+      },
     }),
     {
       provide: INCLUDE_BEARER_TOKEN_INTERCEPTOR_CONFIG,
-      useValue: [urlCondition]
+      useValue: [urlCondition],
     },
     provideRouter(routes),
-    provideHttpClient(withInterceptors([includeBearerTokenInterceptor]))
-  ]
+    provideHttpClient(withInterceptors([includeBearerTokenInterceptor])),
+  ],
 };
