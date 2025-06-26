@@ -3,7 +3,7 @@
   <mat-sidenav
     mode="side"
     [opened]="sidebarOpened()"
-    class="flex flex-col transition-all duration-300 !outline !w-70"
+    class="flex flex-col transition-all duration-300 !outline !outline-(--mat-sys-outline-variant) !w-70 !shadow-(--mat-sys-level2) !sidebar-shadow-offset"
   >
     <mat-toolbar color="primary" class="flex justify-between items-center px-2">
       <button mat-icon-button (click)="openAddProjectDialog()" class="mr-1">
