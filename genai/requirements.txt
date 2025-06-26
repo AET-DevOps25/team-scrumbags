@@ -1,6 +1,7 @@
 fastapi
-uvicorn[standard]
-pydantic
-weaviate-client
+uvicorn
 aio-pika
-uuid
+weaviate-client==4.*
+pydantic
+langchain
+openai  # or another LLM provider

@@ -1,0 +1,43 @@
+name: Genai build python
+on:
+  push:
+    branches:
+      - main
+      - release/*
+    paths:
+      - 'project-management/**'
+      - '.github/workflows/project-management-package.yml'
+  pull_request:
+    paths:
+      - 'project-management/**'
+      - '.github/workflows/project-management-build.yml'
+  workflow_call:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Lint with flake8
+        run: |
+          pip install flake8
+          flake8 app --max-line-length=100
+
+      - name: Run tests
+        env:
+          RABBITMQ_URL: amqp://guest:guest@localhost:5672/
+        run: |
+          pytest
