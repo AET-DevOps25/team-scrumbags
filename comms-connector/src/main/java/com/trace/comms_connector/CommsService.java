@@ -57,7 +57,7 @@ public class CommsService {
         if (platform != null) {
             connectionRepo.deleteInBulkByProjectIdAndPlatform(projectId, platform);
         } else {
-            connectionRepo.deleteInBulkByProjectID(projectId);
+            connectionRepo.deleteInBulkByProjectId(projectId);
         }
     }
 

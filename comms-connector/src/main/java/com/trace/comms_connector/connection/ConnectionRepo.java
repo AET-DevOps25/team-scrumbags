@@ -15,7 +15,7 @@ public interface ConnectionRepo extends JpaRepository<ConnectionEntity, Connecti
 
     List<ConnectionEntity> findAllByProjectIdAndPlatform(UUID projectId, Platform platform);
 
-    void deleteInBulkByProjectID(UUID projectId);
+    void deleteInBulkByProjectId(UUID projectId);
 
     void deleteInBulkByProjectIdAndPlatform(UUID projectId, Platform platform);
 }

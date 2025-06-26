@@ -22,5 +22,5 @@ public class UserEntity {
     @Id
     private Platform platform;
 
-    private String platformUsername;
+    private String platformUserId;
 }
