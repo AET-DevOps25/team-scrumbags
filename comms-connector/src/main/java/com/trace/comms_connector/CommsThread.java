@@ -78,6 +78,7 @@ public class CommsThread extends Thread {
 
     @PreDestroy
     public void stopCommsThreadOnDestroy() {
+        System.out.println("Comms thread stopping!");
         this.cancel();
     }
 }
