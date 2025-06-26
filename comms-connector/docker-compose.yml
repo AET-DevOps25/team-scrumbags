@@ -1,0 +1,33 @@
+services:
+  db:
+    image: mysql:latest
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+    ports:
+      - "4270:3306"
+    volumes:
+      - db_data:/var/lib/mysql/
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  comms-connector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      - DEBUG=${DEBUG}
+      - COMM_DISCORD_SECRET=${COMM_DISCORD_SECRET}
+      - COMM_DB_URL=jdbc:mysql://db:3306/${MYSQL_DATABASE}
+      - COMM_DB_USER=root
+      - COMM_DB_PASSWORD=${MYSQL_ROOT_PASSWORD} 
+
+volumes:
+  db_data:
