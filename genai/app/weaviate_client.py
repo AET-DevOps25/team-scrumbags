@@ -7,21 +7,25 @@ from weaviate.collections.classes.filters import Filter
 
 import weaviate.classes.config as wc
 # Init v4 client
-client = weaviate.connect_to_local()
+client = weaviate.connect_to_local(
+    host="weaviate",  # Use a string to specify the host
+    port=8080,
+    grpc_port=50051,
+)
 COLLECTION_NAME = "ProjectContent"
 
 def init_collection():
-        # Collection not found; create it using v4 API
-        client.collections.create(
-            name=COLLECTION_NAME,
-            properties=[
-                wc.Property(name="type", data_type=wc.DataType.TEXT),
-                wc.Property(name="user", data_type=wc.DataType.UUID),
-                wc.Property(name="timestamp", data_type=wc.DataType.INT),
-                wc.Property(name="projectId", data_type=wc.DataType.UUID),
-                wc.Property(name="content", data_type=wc.DataType.TEXT),
-            ]
-        )
+        if COLLECTION_NAME not in [c for c in client.collections.list_all()]:
+            client.collections.create(
+                name=COLLECTION_NAME,
+                properties=[
+                    wc.Property(name="type", data_type=wc.DataType.TEXT),
+                    wc.Property(name="user", data_type=wc.DataType.UUID),
+                    wc.Property(name="timestamp", data_type=wc.DataType.INT),
+                    wc.Property(name="projectId", data_type=wc.DataType.UUID),
+                    wc.Property(name="content", data_type=wc.DataType.TEXT),
+                ]
+            )
 
 def store_entry(entry):
     collection: Collection = client.collections.get(COLLECTION_NAME)

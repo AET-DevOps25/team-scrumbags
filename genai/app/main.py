@@ -3,20 +3,21 @@ import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from aio_pika import connect_robust, Message
-from models import ContentEntry, QueryRequest
-from langchain_provider import summarize_entries, answer_question
-from weaviate_client import init_collection
-from queue_consumer import consume
+from .models import ContentEntry, QueryRequest
+from .langchain_provider import summarize_entries, answer_question
+from . import weaviate_client as wc
+from .queue_consumer import consume
 
 RABBIT_URL = "amqp://guest:guest@rabbitmq/"
 QUEUE_NAME = "content_queue"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_collection()
+    wc.init_collection()
     task = asyncio.create_task(consume())
     yield
     task.cancel()
+    wc.client.close()
 
 app = FastAPI(lifespan=lifespan)
 

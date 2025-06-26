@@ -1,5 +1,5 @@
 from aio_pika import connect_robust
-from weaviate_client import store_entry
+from . import weaviate_client as wc
 import json
 
 RABBIT_URL = "amqp://guest:guest@rabbitmq/"
@@ -14,4 +14,4 @@ async def consume():
         async for message in queue_iter:
             async with message.process():
                 payload = json.loads(message.body)
-                store_entry(payload)
+                wc.store_entry(payload)
