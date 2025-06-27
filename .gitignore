@@ -374,5 +374,19 @@ sketch
 .history
 .ionide
 
+### Vue ###
+# gitignore template for Vue.js projects
+#
+# Recommended template: Node.gitignore
+
+### Audio Test Files ###
+*.mp3
+*.wav
+!file-separator.wav
+*.flac
+*.opus
+*.mkv
+*.mp4
+
 # ignore letsencrypt files
 acme.json
