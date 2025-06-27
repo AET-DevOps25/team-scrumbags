@@ -1,7 +1,6 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { Project } from '../models/project.model';
 import { User } from '../models/user.model';
-import { UserState } from './user.state';
 
 @Injectable({
   providedIn: 'root',
@@ -26,7 +25,7 @@ export class ProjectState {
   }
 
   setUsersOfProject(id: string, users: User[]) {
-    let project = this.allProjects().get(id);
+    const project = this.allProjects().get(id);
     if (!project) {
       return;
     }
