@@ -25,7 +25,7 @@ export class ProjectDetailView {
   private service = inject(ProjectService);
   private router = inject(Router);
 
-  project = computed<Project | null>(() => this.service.selectedProject());
+  project = computed<Project | undefined>(() => this.service.selectedProject());
 
   navigateToSettings(): void {
     this.router.navigate([

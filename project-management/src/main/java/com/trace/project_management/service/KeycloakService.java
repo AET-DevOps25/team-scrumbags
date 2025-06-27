@@ -1,5 +1,6 @@
 package com.trace.project_management.service;
 
+import com.trace.project_management.domain.User;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
 import org.keycloak.admin.client.resource.RealmResource;
@@ -89,16 +90,36 @@ public class KeycloakService {
         }
     }
 
-    public Set<UUID> getUsersWithRole(String roleName) {
+    public Set<User> getUsersWithRole(String roleName) {
         try {
             return realmResource.roles()
                     .get(roleName)
                     .getUserMembers()
                     .stream()
-                    .map(user -> UUID.fromString(user.getId()))
+                    .map(user ->
+                            new User(
+                                    user.getId(),
+                                    user.getUsername(),
+                                    user.getEmail()
+                            )
+                    )
                     .collect(Collectors.toSet());
         } catch (Exception e) {
             throw new RuntimeException("Failed to fetch users with role in Keycloak", e);
+        }
+    }
+
+    public Set<User> getAllUsers() {
+        try {
+            return realmResource.users().list().stream()
+                    .map(user -> new User(
+                            user.getId(),
+                            user.getUsername(),
+                            user.getEmail()
+                    ))
+                    .collect(Collectors.toSet());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to fetch all users from Keycloak", e);
         }
     }
 }
