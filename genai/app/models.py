@@ -10,9 +10,3 @@ class Metadata(BaseModel):
 class ContentEntry(BaseModel):
     metadata: Metadata
     content: Dict[str, Any]
-
-class QueryRequest(BaseModel):
-    projectId: UUID4
-    startTime: int
-    endTime: int
-    question: str
