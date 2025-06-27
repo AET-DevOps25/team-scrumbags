@@ -8,8 +8,8 @@ llm = ChatOllama(temperature=0)
 
 def summarize_entries(project_id: str, start: int, end: int) -> str:
     # todo
-    return ""
+    return "summary dummy"
 
 def answer_question(project_id: str, start: int, end: int, question: str) -> str:
     #todo
-    return ""
+    return "answer dummy"

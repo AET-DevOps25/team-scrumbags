@@ -8,7 +8,7 @@ from weaviate.collections.classes.filters import Filter
 import weaviate.classes.config as wc
 # Init v4 client
 client = weaviate.connect_to_local(
-    host="weaviate",  # Use a string to specify the host
+    host="weaviate",
     port=8080,
     grpc_port=50051,
 )

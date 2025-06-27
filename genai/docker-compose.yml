@@ -14,18 +14,15 @@ services:
       - .:/app
 
   rabbitmq:
-    image: rabbitmq:latest
+    image: rabbitmq:management
     container_name: rabbitmq
     restart: always
     ports:
       - "5672:5672"
       - "15672:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: kalo
-      RABBITMQ_DEFAULT_PASS: kalo
-    configs:
-      - source: rabbitmq-plugins
-        target: /etc/rabbitmq/enabled_plugins
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
     volumes:
       - rabbitmq-lib:/var/lib/rabbitmq/
       - rabbitmq-log:/var/log/rabbitmq
@@ -51,10 +48,6 @@ services:
       PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
       ENABLE_API_BASED_MODULES: 'true'
       CLUSTER_HOSTNAME: 'node1'
-
-configs:
-  rabbitmq-plugins:
-    content: "[rabbitmq_management]."
 
 volumes:
   weaviate_data:
