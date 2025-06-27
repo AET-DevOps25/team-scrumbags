@@ -7,6 +7,7 @@ import { CommonModule } from '@angular/common';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { ProjectService } from '../../services/project.service';
+import { MeetingNotesComponent } from '../../components/meeting-notes/meeting-notes.component';
 
 @Component({
   selector: 'app-project-detail',
@@ -15,6 +16,7 @@ import { ProjectService } from '../../services/project.service';
     MatProgressSpinnerModule,
     MatButtonModule,
     MatIconModule,
+    MeetingNotesComponent,
   ],
   templateUrl: './project-detail.view.html',
   styleUrl: './project-detail.view.scss',

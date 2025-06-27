@@ -1,0 +1,12 @@
+<div class="relative">
+  <button mat-icon-button class="absolute top-0 right-0 m-2" (click)="openUploadDialog()" aria-label="Upload notes">
+    <mat-icon>add</mat-icon>
+  </button>
+  <mat-list>
+    @for (note of notesMetadata(); track note.id) {
+      <mat-list-item (click)="goToNoteDetail(note.id)">
+        {{ note.name }}
+      </mat-list-item>
+    }
+  </mat-list>
+</div>
