@@ -1,0 +1,34 @@
+meta {
+  name: Post Content
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/content
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "metadata": {
+      "type": "pr_comment",
+      "user": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "timestamp": 1719302400,
+      "projectId": "b6852f4b-36d4-4abb-8740-6e923377124c"
+    },
+    "content": {
+      "prNumber": 42,
+      "commenter": "alice",
+      "comment": "Looks good to me! Just a couple of nits around naming.",
+      "file": "app/weaviate_client.py",
+      "line": 128
+    }
+  }
+  
+}

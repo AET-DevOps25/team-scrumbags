@@ -1,0 +1,17 @@
+meta {
+  name: Get Summary
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/summary/?project_id=b6852f4b-36d4-4abb-8740-6e923377124c&start_time=1719302400&end_time=1719302400
+  body: none
+  auth: inherit
+}
+
+params:query {
+  project_id: b6852f4b-36d4-4abb-8740-6e923377124c
+  start_time: 1719302400
+  end_time: 1719302400
+}
