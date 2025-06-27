@@ -17,6 +17,14 @@ export class MeetingNotesApi {
       .pipe(catchError(this.handleError('Error fetching project list')));
   }
 
+  uploadMeetingNoteFile(projectId: string, file: File): Observable<MeetingNote> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http
+      .post<MeetingNote>(`${environment.meetingNotesUrl}/projects/${projectId}/meeting-notes`, formData)
+      .pipe(catchError(this.handleError('Error uploading meeting note')));
+  }
+
   private handleError(operation: string) {
     return (error: HttpErrorResponse): Observable<never> => {
       console.error(`${operation}:`, error);

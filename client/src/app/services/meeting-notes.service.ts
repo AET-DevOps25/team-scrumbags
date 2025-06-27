@@ -22,4 +22,16 @@ export class MeetingNotesService {
       })
     );
   }
+
+  public uploadMeetingNoteFile(
+    projectId: string,
+    file: File
+  ): Observable<MeetingNote> {
+    return this.api.uploadMeetingNoteFile(projectId, file).pipe(
+      tap((meetingNote) => {
+        console.log('Meeting note uploaded:', meetingNote);
+        this.projectState.addMeetingNote(projectId, meetingNote);
+      })
+    );
+  }
 }
