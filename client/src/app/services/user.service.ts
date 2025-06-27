@@ -17,8 +17,6 @@ export class UserService {
   private _isLoadingAllUsers = signal<boolean>(false);
   public isLoadingAllUsers = this._isLoadingAllUsers.asReadonly();
 
-  constructor() {  }
-
   public getSignedInUser(): User | undefined {
     const token = this.keycloak.tokenParsed;
     if (!token) {

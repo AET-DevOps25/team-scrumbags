@@ -4,10 +4,7 @@ import {
   effect,
   inject,
   input,
-  OnInit,
-  signal,
 } from '@angular/core';
-import { MeetingNote } from '../../models/meeting-note.model';
 import { Router } from '@angular/router';
 import { ProjectService } from '../../services/project.service';
 import { MatButtonModule } from '@angular/material/button';
@@ -20,7 +17,7 @@ import { NotesListComponent } from '../../components/meeting-notes/notes-list/no
   templateUrl: './meeting-notes.view.html',
   styleUrl: './meeting-notes.view.scss',
 })
-export class MeetingNotesView implements OnInit {
+export class MeetingNotesView {
   router = inject(Router);
   projectService = inject(ProjectService);
   meetingNotesService = inject(MeetingNotesService);
@@ -41,8 +38,6 @@ export class MeetingNotesView implements OnInit {
       }
     });
   }
-
-  ngOnInit(): void {}
 
   viewAllNotes() {
     this.router.navigate([

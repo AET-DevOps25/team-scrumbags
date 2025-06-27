@@ -1,7 +1,6 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { Project } from '../models/project.model';
 import { User } from '../models/user.model';
-import { UserState } from './user.state';
 import { MeetingNote } from '../models/meeting-note.model';
 
 @Injectable({
