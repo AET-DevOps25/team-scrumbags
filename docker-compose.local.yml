@@ -32,6 +32,16 @@ services:
       - SERVER_PORT=${PROJECT_MANAGEMENT_PORT:-8080}
     restart: unless-stopped
 
+  mock-meeting-notes:
+    build:
+        context: ./mock-meeting-notes
+        dockerfile: Dockerfile
+    ports:
+      - "3030:3030"
+    environment:
+      - SERVER_PORT=3030
+      - DEBUG=${DEBUG}
+
   keycloak:
     image: quay.io/keycloak/keycloak:26.2.5
     command:

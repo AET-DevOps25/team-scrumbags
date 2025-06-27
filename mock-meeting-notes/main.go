@@ -43,7 +43,7 @@ type MeetingMetadata struct {
 var storage = make(map[uuid.UUID]MeetingMetadata)
 
 func GetMeetingMetadata(c *gin.Context) {
-	var metadata []MeetingMetadata
+	metadata := make([]MeetingMetadata, 0) 
 	for _, m := range storage {
 		metadata = append(metadata, m)
 	}
