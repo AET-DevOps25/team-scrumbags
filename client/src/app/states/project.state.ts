@@ -2,6 +2,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import { Project } from '../models/project.model';
 import { User } from '../models/user.model';
 import { UserState } from './user.state';
+import { MeetingNote } from '../models/meeting-note.model';
 
 @Injectable({
   providedIn: 'root',
@@ -25,14 +26,18 @@ export class ProjectState {
     this._allProjects.set(map);
   }
 
-  setUsersOfProject(id: string, users: User[]) {
-    let project = this.allProjects().get(id);
-    if (!project) {
+  updateProject(id: string, project: Partial<Project>): void {
+    const existingProject = this.allProjects().get(id);
+    if (!existingProject) {
       return;
     }
 
-    project.users = users;
-    this.setProjectById(id, { ...project });
+    const updatedProject = { ...existingProject, ...project };
+    this.setProjectById(id, updatedProject);
+  }
+
+  setUsersOfProject(id: string, users: User[]) {
+    this.updateProject(id, { users: users });
   }
 
   addUserToProject(id: string, user: User) {
@@ -40,12 +45,11 @@ export class ProjectState {
     if (!project) {
       return;
     }
-    if (!project.users) {
-      project.users = [];
-    }
 
-    project.users = [...project.users, user]
-    this.setProjectById(id, { ...project });
+    let users = project.users || [];
+
+    users = [...users, user];
+    this.updateProject(id, { users: users });
   }
 
   removeUserFromProject(id: string, userId: string) {
@@ -53,7 +57,12 @@ export class ProjectState {
     if (!project) {
       return;
     }
-    project.users = project.users.filter((u) => u.id !== userId);
-    this.setProjectById(id, { ...project });
+
+    const users = project.users.filter((u) => u.id !== userId);
+    this.updateProject(id, { users: users });
+  }
+
+  setMeetingNotes(id: string, meetingNotes: MeetingNote[]) {
+    this.updateProject(id, { meetingNotes: meetingNotes });
   }
 }

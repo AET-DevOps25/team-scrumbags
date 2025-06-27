@@ -5,7 +5,7 @@ import { ProjectDetailView } from './views/project-detail/project-detail.view';
 import { SidebarComponent } from './views/sidebar/sidebar.component';
 import { ProjectSettingsView } from './views/project-settings/project-settings.view';
 import { NotesDetailView } from './views/notes-detail/notes-detail.view';
-import { MeetingNotesAllView } from './views/meeting-notes-all/meeting-notes-all.view';
+import { MeetingNotesView } from './views/meeting-notes/meeting-notes.view';
 
 export const routes: Routes = [
   // Default path
@@ -36,7 +36,7 @@ export const routes: Routes = [
       },
       {
         path: 'projects/:projectId/meetings',
-        loadComponent: () => MeetingNotesAllView,
+        loadComponent: () => MeetingNotesView,
         canActivate: [canActivateProject],
       },
       {

@@ -1,2 +1,4 @@
 <app-notes-list [notesMetadata]="prelookMetadata()"></app-notes-list>
+@if (prelookCount() !== undefined) {
 <button mat-button (click)="viewAllNotes()">View all</button>
+}

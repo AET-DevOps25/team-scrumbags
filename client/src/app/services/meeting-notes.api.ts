@@ -3,17 +3,17 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { environment } from '../environment';
-import { User } from '../models/user.model';
+import { MeetingNote } from '../models/meeting-note.model';
 
 @Injectable({
   providedIn: 'root',
 })
-export class UserApi {
+export class MeetingNotesApi {
   private http = inject(HttpClient);
 
-  getAllUsers(): Observable<User[]> {
+  getMeetingNotesMetadata(projectId: string): Observable<MeetingNote[]> {
     return this.http
-      .get<User[]>(`${environment.projectManagementUrl}/users`)
+      .get<MeetingNote[]>(`${environment.meetingNotesUrl}/projects/${projectId}/meeting-notes`)
       .pipe(catchError(this.handleError('Error fetching project list')));
   }
 

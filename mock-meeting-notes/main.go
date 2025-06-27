@@ -27,12 +27,32 @@ func SetupRouter() *gin.Engine {
 	r := gin.New()
 	r.Use(gin.ErrorLogger())
 	r.Use(gin.Recovery())
+	r.Use(corsMiddleware())
 
-	r.GET("/meetings", GetMeetingMetadata)
-	r.GET("/meetings/:id/file", GetMeetingFile)
-	r.POST("/meetings", UploadMeetingFile)
+	r.GET("projects/:projectId/meeting-notes", GetMeetingMetadata)
+	r.GET("projects/:projectId/meeting-notes/:id/file", GetMeetingFile)
+	r.POST("projects/:projectId/meeting-notes", UploadMeetingFile)
 
 	return r
+}
+
+// corsMiddleware sets up CORS headers for all routes
+func corsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+		c.Header("Access-Control-Expose-Headers", "Content-Length")
+		c.Header("Access-Control-Allow-Credentials", "true")
+
+		// Handle preflight requests
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	}
 }
 
 type MeetingMetadata struct {
