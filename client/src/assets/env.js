@@ -11,6 +11,5 @@
   window["env"]["keycloakUrl"] = "http://localhost:8081";
   window["env"]["keycloakRealm"] = "trace";
   window["env"]["keycloakClient"] = "trace-api";
-  window["env"]["redirectUrl"] = "http://localhost:4200";
   window["env"]["debug"] = true;
 })(this);

@@ -41,7 +41,6 @@ export const appConfig: ApplicationConfig = {
         onLoad: 'login-required',
         checkLoginIframe: false, // Disable iframe checking
         flow: 'standard',
-        redirectUri: window.env?.redirectUrl || window.location.origin,
       },
     }),
     {

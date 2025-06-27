@@ -4,8 +4,8 @@ import { ProjectOverviewView } from './views/project-overview/project-overview.v
 import { ProjectDetailView } from './views/project-detail/project-detail.view';
 import { SidebarComponent } from './views/sidebar/sidebar.component';
 import { ProjectSettingsView } from './views/project-settings/project-settings.view';
-import { NotesDetailView } from './views/notes-detail/notes-detail.view';
 import { MeetingNotesView } from './views/meeting-notes/meeting-notes.view';
+import { MeetingNotesDetailView } from './views/meeting-notes-detail/meeting-notes-detail.view';
 
 export const routes: Routes = [
   // Default path
@@ -39,12 +39,12 @@ export const routes: Routes = [
         loadComponent: () => MeetingNotesView,
         canActivate: [canActivateProject],
       },
-      {
-        path: 'projects/:projectId/meetings/:meetingId',
-        loadComponent: () => NotesDetailView,
-        canActivate: [canActivateProject],
-      },
     ],
+  },
+  {
+    path: 'projects/:projectId/meetings/:meetingId',
+    loadComponent: () => MeetingNotesDetailView,
+    canActivate: [canActivateProject],
   },
   // Fallback route
   {

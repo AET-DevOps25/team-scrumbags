@@ -14,7 +14,6 @@ services:
       - KEYCLOAK_URL=http://localhost:8081
       - KEYCLOAK_REALM=${KEYCLOAK_REALM:-trace}
       - KEYCLOAK_CLIENT=${KEYCLOAK_CLIENT:-trace-api}
-      - KEYCLOAK_REDIRECT_URL=http://localhost:4200
       - DEBUG=${DEBUG:-false}
 
   project-management:

@@ -9,7 +9,7 @@
 </div>
 <mat-list>
   @for (note of notesMetadata(); track note.id) {
-  <mat-list-item (click)="goToNoteDetail(note.id)" class="cursor-pointer">
+  <mat-list-item (click)="openFile(note)" class="cursor-pointer">
     <span matListItemTitle> {{ note.name }} </span>
   </mat-list-item>
   }

@@ -58,6 +58,7 @@ func corsMiddleware() gin.HandlerFunc {
 type MeetingMetadata struct {
 	ID       uuid.UUID `json:"id"`
 	FileName string    `json:"name"`
+	MimeType string    `json:"-"`
 }
 
 var storage = make(map[uuid.UUID]MeetingMetadata)
@@ -89,8 +90,8 @@ func GetMeetingFile(c *gin.Context) {
 		return
 	}
 	defer file.Close()
-	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", meta.FileName))
-	c.Header("Content-Type", "application/octet-stream")
+	c.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", meta.FileName))
+	c.Header("Content-Type", meta.MimeType)
 	c.File(filePath)
 }
 
@@ -120,6 +121,11 @@ func UploadMeetingFile(c *gin.Context) {
 		c.JSON(500, gin.H{"error": "Failed to save file"})
 		return
 	}
-	storage[id] = MeetingMetadata{ID: id, FileName: header.Filename}
+
+	mimeType := header.Header.Get("Content-Type")
+	if mimeType == "" {
+		mimeType = "application/octet-stream" // Default MIME type if not provided
+	}
+	storage[id] = MeetingMetadata{ID: id, FileName: header.Filename, MimeType: mimeType}
 	c.JSON(201, storage[id])
 }

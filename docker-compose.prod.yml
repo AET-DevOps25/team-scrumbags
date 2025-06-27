@@ -31,7 +31,6 @@ services:
       - KEYCLOAK_URL=${KEYCLOAK_URL:-https://${DOMAIN}/keycloak}
       - KEYCLOAK_REALM=${KEYCLOAK_REALM:-trace}
       - KEYCLOAK_CLIENT=${KEYCLOAK_CLIENT:-trace-api}
-      - KEYCLOAK_REDIRECT_URL=${KEYCLOAK_REDIRECT_URL:-https://${DOMAIN}}
       - DEBUG=${DEBUG:-false}
     labels:
       - "traefik.enable=true"

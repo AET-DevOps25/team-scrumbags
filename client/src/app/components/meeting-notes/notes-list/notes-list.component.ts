@@ -1,5 +1,4 @@
 import { Component, input, inject } from '@angular/core';
-import { Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
@@ -17,17 +16,20 @@ import { ProjectService } from '../../../services/project.service';
   styleUrl: './notes-list.component.scss',
 })
 export class NotesListComponent {
-  private router = inject(Router);
   private dialog = inject(MatDialog);
   private projectService = inject(ProjectService);
 
   notesMetadata = input.required<MeetingNote[]>();
 
-  goToNoteDetail(noteId: string) {
+  openFile(note: MeetingNote) {
     const projectId = this.projectService.selectedProjectId();
-    if (projectId) {
-      this.router.navigate([`/projects/${projectId}/meetings/${noteId}`]);
+    if (!projectId) {
+      console.error('No project selected for downloading meeting note file');
+      return;
     }
+
+    const url = `${window.location.origin}/projects/${projectId}/meetings/${note.id}`;
+    window.open(url, '_blank');
   }
 
   openUploadDialog() {
