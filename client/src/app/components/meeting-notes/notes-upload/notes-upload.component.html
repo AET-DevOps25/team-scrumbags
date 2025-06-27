@@ -1,0 +1,32 @@
+<div mat-dialog-title class="!pt-0 !h-auto" >
+  <h2 class="text-xl font-semibold">Upload File</h2>
+</div>
+
+<div mat-dialog-content class="!pt-1">
+    <input
+      type="file"
+      (change)="onFileSelected($event)"
+      accept=".pdf,.txt,.md,.mp3,.wav,.m4a"
+      class="block w-full text-sm rounded-lg cursor-pointer 
+      border border-(--mat-sys-outline-variant)
+      file:bg-(--mat-sys-primary) file:text-(--mat-sys-on-primary) file:font-semibold file:py-2 file:px-4 file:border-0 file:rounded file:mr-4 hover:file:text-(--mat-sys-on-primary-hover) hover:file:bg-(--mat-sys-primary-hover)"
+      [disabled]="isSubmitting()"
+    />
+  @if (selectedFile()) {
+    <span class="mt-2 text-xs text-(--mat-sys-on-surface-variant)">Selected: {{ selectedFile()?.name }}</span>
+  }
+</div>
+
+<div mat-dialog-actions class="flex justify-end gap-2">
+  <button mat-button (click)="onCancel()" [disabled]="isSubmitting()">
+    Cancel
+  </button>
+  <button
+    mat-raised-button
+    color="primary"
+    (click)="onSubmit()"
+    [disabled]="!selectedFile() || isSubmitting()"
+  >
+    @if (isSubmitting()) { Uploading... } @else { Upload File }
+  </button>
+</div>

@@ -1,11 +1,11 @@
 meta {
   name: Assign User to Project
   type: http
-  seq: 7
+  seq: 2
 }
 
 post {
-  url: {{api_url}}/projects/:projectId/users
+  url: {{projects_url}}/projects/:projectId/users
   body: json
   auth: inherit
 }

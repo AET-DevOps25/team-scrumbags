@@ -52,7 +52,7 @@ export class ProjectService {
     return this.api.getProjectById(projectId).pipe(
       tap((project) => {
         // Update the state with the loaded project
-        this.state.setProjectById(projectId, project);
+        this.state.updateProject(projectId, project);
       })
     );
   }

@@ -27,15 +27,14 @@ services:
     ports:
       - "4200:80"
     environment:
-      - API_URL=${API_URL:-https://${DOMAIN:-localhost}/project-management}
-      - KEYCLOAK_URL=${KEYCLOAK_URL:-https://${DOMAIN:-localhost}/keycloak}
+      - API_URL=${API_URL:-https://${DOMAIN}/project-management}
+      - KEYCLOAK_URL=${KEYCLOAK_URL:-https://${DOMAIN}/keycloak}
       - KEYCLOAK_REALM=${KEYCLOAK_REALM:-trace}
       - KEYCLOAK_CLIENT=${KEYCLOAK_CLIENT:-trace-api}
-      - KEYCLOAK_REDIRECT_URL=${KEYCLOAK_REDIRECT_URL:-https://${DOMAIN:-localhost}}
       - DEBUG=${DEBUG:-false}
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.client.rule=Host(`${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.client.rule=Host(`${DOMAIN}`)"
       - "traefik.http.services.client.loadbalancer.server.port=80"
       - "traefik.http.routers.client.entrypoints=websecure"
       - "traefik.http.routers.client.tls.certresolver=letsencrypt"
@@ -53,17 +52,17 @@ services:
     environment:
       - DEBUG=${DEBUG:-false}
       - DB_URL=jdbc:postgresql://project-db:5432/project-db
-      - DB_USER=${PROJECT_DB_USER:-user}
-      - DB_PASSWORD=${PROJECT_DB_PASSWORD:-test}
+      - DB_USER=${PROJECT_DB_USER}
+      - DB_PASSWORD=${PROJECT_DB_PASSWORD}
       - KEYCLOAK_REALM=${KEYCLOAK_REALM:-trace}
-      - KEYCLOAK_AUTH_URL=https://${DOMAIN:-localhost}/keycloak
-      - KEYCLOAK_ADMIN_USERNAME=${KEYCLOAK_ADMIN_USERNAME:-admin}
-      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      - KEYCLOAK_AUTH_URL=https://${DOMAIN}/keycloak
+      - KEYCLOAK_ADMIN_USERNAME=${KEYCLOAK_ADMIN_USERNAME}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
       - SERVER_PORT=8080
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.project-management.rule=Host(`${DOMAIN:-localhost}`) && PathPrefix(`/project-management`)"
+      - "traefik.http.routers.project-management.rule=Host(`${DOMAIN}`) && PathPrefix(`/project-management`)"
       - "traefik.http.services.project-management.loadbalancer.server.port=8080"
       - "traefik.http.routers.project-management.entrypoints=websecure"
       - "traefik.http.routers.project-management.tls.certresolver=letsencrypt"
@@ -80,18 +79,18 @@ services:
     ports:
       - "8081:8080"
     environment:
-      KC_HOSTNAME: ${DOMAIN:-localhost}
+      KC_HOSTNAME: ${DOMAIN}
       KC_HOSTNAME_STRICT: false
       KC_HTTP_ENABLED: true
       KC_PROXY_HEADERS: xforwarded
       KC_HTTP_RELATIVE_PATH: /keycloak
-      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
-      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
     volumes:
       - ./project-management/keycloak/:/opt/keycloak/data/import/
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.keycloak.rule=Host(`${DOMAIN:-localhost}`) && PathPrefix(`/keycloak`)"
+      - "traefik.http.routers.keycloak.rule=Host(`${DOMAIN}`) && PathPrefix(`/keycloak`)"
       - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
       - "traefik.http.routers.keycloak.entrypoints=websecure"
       - "traefik.http.routers.keycloak.tls.certresolver=letsencrypt"
@@ -99,8 +98,8 @@ services:
   project-db:
     image: postgres:latest
     environment:
-      POSTGRES_USER: ${DB_USER:-user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-test}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: project-db
     ports:
       - "5432:5432"

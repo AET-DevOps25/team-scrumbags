@@ -4,14 +4,17 @@ services:
       context: ./client
       dockerfile: Dockerfile
     ports:
-      - "${CLIENT_PORT:-4200}:80"
+      - "4200:80"
     environment:
-      - API_URL=http://localhost:${PROJECT_MANAGEMENT_PORT:-8080}
-      - KEYCLOAK_URL=http://localhost:${KEYCLOAK_PORT:-8081}
+      - PROJECT_MANAGEMENT_URL=http://localhost:8080
+      - SDLC_URL=http://localhost/api/sdlc
+      - MEETING_NOTES_URL=http://localhost:3030
+      - COMMUNICATION_URL=http://localhost/api/communication
+      - GEN_AI_URL=http://localhost/api/gen-ai
+      - KEYCLOAK_URL=http://localhost:8081
       - KEYCLOAK_REALM=${KEYCLOAK_REALM:-trace}
       - KEYCLOAK_CLIENT=${KEYCLOAK_CLIENT:-trace-api}
       - DEBUG=${DEBUG:-false}
-      - CLIENT_PORT=${CLIENT_PORT:-4200}
 
   project-management:
     build:
@@ -22,14 +25,24 @@ services:
       - project-db
     environment:
       - DEBUG=${DEBUG:-false}
-      - DB_URL=jdbc:postgresql://localhost:${DB_PORT:-5432}/project-db
+      - DB_URL=jdbc:postgresql://localhost:5432/project-db
       - DB_USER=${PROJECT_DB_USER:-user}
       - DB_PASSWORD=${PROJECT_DB_PASSWORD:-test}
       - KEYCLOAK_REALM=${KEYCLOAK_REALM:-trace}
-      - KEYCLOAK_AUTH_URL=http://localhost:${KEYCLOAK_PORT:-8081}
+      - KEYCLOAK_AUTH_URL=http://localhost:8081
       - KEYCLOAK_ADMIN_USERNAME=${KEYCLOAK_ADMIN_USERNAME:-admin}
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
-      - SERVER_PORT=${PROJECT_MANAGEMENT_PORT:-8080}
+      - SERVER_PORT=8080
+    restart: unless-stopped
+
+  mock-meeting-notes:
+    build:
+        context: ./mock-meeting-notes
+        dockerfile: Dockerfile
+    network_mode: host
+    environment:
+      - SERVER_PORT=3030
+      - DEBUG=${DEBUG}
     restart: unless-stopped
 
   keycloak:
@@ -41,22 +54,22 @@ services:
     environment:
       KC_HOSTNAME: localhost
       KC_HOSTNAME_STRICT: false
-      KC_HOSTNAME_PORT: ${KEYCLOAK_PORT:-8081}
+      KC_HOSTNAME_PORT: 8081
       KC_HTTP_ENABLED: true
-      KC_HTTP_PORT: ${KEYCLOAK_PORT:-8081}
+      KC_HTTP_PORT: 8081
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
     volumes:
       - ./project-management/keycloak/:/opt/keycloak/data/import/
-      
+  
   project-db:
     image: postgres:latest
-    network_mode: host
     environment:
       POSTGRES_USER: ${DB_USER:-user}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-test}
       POSTGRES_DB: project-db
-      POSTGRES_PORT: ${DB_PORT:-5432}
+      POSTGRES_PORT: 5432
+    network_mode: host
     volumes:
       - project_db_data:/var/lib/postgresql/data
 

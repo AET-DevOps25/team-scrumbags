@@ -29,7 +29,7 @@ const hasProjectAccess = async (
   }
 
   // Get the Project ID from the route parameters
-  const projectId = route.params['id'];
+  const projectId = route.params['projectId'];
   if (!projectId) {
     return false;
   }

@@ -56,15 +56,9 @@ export class SidebarComponent implements OnInit{
   }
 
   openAddProjectDialog(): void {
-    const dialogRef = this.dialog.open(ProjectAddDialog, {
+    this.dialog.open(ProjectAddDialog, {
       width: '500px',
       disableClose: false,
-    });
-
-    dialogRef.afterClosed().subscribe((newProject) => {
-      if (newProject) {
-        this.state.setProjectById(newProject.id, newProject);
-      }
     });
   }
 
