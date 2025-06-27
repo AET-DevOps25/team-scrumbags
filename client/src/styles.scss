@@ -1,1 +1,13 @@
 /* You can add global styles to this file, and also import other style files */
+@use "tailwindcss";
+
+html, body { height: 100%; }
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+
+.mdc-notched-outline__notch {
+    border-style: none;
+}
+
+.mat-mdc-icon-button {
+    line-height: normal;
+}

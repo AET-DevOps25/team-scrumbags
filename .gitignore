@@ -387,3 +387,6 @@ sketch
 *.opus
 *.mkv
 *.mp4
+
+# ignore letsencrypt files
+acme.json
