@@ -66,7 +66,7 @@ export class ProjectApi {
       })
       .pipe(
         catchError(
-          this.handleError(`Error assigning user to project (${projectId})`)
+          this.handleError(`Error removing user from project (${projectId})`)
         )
       );
   }
