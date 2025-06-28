@@ -1,0 +1,55 @@
+<h2 class="text-xl font-semibold">Reports</h2>
+<router-outlet></router-outlet>
+
+<div class="mt-4">
+  @if (!showForm()) {
+  <button
+    mat-mini-fab
+    color="primary"
+    aria-label="Add report"
+    (click)="showForm.set(true)"
+  >
+    <mat-icon>add</mat-icon>
+  </button>
+  } @else {
+  <form
+    class="flex flex-row flex-wrap items-center gap-4 max-w-full"
+    (ngSubmit)="onSubmit()"
+  >
+    <button mat-icon-button type="button" (click)="onCancel()" aria-label="Cancel" class="mb-2">
+      <mat-icon>close</mat-icon>
+    </button>
+    <mat-form-field appearance="outline" class="min-w-[180px]">
+      <mat-label>Start Date</mat-label>
+      <input
+        matInput
+        type="date"
+        [(ngModel)]="periodStart"
+        name="startDate"
+        required
+      />
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="min-w-[180px]">
+      <mat-label>End Date</mat-label>
+      <input
+        matInput
+        type="date"
+        [(ngModel)]="periodEnd"
+        name="endDate"
+        required
+      />
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="min-w-[200px]">
+      <mat-label>Users</mat-label>
+      <mat-select multiple [(ngModel)]="userIds" name="userIds">
+        @for (user of possibleUsers(); track user.id) {
+        <mat-option [value]="user.id">{{ user.username }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    <button mat-icon-button color="primary" type="submit" aria-label="Send" class="mb-2">
+      <mat-icon>send</mat-icon>
+    </button>
+  </form>
+  }
+</div>
