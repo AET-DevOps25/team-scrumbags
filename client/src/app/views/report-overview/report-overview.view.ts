@@ -9,6 +9,7 @@ import { ReportService } from '../../services/report.service';
 import { ProjectService } from '../../services/project.service';
 import { ReportListView } from './report-list/report-list.view';
 import { ReportContentView } from './report-content/report-content.view';
+import { UserService } from '../../services/user.service';
 
 @Component({
   selector: 'app-report-overview',
@@ -27,6 +28,7 @@ import { ReportContentView } from './report-content/report-content.view';
   styleUrl: './report-overview.view.scss',
 })
 export class ReportOverviewView {
+  private userService = inject(UserService);
   private projectService = inject(ProjectService);
   private reportService = inject(ReportService);
 
@@ -39,6 +41,15 @@ export class ReportOverviewView {
   periodStart = signal<string | undefined>(undefined);
   periodEnd = signal<string | undefined>(undefined);
   userIds = signal<string[]>([]);
+
+  displayForm() {
+    this.showForm.set(true);
+    const projectId = this.projectService.selectedProjectId();
+    if (!projectId) {
+      return;
+    }
+    this.projectService.loadUsersOfProject(projectId).subscribe();
+  }
 
   onSubmit() {
     this.generateReport();
