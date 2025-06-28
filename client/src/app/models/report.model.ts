@@ -5,4 +5,5 @@ export interface Report {
   periodEnd: Date;
   userIds: string[];
   content: string;
+  generating: boolean;
 }

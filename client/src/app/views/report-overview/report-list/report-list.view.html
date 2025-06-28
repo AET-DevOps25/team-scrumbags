@@ -1,17 +1,25 @@
 <div class="flex flex-col">
-    @if (isLoading()) {
-    <div class="flex items-center justify-center h-full">
-      <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
-    </div>
-    } @else if (reports().length === 0) {
-    <span>No reports available.</span>
-    } @else {
-    <mat-action-list>
-      @for (report of reports(); track report.id) {
-      <button mat-list-item (click)="onReportSelected(report.id)">
-        {{report.name}}
-      </button>
-      }
-    </mat-action-list>
+  @if (isLoading()) {
+  <div class="flex items-center justify-center h-full">
+    <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+  </div>
+  } @else if (reports().length === 0) {
+  <span>No reports available.</span>
+  } @else {
+  <mat-action-list>
+    @for (report of reports(); track report.id) {
+    <button
+      mat-list-item
+      [disabled]="report.generating"
+      (click)="onReportSelected(report.id)"
+    >
+      <span class="flex items-center gap-2">
+        {{report.name}} @if (report.generating){
+        <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+        }
+      </span>
+    </button>
     }
+  </mat-action-list>
+  }
 </div>
