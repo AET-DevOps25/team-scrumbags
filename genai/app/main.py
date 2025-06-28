@@ -3,10 +3,10 @@ import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Query, Body, HTTPException
 from aio_pika import connect_robust, Message
-from .models import ContentEntry
-from .langchain_provider import summarize_entries, answer_question
-from . import weaviate_client as wc
-from .queue_consumer import consume
+from app.models import ContentEntry
+from app.langchain_provider import summarize_entries, answer_question
+from app import weaviate_client as wc
+from app.queue_consumer import consume
 from pydantic import UUID4
 
 RABBIT_URL = "amqp://guest:guest@rabbitmq/"
@@ -16,6 +16,7 @@ QUEUE_NAME = "content_queue"
 async def lifespan(app: FastAPI):
     wc.init_collection()
     task = asyncio.create_task(consume())
+    print(task)
     yield
     task.cancel()
     wc.client.close()
@@ -32,6 +33,11 @@ async def post_content(entry: ContentEntry = Body(..., description="Content entr
         message,
         routing_key=QUEUE_NAME
     )
+
+    print(f"Published message to {QUEUE_NAME}: {raw}")
+    print(f"Queue: {ch}")
+    print(f"Connection: {conn}")
+
     await conn.close()
     return {"status": "queued"}
 

@@ -2,7 +2,7 @@ from langchain.chains.summarize import load_summarize_chain
 from langchain_ollama import ChatOllama
 from langchain_community.vectorstores import Weaviate as LCWeaviate
 from langchain.chains import RetrievalQA
-from . import weaviate_client as wc
+from app import weaviate_client as wc
 
 llm = ChatOllama(temperature=0.0, model="llama3")
 
