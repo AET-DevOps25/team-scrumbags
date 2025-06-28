@@ -1,4 +1,3 @@
-import json
 import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Query, Body, HTTPException
@@ -8,6 +7,7 @@ from app.langchain_provider import summarize_entries, answer_question
 from app import weaviate_client as wc
 from app.queue_consumer import consume
 from pydantic import UUID4
+from typing import List
 
 RABBIT_URL = "amqp://guest:guest@rabbitmq/"
 QUEUE_NAME = "content_queue"
@@ -24,22 +24,22 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 @app.post("/content", summary="Post content to the queue for processing")
-async def post_content(entry: ContentEntry = Body(..., description="Content entry to be processed")):
+async def post_content(
+    entries: List[ContentEntry] = Body(..., description="List of content entries to be processed")
+):
     conn = await connect_robust(RABBIT_URL)
     ch = await conn.channel()
-    raw = entry.model_dump_json()  # returns a JSON string
-    message = Message(body=raw.encode())
-    await ch.default_exchange.publish(
-        message,
-        routing_key=QUEUE_NAME
-    )
 
-    print(f"Published message to {QUEUE_NAME}: {raw}")
-    print(f"Queue: {ch}")
-    print(f"Connection: {conn}")
+    for entry in entries:
+        raw = entry.model_dump_json()
+        message = Message(body=raw.encode())
+        await ch.default_exchange.publish(
+            message,
+            routing_key=QUEUE_NAME
+        )
 
     await conn.close()
-    return {"status": "queued"}
+    return {"status": f"Published {len(entries)} message(s) to queue."}
 
 @app.get("/summary/", summary="Get a summary of content entries")
 def get_summary(
