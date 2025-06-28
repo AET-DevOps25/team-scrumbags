@@ -7,7 +7,6 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { ReportService } from '../../services/report.service';
 import { ProjectService } from '../../services/project.service';
-import { RouterOutlet } from '@angular/router';
 import { ReportListView } from './report-list/report-list.view';
 import { ReportContentView } from './report-content/report-content.view';
 
