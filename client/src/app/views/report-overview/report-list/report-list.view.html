@@ -1,17 +1,19 @@
 <div class="flex flex-col h-full">
   <div class="flex-1 overflow-y-auto">
-    @if (!isLoading()) {
-      <mat-list>
-        @for (report of reports(); track report.id) {
-          <mat-list-item>
-            <span>{{ report.name }}</span>
-          </mat-list-item>
-        }
-      </mat-list>
+    @if (isLoading()) {
+    <div class="flex items-center justify-center h-full">
+      <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+    </div>
+    } @else if (reports().length === 0) {
+    <span>No reports available.</span>
     } @else {
-      <div class="flex items-center justify-center h-full">
-        <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
-      </div>
+    <mat-action-list>
+      @for (report of reports(); track report.id) {
+      <button mat-list-item (click)="onReportSelected(report.id)">
+        {{report.name}}
+      </button>
+      }
+    </mat-action-list>
     }
   </div>
 </div>

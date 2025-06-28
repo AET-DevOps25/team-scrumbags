@@ -1,19 +1,26 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { ProjectService } from '../../../services/project.service';
 import { ReportService } from '../../../services/report.service';
-import { ActivatedRoute } from '@angular/router';
 import { finalize } from 'rxjs';
 
 @Component({
-  selector: 'app-report-content.view',
+  selector: 'app-report-content',
   imports: [],
   templateUrl: './report-content.view.html',
   styleUrl: './report-content.view.scss',
 })
-export class ReportContentView implements OnInit {
+export class ReportContentView {
   private projectService = inject(ProjectService);
   private reportService = inject(ReportService);
-  private route = inject(ActivatedRoute);
+
+  reportId = input<string>();
 
   report = computed(() => {
     const project = this.projectService.selectedProject();
@@ -25,28 +32,27 @@ export class ReportContentView implements OnInit {
     return project?.reports.find((report) => report.id === reportId) ?? null;
   });
 
-  reportId = signal<string | null>(null);
   isLoading = signal(false);
 
-  ngOnInit(): void {
-    // on url path change, update reportId
-    this.route.paramMap.subscribe((params) => {
-      const reportId = params.get('reportId');
-      if (reportId) {
-        this.reportId.set(reportId);
-        const projectId = this.projectService.selectedProjectId();
-        if (projectId) {
-          this.isLoading.set(true);
-          this.reportService
-            .loadReportContent(projectId, reportId)
-            .pipe(
-              finalize(() => {
-                this.isLoading.set(false);
-              })
-            )
-            .subscribe();
-        }
+  constructor() {
+    effect(() => {
+      const projectId = this.projectService.selectedProjectId();
+      const reportId = this.reportId();
+      if (projectId && reportId) {
+        this.loadContent(projectId, reportId);
       }
     });
+  }
+
+  loadContent(projectId: string, reportId: string) {
+    this.isLoading.set(true);
+    this.reportService
+      .loadReportContent(projectId, reportId)
+      .pipe(
+        finalize(() => {
+          this.isLoading.set(false);
+        })
+      )
+      .subscribe();
   }
 }

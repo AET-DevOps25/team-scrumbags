@@ -8,6 +8,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { ReportService } from '../../services/report.service';
 import { ProjectService } from '../../services/project.service';
 import { RouterOutlet } from '@angular/router';
+import { ReportListView } from './report-list/report-list.view';
+import { ReportContentView } from './report-content/report-content.view';
 
 @Component({
   selector: 'app-report-overview',
@@ -19,7 +21,8 @@ import { RouterOutlet } from '@angular/router';
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
-    RouterOutlet,
+    ReportListView,
+    ReportContentView,
   ],
   templateUrl: './report-overview.view.html',
   styleUrl: './report-overview.view.scss',
@@ -28,10 +31,11 @@ export class ReportOverviewView {
   private projectService = inject(ProjectService);
   private reportService = inject(ReportService);
 
+  selectedReportId = signal<string | undefined>(undefined);
+
   possibleUsers = computed(
     () => this.projectService.selectedProject()?.users ?? []
   );
-
   showForm = signal(false);
   periodStart = signal<string | undefined>(undefined);
   periodEnd = signal<string | undefined>(undefined);

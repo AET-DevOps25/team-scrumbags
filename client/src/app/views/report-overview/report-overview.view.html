@@ -1,6 +1,25 @@
-<h2 class="text-xl font-semibold">Reports</h2>
-<router-outlet></router-outlet>
+<div class="flex gap-2 items-center">
+  <button
+    mat-icon-button
+    aria-label="Back to report overview"
+    [disabled]="!selectedReportId()"
+    (click)="selectedReportId.set(undefined)"
+  >
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  <h2 class="text-xl font-semibold">Reports</h2>
+</div>
 
+<!-- The router outlet will switch between list and content -->
+@if (selectedReportId()){
+<app-report-content [reportId]="selectedReportId()!"></app-report-content>
+} @else {
+<app-report-list
+  (selectedReportId)="selectedReportId.set($event)"
+></app-report-list>
+}
+
+<!-- Always show the form here -->
 <div class="mt-4">
   @if (!showForm()) {
   <button
@@ -16,7 +35,13 @@
     class="flex flex-row flex-wrap items-center gap-4 max-w-full"
     (ngSubmit)="onSubmit()"
   >
-    <button mat-icon-button type="button" (click)="onCancel()" aria-label="Cancel" class="mb-2">
+    <button
+      mat-icon-button
+      type="button"
+      (click)="onCancel()"
+      aria-label="Cancel"
+      class="mb-2"
+    >
       <mat-icon>close</mat-icon>
     </button>
     <mat-form-field appearance="outline" class="min-w-[180px]">
@@ -47,7 +72,13 @@
         }
       </mat-select>
     </mat-form-field>
-    <button mat-icon-button color="primary" type="submit" aria-label="Send" class="mb-2">
+    <button
+      mat-icon-button
+      color="primary"
+      type="submit"
+      aria-label="Send"
+      class="mb-2"
+    >
       <mat-icon>send</mat-icon>
     </button>
   </form>
