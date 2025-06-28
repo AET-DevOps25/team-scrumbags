@@ -2,6 +2,7 @@ import { Injectable, signal } from '@angular/core';
 import { Project } from '../models/project.model';
 import { User } from '../models/user.model';
 import { MeetingNote } from '../models/meeting-note.model';
+import { Report } from '../models/report.model';
 
 @Injectable({
   providedIn: 'root',
@@ -74,5 +75,26 @@ export class ProjectState {
     let meetingNotes = project.meetingNotes || [];
     meetingNotes = [...meetingNotes, meetingNote];
     this.updateProject(id, { meetingNotes: meetingNotes });
+  }
+
+  setReports(id: string, reports: Report[]) {
+    this.updateProject(id, { reports: reports });
+  }
+
+  updateReport(id: string, report: Report) {
+    const project = this.allProjects().get(id);
+    if (!project) {
+      return;
+    }
+
+    const reports = project.reports || [];
+    const existingReportIndex = reports.findIndex((r) => r.id === report.id);
+    if (existingReportIndex !== -1) {
+      reports[existingReportIndex] = report;
+    } else {
+      reports.push(report);
+    }
+    
+    this.updateProject(id, { reports: reports });
   }
 }

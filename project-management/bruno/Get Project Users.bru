@@ -1,11 +1,11 @@
 meta {
   name: Get Project Users
   type: http
-  seq: 2
+  seq: 6
 }
 
 get {
-  url: {{projects_url}}/projects/:projectId/users
+  url: {{api_url}}/projects/:projectId/users
   body: none
   auth: inherit
 }

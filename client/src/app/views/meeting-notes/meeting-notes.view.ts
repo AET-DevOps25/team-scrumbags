@@ -26,7 +26,6 @@ export class MeetingNotesView {
   prelookMetadata = computed(() => {
     const end = this.prelookCount();
     const notesMetadata = this.projectService.selectedProject()?.meetingNotes ?? [];
-    console.log('Prelook metadata:', notesMetadata, 'End:', end);
     return end ? notesMetadata.slice(0, end) : notesMetadata;
   });
 
