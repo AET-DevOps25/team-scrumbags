@@ -14,7 +14,6 @@ export class ReportService {
   public loadReportsMetadata(projectId: string): Observable<MeetingNote[]> {
     return this.api.getReportsMetadata(projectId).pipe(
       tap((reportMetadata) => {
-        console.log('Report Metadata loaded:', reportMetadata);
         this.projectState.setReports(projectId, reportMetadata);
       })
     );
@@ -30,7 +29,6 @@ export class ReportService {
       .generateReport(projectId, periodStart, periodEnd, userIds)
       .pipe(
         tap((report) => {
-          console.log('Report generated:', report);
           this.projectState.updateReport(projectId, report);
         })
       );
@@ -42,7 +40,6 @@ export class ReportService {
   ): Observable<MeetingNote> {
     return this.api.getReportContent(projectId, reportId).pipe(
       tap((report) => {
-        console.log('Report content loaded:', report);
         this.projectState.updateReport(projectId, report);
       })
     );
