@@ -6,3 +6,6 @@ pydantic
 langchain-community
 langchain-ollama
 transformers
+sqlalchemy
+aiomysql
+asyncmy
