@@ -1,6 +1,5 @@
 package com.trace.comms_connector;
 
-import java.util.List;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,16 +26,14 @@ public class CommsController {
     public ResponseEntity<?> addCommsIntegration(
         @PathVariable UUID projectId,
         @PathVariable Platform platform,
-        @RequestParam(required = false) String serverId,
-        @RequestParam(required = true) List<UUID> userIdList
+        @RequestParam(required = false) String serverId
     ) {
-        // TODO: maybe get user IDs from server
         if (serverId == null) {
             return ResponseEntity.badRequest().body("Communication platorm server ID must be specified!"); 
         }
 
         try {
-            var connectionList = commsService.addCommIntegration(projectId, platform, serverId, userIdList);
+            var connectionList = commsService.addCommIntegration(projectId, platform, serverId);
             return ResponseEntity.ok(connectionList);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(e.getMessage());
@@ -54,7 +51,7 @@ public class CommsController {
             return ResponseEntity.badRequest().body("User ID and platform username must be specified!");
         }
 
-        var userEntity = commsService.saveUser(projectId, userId, platform, platformUserId);
+        var userEntity = commsService.saveUser(projectId, platformUserId, platform, userId);
 
         return ResponseEntity.ok(userEntity);
     }

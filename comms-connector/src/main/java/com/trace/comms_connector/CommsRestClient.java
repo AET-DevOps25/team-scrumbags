@@ -52,7 +52,7 @@ public final class CommsRestClient {
      * @param projectId
      * @return
      */
-    ResponseEntity<?> getUsersInProject(UUID projectId) {
+    ResponseEntity<HashSet<UUID>> getUsersInProject(UUID projectId) {
         return getProjectManagementClient()
             .get()
             .uri(uriBuilder -> uriBuilder

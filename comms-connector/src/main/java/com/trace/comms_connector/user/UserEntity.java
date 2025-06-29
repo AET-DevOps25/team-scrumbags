@@ -16,11 +16,11 @@ public class UserEntity {
     private UUID projectId;
     
     @Id
-    private UUID userId;
+    private String platformUserId;
 
     @Enumerated(EnumType.STRING)
     @Id
     private Platform platform;
 
-    private String platformUserId;
+    private UUID userId;
 }

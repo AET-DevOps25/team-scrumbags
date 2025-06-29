@@ -10,6 +10,6 @@ import lombok.*;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @EqualsAndHashCode
 public class UserCompositeKey implements Serializable {
     private UUID projectId;
-    private UUID userId;
+    private String platformUserId;
     private Platform platform;
 }

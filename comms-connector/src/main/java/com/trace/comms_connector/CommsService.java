@@ -65,11 +65,11 @@ public class CommsService {
     @Transactional
     public UserEntity saveUser(
         @NonNull UUID projectId,
-        @NonNull UUID userId,
+        @NonNull String platformUserId,
         @NonNull Platform platform,
-        @Nullable String platformUserId
+        @Nullable UUID userId
     ) {
-        UserEntity userEntity = new UserEntity(projectId, userId, platform, platformUserId);
+        UserEntity userEntity = new UserEntity(projectId, platformUserId, platform, userId);
         userEntity = userRepo.save(userEntity);
         return userEntity;
     }
@@ -117,16 +117,15 @@ public class CommsService {
     public List<ConnectionEntity> addCommIntegration(
         @NonNull UUID projectId,
         @NonNull Platform platform,
-        @NonNull String serverId,
-        @NonNull List<UUID> userIdList
+        @NonNull String serverId
     ) throws Exception {
-        // TODO: get user IDs from server maybe
         ArrayList<ConnectionEntity> connections = new ArrayList<ConnectionEntity>(); 
-        List<String> channelIdList;
+        List<String> channelIdList, platformUserIdList;
 
         if (platform.equals(Platform.DISCORD)) {
-            DiscordRestClient client = new DiscordRestClient();
-            channelIdList = client.getGuildChannelIds(serverId);
+            DiscordRestClient discordClient = new DiscordRestClient();
+            channelIdList = discordClient.getGuildChannelIds(serverId);
+            platformUserIdList = discordClient.getGuildMemberNames(serverId);
         } else {
             throw new Exception("Platform not supported.");
         }
@@ -135,8 +134,8 @@ public class CommsService {
             var connection = this.saveConnection(projectId, channel, platform, null); 
             connections.add(connection);
         }
-        for (UUID user : userIdList) {
-            this.saveUser(projectId, user, platform, null);
+        for (String platformUser : platformUserIdList) {
+            this.saveUser(projectId, platformUser, platform, null);
         }
         return connections;
     }
