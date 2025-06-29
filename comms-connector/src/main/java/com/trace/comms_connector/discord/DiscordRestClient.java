@@ -80,6 +80,10 @@ public class DiscordRestClient {
             .retrieve()
             .body(new ParameterizedTypeReference<>() {});
 
+        // Update last message ID
+        commsService.saveConnection(projectId, channelId, Platform.DISCORD, messages.get(0).getId());
+
+        // Convert to list of JSON strings according to the gen AI microservice
         List<String> jsonMessages = messages.stream()
             .map(msg -> {
                 UUID userId = commsService.getUserIdByProjectIdAndPlatformDetails(
@@ -88,6 +92,7 @@ public class DiscordRestClient {
             })
             .toList();
 
+        // Convert to a single string of a JSON array
         ObjectMapper mapper = new ObjectMapper();
         try {
             return mapper.writeValueAsString(jsonMessages);
