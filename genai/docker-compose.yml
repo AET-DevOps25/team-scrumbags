@@ -81,9 +81,7 @@ services:
       - "11434:11434"
     volumes:
       - ollama:/root/.ollama
-      #- ./ollama_docker:/ollama_docker
     restart: always
-    pull_policy: always
     healthcheck:
       test: [ "CMD-SHELL", "ollama list | grep -q llama3.2" ]
       interval: 30s

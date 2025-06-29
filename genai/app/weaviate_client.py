@@ -61,7 +61,7 @@ def store_entry(entry):
     if len(collection.batch.failed_objects) > 0:
         print(f"Failed to import {len(collection.batch.failed_objects)} objects")
 
-def get_entries(project_id: str, start: int, end: int) -> List[str]:
+def get_entries(project_id: str, start: int, end: int):
     collection = client.collections.get(COLLECTION_NAME)
     start_dt = datetime.fromtimestamp(start, tz=timezone.utc).isoformat()
     end_dt = datetime.fromtimestamp(end, tz=timezone.utc).isoformat()
@@ -75,7 +75,4 @@ def get_entries(project_id: str, start: int, end: int) -> List[str]:
 
     print(f"Found {len(results.objects)} objects in collection {COLLECTION_NAME}")
 
-    for o in results.objects:
-        print(o.properties)
-
-    return [obj.properties["content"] for obj in results.objects]
+    return results.objects
