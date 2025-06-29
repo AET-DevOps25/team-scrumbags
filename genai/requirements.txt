@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+aio-pika
+weaviate-client==4.*
+pydantic
+langchain-community
+langchain-ollama
+langchain-weaviate
+transformers
+sqlalchemy
+aiomysql
+asyncmy
