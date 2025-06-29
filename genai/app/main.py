@@ -62,34 +62,34 @@ async def get_summary(
         )
 
     async with async_session() as session:
-        existing = await session.execute(
-            Summary.__table__.select().where(
+        result = await session.execute(
+            select(Summary).where(
                 Summary.project_id == str(project_id),
                 Summary.start_time == start_time,
                 Summary.end_time == end_time
             )
         )
-        print(existing)
-        row = existing.first()
-        if row:
-            return {"summary": row[0].summary_md}
+        existing_summary = result.scalars().first()
+        if existing_summary:
+            print("Existing summary found, returning it...")
+            summary_md = {
+                "output_text": existing_summary.summary,
+                "generated_at": existing_summary.generated_at.isoformat()
+            }
+            return {"summary": summary_md}
 
         print("No existing summary found, generating new one...")
         # Generate and store new summary
         summary_md = summarize_entries(str(project_id), start_time, end_time)
-        print(type(summary_md))
-        print("Generated summary:", summary_md)
 
         new_summary = Summary(
             project_id=str(project_id),
             start_time=start_time,
             end_time=end_time,
             generated_at=datetime.now(UTC),
-            summary=str(summary_md)
+            summary=summary_md["output_text"]  # Assuming the summary is in this field
         )
-        print("Storing new summary in database...")
         session.add(new_summary)
-        print("Committing new summary to database...")
         await session.commit()
 
     return {"summary": summary_md}
