@@ -6,6 +6,7 @@ pydantic
 langchain-community
 langchain-ollama
 langchain-weaviate
+langchain-openai
 transformers
 sqlalchemy
 aiomysql

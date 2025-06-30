@@ -8,8 +8,8 @@ services:
       ollama:
         condition: service_healthy
     environment:
-      - WEAVIATE_URL=http://weaviate:8080
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq/
+      - WEAVIATE_URL=${WEAVIATE_URL:-http://weaviate:8080}
+      - RABBITMQ_URL=${RABBITMQ_URL:-amqp://guest:guest@rabbitmq/}
     volumes:
       - .:/app
 
@@ -70,7 +70,7 @@ services:
           sleep 1
         done
 
-        echo "✅  Server is up! Pulling llama3.2…"
+        echo "✅  Server is up! Pulling llama3.3…"
         # Now that the daemon is running, pull the model
         ollama pull llama3.2
 
@@ -93,10 +93,10 @@ services:
     container_name: mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: summaries
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-summaries}
+      MYSQL_USER: ${MYSQL_USER:-user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
     ports:
       - "3306:3306"
     volumes:

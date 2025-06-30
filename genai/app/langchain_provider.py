@@ -1,18 +1,57 @@
 from langchain.chains.summarize import load_summarize_chain
-from langchain_ollama import OllamaLLM, OllamaEmbeddings
-import weaviate
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_ollama import OllamaLLM, OllamaEmbeddings, ChatOllama
+from langchain_openai import ChatOpenAI
 from langchain_weaviate.vectorstores import WeaviateVectorStore
 from langchain.chains import RetrievalQA
 from langchain.schema import Document
 from langchain.prompts import PromptTemplate
+from pydantic import SecretStr
+from dotenv import load_dotenv
+import os
 
 from app import weaviate_client as wc
 
-llm = OllamaLLM(model="llama3.2",
-                base_url="http://ollama:11434",
-                temperature=0.1)
+load_dotenv()
 
-embeddings = OllamaEmbeddings(model="llama3.2", base_url="http://ollama:11434")
+API_URL = os.getenv("OLLAMA_URL")
+
+if API_URL.startswith("https://"):
+    use_local = False
+else:
+    use_local = True
+
+if use_local:
+    # Use Ollama locally
+    llm = OllamaLLM(model="llama3.2",
+                     base_url=os.getenv("OLLAMA_API_URL", "http://ollama:11434"),  # Default Ollama API URL
+                     temperature=0.1)
+    embeddings = OllamaEmbeddings(model="llama3.2:latest", base_url="http://ollama:11434")
+
+else:
+    TOKEN = SecretStr(os.getenv("OLLAMA_API_TOKEN"))
+    llm = ChatOllama(
+        model="llama3.3:latest",
+        base_url=API_URL,
+        client_kwargs={"headers": {
+            "Authorization": f"Bearer {TOKEN}"
+        }}
+    )
+    embeddings = OllamaEmbeddings(
+        model="llama3.3:latest",
+        base_url=API_URL,
+        client_kwargs={"headers": {
+            "Authorization": f"Bearer {TOKEN}"
+        }}
+    )
+
+#import logging
+#logging.basicConfig(level=logging.DEBUG)
+
+#httpx_logger = logging.getLogger("httpx")
+#httpx_logger.setLevel(logging.DEBUG)
+#httpx_logger.propagate = True
 
 def summarize_entries(project_id: str, start: int, end: int):
     #raw content strings
@@ -20,7 +59,7 @@ def summarize_entries(project_id: str, start: int, end: int):
     if not contents:
         return "No entries found for the given parameters."
 
-    markdown_stuff_prompt = PromptTemplate(
+    prompt = PromptTemplate(
         template=(
             "You are a summarizer of source control information (pull requests, commits, branches, etc.), transcripts "
             "of meetings with assigned speakers, and written communication (e.g., messages) between team members over "
@@ -35,6 +74,10 @@ def summarize_entries(project_id: str, start: int, end: int):
         input_variables=["text"],
     )
 
+    #prompt = ChatPromptTemplate.from_messages([ # alternative using ChatPromptTemplate
+    #    ("system", "Write a concise summary of the following text:\n\n{context}")
+    #])
+
     # LangChain Documents
     docs = [Document(id=str(obj.uuid),
                         metadata={
@@ -46,7 +89,9 @@ def summarize_entries(project_id: str, start: int, end: int):
                         page_content=obj.properties["content"]
     ) for obj in contents]
 
-    chain = load_summarize_chain(llm, chain_type="stuff", verbose=False, prompt=markdown_stuff_prompt,)
+    chain = load_summarize_chain(llm, chain_type="stuff", verbose=False, prompt=prompt)
+
+    #chain = create_stuff_documents_chain(llm, prompt) # alternative using create_stuff_documents_chain
 
     summary = chain.invoke(docs)
     return summary
