@@ -15,7 +15,7 @@ from app import weaviate_client as wc
 
 load_dotenv()
 
-API_URL = os.getenv("OLLAMA_URL")
+API_URL = os.getenv("OLLAMA_URL", "http://ollama:11434")  # Default Ollama API URL
 
 if API_URL.startswith("https://"):
     use_local = False
@@ -46,14 +46,6 @@ else:
             "Authorization": f"Bearer {TOKEN.get_secret_value()}"
         }}
     )
-
-
-# import logging
-# logging.basicConfig(level=logging.DEBUG)
-
-# httpx_logger = logging.getLogger("httpx")
-# httpx_logger.setLevel(logging.DEBUG)
-# httpx_logger.propagate = True
 
 
 def summarize_entries(project_id: str, start: int, end: int):
