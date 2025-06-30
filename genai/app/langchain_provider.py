@@ -1,6 +1,6 @@
 from langchain.chains.summarize import load_summarize_chain
-#from langchain.chains.combine_documents import create_stuff_documents_chain
-#from langchain_core.prompts import ChatPromptTemplate
+# from langchain.chains.combine_documents import create_stuff_documents_chain
+# from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import OllamaLLM, OllamaEmbeddings, ChatOllama
 from langchain_weaviate.vectorstores import WeaviateVectorStore
 from langchain.chains import RetrievalQA
@@ -46,15 +46,16 @@ else:
         }}
     )
 
-#import logging
-#logging.basicConfig(level=logging.DEBUG)
+# import logging
+# logging.basicConfig(level=logging.DEBUG)
 
-#httpx_logger = logging.getLogger("httpx")
-#httpx_logger.setLevel(logging.DEBUG)
-#httpx_logger.propagate = True
+# httpx_logger = logging.getLogger("httpx")
+# httpx_logger.setLevel(logging.DEBUG)
+# httpx_logger.propagate = True
+
 
 def summarize_entries(project_id: str, start: int, end: int):
-    #raw content strings
+    # raw content strings
     contents = wc.get_entries(project_id, start, end)
     if not contents:
         return "No entries found for the given parameters."
@@ -74,27 +75,27 @@ def summarize_entries(project_id: str, start: int, end: int):
         input_variables=["text"],
     )
 
-    #prompt = ChatPromptTemplate.from_messages([ # alternative using ChatPromptTemplate
+    # prompt = ChatPromptTemplate.from_messages([ # alternative using ChatPromptTemplate
     #    ("system", "Write a concise summary of the following text:\n\n{context}")
-    #])
+    # ])
 
     # LangChain Documents
     docs = [Document(id=str(obj.uuid),
-                        metadata={
-                            "type": obj.properties["type"],
-                            "user": obj.properties["user"],
-                            "timestamp": obj.properties["timestamp"],
-                            "projectId": obj.properties["projectId"]
-                        },
-                        page_content=obj.properties["content"]
-    ) for obj in contents]
+                    metadata={
+                        "type": obj.properties["type"],
+                        "user": obj.properties["user"],
+                        "timestamp": obj.properties["timestamp"],
+                        "projectId": obj.properties["projectId"]
+                    },
+                    page_content=obj.properties["content"]) for obj in contents]
 
     chain = load_summarize_chain(llm, chain_type="stuff", verbose=False, prompt=prompt)
 
-    #chain = create_stuff_documents_chain(llm, prompt) # alternative using create_stuff_documents_chain
+    # chain = create_stuff_documents_chain(llm, prompt) # alternative using create_stuff_documents_chain
 
     summary = chain.invoke(docs)
     return summary
+
 
 def answer_question(project_id: str, start: int, end: int, question: str) -> str:
     contents = wc.get_entries(project_id, start, end)

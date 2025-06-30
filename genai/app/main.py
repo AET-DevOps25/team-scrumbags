@@ -1,8 +1,6 @@
 import asyncio
-import json
 from contextlib import asynccontextmanager
 
-import uuid
 from fastapi import FastAPI, Query, Body, HTTPException
 from aio_pika import connect_robust, Message
 from app.models import ContentEntry
