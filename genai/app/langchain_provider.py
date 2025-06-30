@@ -24,8 +24,8 @@ else:
 if use_local:
     # Use Ollama locally
     llm = OllamaLLM(model="llama3.2",
-                     base_url=os.getenv("OLLAMA_API_URL", "http://ollama:11434"),  # Default Ollama API URL
-                     temperature=0.1)
+        base_url=os.getenv("OLLAMA_API_URL", "http://ollama:11434"),  # Default Ollama API URL
+        temperature=0.1)
     embeddings = OllamaEmbeddings(model="llama3.2:latest", base_url=os.getenv("OLLAMA_API_URL", "http://ollama:11434"))
 
 else:
@@ -81,13 +81,13 @@ def summarize_entries(project_id: str, start: int, end: int):
 
     # LangChain Documents
     docs = [Document(id=str(obj.uuid),
-                    metadata={
-                        "type": obj.properties["type"],
-                        "user": obj.properties["user"],
-                        "timestamp": obj.properties["timestamp"],
-                        "projectId": obj.properties["projectId"]
-                    },
-                    page_content=obj.properties["content"]) for obj in contents]
+        metadata={
+            "type": obj.properties["type"],
+            "user": obj.properties["user"],
+            "timestamp": obj.properties["timestamp"],
+            "projectId": obj.properties["projectId"]
+        },
+        page_content=obj.properties["content"]) for obj in contents]
 
     chain = load_summarize_chain(llm, chain_type="stuff", verbose=False, prompt=prompt)
 
@@ -104,14 +104,13 @@ def answer_question(project_id: str, start: int, end: int, question: str) -> str
 
     # LangChain Documents
     docs = [Document(id=str(obj.uuid),
-                        metadata={
-                            "type": obj.properties["type"],
-                            "user": obj.properties["user"],
-                            "timestamp": obj.properties["timestamp"],
-                            "projectId": obj.properties["projectId"]
-                        },
-                        page_content=obj.properties["content"]
-    ) for obj in contents]
+        metadata={
+            "type": obj.properties["type"],
+            "user": obj.properties["user"],
+            "timestamp": obj.properties["timestamp"],
+            "projectId": obj.properties["projectId"]
+        },
+        page_content=obj.properties["content"]) for obj in contents]
 
     vectorstore = WeaviateVectorStore.from_documents(
         documents=docs,

@@ -66,8 +66,8 @@ def get_entries(project_id: str, start: int, end: int):
 
     results = collection.query.fetch_objects(
         filters = Filter.by_property("projectId").equal(project_id) &
-                     Filter.by_property("timestamp").greater_or_equal(start_dt) &
-                     Filter.by_property("timestamp").less_or_equal(end_dt),
+                  Filter.by_property("timestamp").greater_or_equal(start_dt) &
+                  Filter.by_property("timestamp").less_or_equal(end_dt),
         limit=100
     )
 
