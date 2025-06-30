@@ -1,9 +1,12 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 from sqlalchemy import Column, String, Text, Integer, DateTime, UniqueConstraint
+from dotenv import load_dotenv
 import os
 
-DATABASE_URL = "mysql+asyncmy://user:password@mysql:3306/summaries"
+load_dotenv()
+
+DATABASE_URL = f"mysql+asyncmy://user:password@mysql:3306/{os.getenv('MYSQL_DATABASE', 'summaries')}"
 
 engine = create_async_engine(DATABASE_URL, echo=True)
 async_session = async_sessionmaker(engine, expire_on_commit=False)
