@@ -151,7 +151,7 @@ async def get_summaries(
             "start_time": s.start_time,
             "end_time": s.end_time,
             "generated_at": s.generated_at.isoformat(),
-            "summary": s.summary_md,
+            "summary": s.summary,
         }
         for s in summaries
     ]
