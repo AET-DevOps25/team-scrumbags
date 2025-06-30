@@ -1,22 +1,24 @@
 import asyncio
 from contextlib import asynccontextmanager
-
-from fastapi import FastAPI, Query, Body, HTTPException
-from aio_pika import connect_robust, Message
-from app.models import ContentEntry
-from app.langchain_provider import summarize_entries, answer_question
-from app import weaviate_client as wc
-from app.queue_consumer import consume
-from app.db import init_db
-from pydantic import UUID4
-from typing import List
-from app.db import async_session, Summary
-from sqlalchemy import delete, select
-from fastapi import status
 from datetime import datetime, UTC
+from typing import List
+
+from aio_pika import connect_robust, Message
+from fastapi import FastAPI, Query, Body, HTTPException
+from fastapi import status
+from pydantic import UUID4
+from sqlalchemy import delete, select
+
+from app import weaviate_client as wc
+from app.db import async_session, Summary
+from app.db import init_db
+from app.langchain_provider import summarize_entries, answer_question
+from app.models import ContentEntry
+from app.queue_consumer import consume
 
 RABBIT_URL = "amqp://guest:guest@rabbitmq/"
 QUEUE_NAME = "content_queue"
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -27,11 +29,13 @@ async def lifespan(app: FastAPI):
     task.cancel()
     wc.client.close()
 
+
 app = FastAPI(lifespan=lifespan)
+
 
 @app.post("/content", summary="Post content to the queue for processing")
 async def post_content(
-    entries: List[ContentEntry] = Body(..., description="List of content entries to be processed")
+        entries: List[ContentEntry] = Body(..., description="List of content entries to be processed")
 ):
     conn = await connect_robust(RABBIT_URL)
     ch = await conn.channel()
@@ -47,11 +51,12 @@ async def post_content(
     await conn.close()
     return {"status": f"Published {len(entries)} message(s) to queue."}
 
+
 @app.get("/summary/", summary="Get a summary of content entries")
 async def get_summary(
-    project_id: UUID4 = Query(..., description="Project UUID (must be UUID4)"),
-    start_time: int = Query(..., ge=0, description="Start UNIX timestamp (>=0)"),
-    end_time:   int = Query(..., ge=0, description="End   UNIX timestamp (>=0)")
+        project_id: UUID4 = Query(..., description="Project UUID (must be UUID4)"),
+        start_time: int = Query(..., ge=0, description="Start UNIX timestamp (>=0)"),
+        end_time: int = Query(..., ge=0, description="End   UNIX timestamp (>=0)")
 ):
     if start_time > end_time:
         raise HTTPException(
@@ -92,12 +97,13 @@ async def get_summary(
 
     return {"summary": summary_md}
 
+
 @app.post("/summary/refresh/", summary="Regenerate and overwrite summary for given time frame",
           status_code=status.HTTP_201_CREATED)
 async def refresh_summary(
-    project_id: UUID4 = Query(..., description="Project UUID (must be UUID4)"),
-    start_time: int = Query(..., ge=0, description="Start UNIX timestamp (>=0)"),
-    end_time:   int = Query(..., ge=0, description="End   UNIX timestamp (>=0)")
+        project_id: UUID4 = Query(..., description="Project UUID (must be UUID4)"),
+        start_time: int = Query(..., ge=0, description="Start UNIX timestamp (>=0)"),
+        end_time: int = Query(..., ge=0, description="End   UNIX timestamp (>=0)")
 ):
     if start_time > end_time:
         raise HTTPException(
@@ -129,9 +135,10 @@ async def refresh_summary(
 
     return {"summary": summary_md}
 
+
 @app.get("/summaries/", summary="Get all summaries for a project")
 async def get_summaries(
-    project_id: UUID4 = Query(..., description="Project UUID (must be UUID4)")
+        project_id: UUID4 = Query(..., description="Project UUID (must be UUID4)")
 ):
     async with async_session() as session:
         result = await session.execute(
@@ -149,12 +156,13 @@ async def get_summaries(
         for s in summaries
     ]
 
+
 @app.post("/query/", summary="Query the project for answers")
 def query_project(
-    project_id: UUID4 = Query(..., description="Project UUID (must be UUID4)"),
-    start_time: int = Query(..., ge=0, description="Start UNIX timestamp (>=0)"),
-    end_time:   int = Query(..., ge=0, description="End   UNIX timestamp (>=0)"),
-    question: str = Query(..., description="Question to ask about the project content")
+        project_id: UUID4 = Query(..., description="Project UUID (must be UUID4)"),
+        start_time: int = Query(..., ge=0, description="Start UNIX timestamp (>=0)"),
+        end_time: int = Query(..., ge=0, description="End   UNIX timestamp (>=0)"),
+        question: str = Query(..., description="Question to ask about the project content")
 ):
     if start_time > end_time:
         raise HTTPException(
