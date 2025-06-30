@@ -25,9 +25,9 @@ else:
 if use_local:
     # Use Ollama locally
     llm = OllamaLLM(model="llama3.2",
-                    base_url=os.getenv("OLLAMA_API_URL", "http://ollama:11434"),  # Default Ollama API URL
+                    base_url=os.getenv("OLLAMA_URL", "http://ollama:11434"),  # Default Ollama API URL
                     temperature=0.1)
-    embeddings = OllamaEmbeddings(model="llama3.2:latest", base_url=os.getenv("OLLAMA_API_URL", "http://ollama:11434"))
+    embeddings = OllamaEmbeddings(model="llama3.2:latest", base_url=os.getenv("OLLAMA_URL", "http://ollama:11434"))
 
 else:
     TOKEN = SecretStr(os.getenv("OPEN_WEBUI_BEARER"))
