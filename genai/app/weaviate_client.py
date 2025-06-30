@@ -1,8 +1,6 @@
 import weaviate
-from weaviate.collections import Collection
 from weaviate.util import generate_uuid5
 from datetime import datetime, timezone
-from typing import List
 from weaviate.collections.classes.filters import Filter
 
 import weaviate.classes.config as wc

@@ -1,8 +1,7 @@
 from langchain.chains.summarize import load_summarize_chain
-from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain_core.prompts import ChatPromptTemplate
+#from langchain.chains.combine_documents import create_stuff_documents_chain
+#from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import OllamaLLM, OllamaEmbeddings, ChatOllama
-from langchain_openai import ChatOpenAI
 from langchain_weaviate.vectorstores import WeaviateVectorStore
 from langchain.chains import RetrievalQA
 from langchain.schema import Document

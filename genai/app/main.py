@@ -94,7 +94,8 @@ async def get_summary(
 
     return {"summary": summary_md}
 
-@app.post("/summary/refresh/", summary="Regenerate and overwrite summary for given time frame", status_code=status.HTTP_201_CREATED)
+@app.post("/summary/refresh/", summary="Regenerate and overwrite summary for given time frame",
+          status_code=status.HTTP_201_CREATED)
 async def refresh_summary(
     project_id: UUID4 = Query(..., description="Project UUID (must be UUID4)"),
     start_time: int = Query(..., ge=0, description="Start UNIX timestamp (>=0)"),
