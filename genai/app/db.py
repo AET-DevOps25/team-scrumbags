@@ -30,6 +30,17 @@ class Summary(Base):
     )
 
 
+class QAPair(Base):
+    __tablename__ = "qa_pairs"
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(String(length=36), index=True)
+    user_id = Column(String(length=36), index=True)
+    question = Column(Text)
+    answer = Column(Text)
+    question_time = Column(DateTime)
+    answer_time = Column(DateTime)
+
+
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

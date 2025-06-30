@@ -91,9 +91,9 @@ def summarize_entries(project_id: str, start: int, end: int):
     return summary
 
 
-def answer_question(project_id: str, start: int, end: int, question: str) -> str:
+def answer_question(project_id: str, start: int, end: int, question: str):
     contents = wc.get_entries(project_id, start, end)
-    if not contents:
+    if not contents or len(contents) == 0:
         return "No entries found for the given parameters."
 
     # LangChain Documents
@@ -121,4 +121,5 @@ def answer_question(project_id: str, start: int, end: int, question: str) -> str
         return_source_documents=True
     )
     response = qa_chain.invoke(question)
+    print(response)
     return response
