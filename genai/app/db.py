@@ -1,8 +1,9 @@
+import os
+
+from dotenv import load_dotenv
+from sqlalchemy import Column, String, Text, Integer, DateTime, UniqueConstraint
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
-from sqlalchemy import Column, String, Text, Integer, DateTime, UniqueConstraint
-from dotenv import load_dotenv
-import os
 
 load_dotenv()
 
@@ -12,6 +13,7 @@ engine = create_async_engine(DATABASE_URL, echo=True)
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 
 Base = declarative_base()
+
 
 class Summary(Base):
     __tablename__ = "summaries"
@@ -25,6 +27,7 @@ class Summary(Base):
     __table_args__ = (
         UniqueConstraint("project_id", "start_time", "end_time", name="uq_project_timeframe"),
     )
+
 
 async def init_db():
     async with engine.begin() as conn:

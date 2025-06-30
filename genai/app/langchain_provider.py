@@ -1,14 +1,15 @@
+import os
+
+from dotenv import load_dotenv
+from langchain.chains import RetrievalQA
 from langchain.chains.summarize import load_summarize_chain
+from langchain.prompts import PromptTemplate
+from langchain.schema import Document
 # from langchain.chains.combine_documents import create_stuff_documents_chain
 # from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import OllamaLLM, OllamaEmbeddings, ChatOllama
 from langchain_weaviate.vectorstores import WeaviateVectorStore
-from langchain.chains import RetrievalQA
-from langchain.schema import Document
-from langchain.prompts import PromptTemplate
 from pydantic import SecretStr
-from dotenv import load_dotenv
-import os
 
 from app import weaviate_client as wc
 
@@ -24,8 +25,8 @@ else:
 if use_local:
     # Use Ollama locally
     llm = OllamaLLM(model="llama3.2",
-        base_url=os.getenv("OLLAMA_API_URL", "http://ollama:11434"),  # Default Ollama API URL
-        temperature=0.1)
+                    base_url=os.getenv("OLLAMA_API_URL", "http://ollama:11434"),  # Default Ollama API URL
+                    temperature=0.1)
     embeddings = OllamaEmbeddings(model="llama3.2:latest", base_url=os.getenv("OLLAMA_API_URL", "http://ollama:11434"))
 
 else:
@@ -45,6 +46,7 @@ else:
             "Authorization": f"Bearer {TOKEN.get_secret_value()}"
         }}
     )
+
 
 # import logging
 # logging.basicConfig(level=logging.DEBUG)
@@ -81,13 +83,13 @@ def summarize_entries(project_id: str, start: int, end: int):
 
     # LangChain Documents
     docs = [Document(id=str(obj.uuid),
-        metadata={
-            "type": obj.properties["type"],
-            "user": obj.properties["user"],
-            "timestamp": obj.properties["timestamp"],
-            "projectId": obj.properties["projectId"]
-        },
-        page_content=obj.properties["content"]) for obj in contents]
+                     metadata={
+                         "type": obj.properties["type"],
+                         "user": obj.properties["user"],
+                         "timestamp": obj.properties["timestamp"],
+                         "projectId": obj.properties["projectId"]
+                     },
+                     page_content=obj.properties["content"]) for obj in contents]
 
     chain = load_summarize_chain(llm, chain_type="stuff", verbose=False, prompt=prompt)
 
@@ -104,13 +106,13 @@ def answer_question(project_id: str, start: int, end: int, question: str) -> str
 
     # LangChain Documents
     docs = [Document(id=str(obj.uuid),
-        metadata={
-            "type": obj.properties["type"],
-            "user": obj.properties["user"],
-            "timestamp": obj.properties["timestamp"],
-            "projectId": obj.properties["projectId"]
-        },
-        page_content=obj.properties["content"]) for obj in contents]
+                     metadata={
+                         "type": obj.properties["type"],
+                         "user": obj.properties["user"],
+                         "timestamp": obj.properties["timestamp"],
+                         "projectId": obj.properties["projectId"]
+                     },
+                     page_content=obj.properties["content"]) for obj in contents]
 
     vectorstore = WeaviateVectorStore.from_documents(
         documents=docs,

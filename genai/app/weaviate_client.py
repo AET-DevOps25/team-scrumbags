@@ -1,9 +1,9 @@
-import weaviate
-from weaviate.util import generate_uuid5
 from datetime import datetime, timezone
-from weaviate.collections.classes.filters import Filter
 
+import weaviate
 import weaviate.classes.config as wc
+from weaviate.collections.classes.filters import Filter
+from weaviate.util import generate_uuid5
 
 from app.models import ContentEntry
 
@@ -14,6 +14,7 @@ client = weaviate.connect_to_local(
     grpc_port=50051,
 )
 COLLECTION_NAME = "ProjectContent"
+
 
 def init_collection():
     if COLLECTION_NAME not in [c for c in client.collections.list_all()]:
@@ -27,6 +28,7 @@ def init_collection():
                 wc.Property(name="content", data_type=wc.DataType.TEXT),
             ]
         )
+
 
 def store_entry(entry):
     collection = client.collections.get(COLLECTION_NAME)
@@ -59,15 +61,16 @@ def store_entry(entry):
     if len(collection.batch.failed_objects) > 0:
         print(f"Failed to import {len(collection.batch.failed_objects)} objects")
 
+
 def get_entries(project_id: str, start: int, end: int):
     collection = client.collections.get(COLLECTION_NAME)
     start_dt = datetime.fromtimestamp(start, tz=timezone.utc).isoformat()
     end_dt = datetime.fromtimestamp(end, tz=timezone.utc).isoformat()
 
     results = collection.query.fetch_objects(
-        filters = Filter.by_property("projectId").equal(project_id) &
-                  Filter.by_property("timestamp").greater_or_equal(start_dt) &
-                  Filter.by_property("timestamp").less_or_equal(end_dt),
+        filters=Filter.by_property("projectId").equal(project_id) &
+                Filter.by_property("timestamp").greater_or_equal(start_dt) &
+                Filter.by_property("timestamp").less_or_equal(end_dt),
         limit=100
     )
 

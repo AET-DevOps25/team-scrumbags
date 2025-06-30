@@ -1,9 +1,12 @@
-from aio_pika import connect_robust
-from app import weaviate_client as wc
 import json
+
+from aio_pika import connect_robust
+
+from app import weaviate_client as wc
 
 RABBIT_URL = "amqp://guest:guest@rabbitmq/"
 QUEUE_NAME = "content_queue"
+
 
 async def consume():
     connection = await connect_robust(RABBIT_URL)
