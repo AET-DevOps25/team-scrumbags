@@ -27,22 +27,23 @@ if use_local:
     llm = OllamaLLM(model="llama3.2",
                      base_url=os.getenv("OLLAMA_API_URL", "http://ollama:11434"),  # Default Ollama API URL
                      temperature=0.1)
-    embeddings = OllamaEmbeddings(model="llama3.2:latest", base_url="http://ollama:11434")
+    embeddings = OllamaEmbeddings(model="llama3.2:latest", base_url=os.getenv("OLLAMA_API_URL", "http://ollama:11434"))
 
 else:
-    TOKEN = SecretStr(os.getenv("OLLAMA_API_TOKEN"))
+    TOKEN = SecretStr(os.getenv("OPEN_WEBUI_BEARER"))
+
     llm = ChatOllama(
         model="llama3.3:latest",
         base_url=API_URL,
         client_kwargs={"headers": {
-            "Authorization": f"Bearer {TOKEN}"
+            "Authorization": f"Bearer {TOKEN.get_secret_value()}"
         }}
     )
     embeddings = OllamaEmbeddings(
         model="llama3.3:latest",
         base_url=API_URL,
         client_kwargs={"headers": {
-            "Authorization": f"Bearer {TOKEN}"
+            "Authorization": f"Bearer {TOKEN.get_secret_value()}"
         }}
     )
 
