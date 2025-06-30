@@ -1,0 +1,15 @@
+meta {
+  name: Get Summaries
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{base_url}}/summaries/?project_id=b6852f4b-36d4-4abb-8740-6e923377124c
+  body: none
+  auth: inherit
+}
+
+params:query {
+  project_id: b6852f4b-36d4-4abb-8740-6e923377124c
+}
