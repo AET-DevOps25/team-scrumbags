@@ -1,13 +1,12 @@
 import json
+import os
 
 from aio_pika import connect_robust
 from dotenv import load_dotenv
-import os
 
 from app import weaviate_client as wc
 
 load_dotenv()
-
 
 RABBIT_URL = os.getenv("RABBITMQ_URL", "amqp://guest:guest@rabbitmq/")
 QUEUE_NAME = "content_queue"
