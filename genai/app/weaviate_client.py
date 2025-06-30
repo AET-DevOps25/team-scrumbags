@@ -16,17 +16,17 @@ client = weaviate.connect_to_local(
 COLLECTION_NAME = "ProjectContent"
 
 def init_collection():
-        if COLLECTION_NAME not in [c for c in client.collections.list_all()]:
-            client.collections.create(
-                name=COLLECTION_NAME,
-                properties=[
-                    wc.Property(name="type", data_type=wc.DataType.TEXT),
-                    wc.Property(name="user", data_type=wc.DataType.UUID),
-                    wc.Property(name="timestamp", data_type=wc.DataType.DATE),
-                    wc.Property(name="projectId", data_type=wc.DataType.UUID),
-                    wc.Property(name="content", data_type=wc.DataType.TEXT),
-                ]
-            )
+    if COLLECTION_NAME not in [c for c in client.collections.list_all()]:
+        client.collections.create(
+            name=COLLECTION_NAME,
+            properties=[
+                wc.Property(name="type", data_type=wc.DataType.TEXT),
+                wc.Property(name="user", data_type=wc.DataType.UUID),
+                wc.Property(name="timestamp", data_type=wc.DataType.DATE),
+                wc.Property(name="projectId", data_type=wc.DataType.UUID),
+                wc.Property(name="content", data_type=wc.DataType.TEXT),
+            ]
+        )
 
 def store_entry(entry):
     collection = client.collections.get(COLLECTION_NAME)
@@ -65,9 +65,9 @@ def get_entries(project_id: str, start: int, end: int):
     end_dt = datetime.fromtimestamp(end, tz=timezone.utc).isoformat()
 
     results = collection.query.fetch_objects(
-        filters = (Filter.by_property("projectId").equal(project_id) &
+        filters = Filter.by_property("projectId").equal(project_id) &
                      Filter.by_property("timestamp").greater_or_equal(start_dt) &
-                     Filter.by_property("timestamp").less_or_equal(end_dt)),
+                     Filter.by_property("timestamp").less_or_equal(end_dt),
         limit=100
     )
 
