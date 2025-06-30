@@ -10,7 +10,7 @@ from pydantic import UUID4
 from sqlalchemy import delete, select
 
 from app import weaviate_client as wc
-from app.db import async_session, Summary
+from app.db import async_session, Summary, QAPair
 from app.db import init_db
 from app.langchain_provider import summarize_entries, answer_question
 from app.models import ContentEntry
@@ -85,6 +85,9 @@ async def get_summary(
         # Generate and store new summary
         summary_md = summarize_entries(str(project_id), start_time, end_time)
 
+        if not summary_md or "output_text" not in summary_md:
+            return {"summary": "No content found for the given parameters."}
+
         new_summary = Summary(
             project_id=str(project_id),
             start_time=start_time,
@@ -158,16 +161,58 @@ async def get_summaries(
 
 
 @app.post("/query/", summary="Query the project for answers")
-def query_project(
+async def query_project(
+        user_id: UUID4 = Query(..., description="User UUID (must be UUID4)"),
         project_id: UUID4 = Query(..., description="Project UUID (must be UUID4)"),
         start_time: int = Query(..., ge=0, description="Start UNIX timestamp (>=0)"),
-        end_time: int = Query(..., ge=0, description="End   UNIX timestamp (>=0)"),
+        end_time: int = Query(..., ge=0, description="End UNIX timestamp (>=0)"),
         question: str = Query(..., description="Question to ask about the project content")
 ):
     if start_time > end_time:
-        raise HTTPException(
-            status_code=422,
-            detail="start_time must be ≤ end_time",
-        )
+        raise HTTPException(status_code=422, detail="start_time must be ≤ end_time")
+
+    q_time = datetime.now(UTC)
+
+    # Call the existing QA chain to get an answer
     answer = answer_question(str(project_id), start_time, end_time, question)
+
+    a_time = datetime.now(UTC)
+
+    # Save the Q&A pair to the database
+    new_qapair = QAPair(
+        project_id=str(project_id),
+        user_id=str(user_id),
+        question=question,
+        answer=answer["result"],
+        question_time=q_time,
+        answer_time=a_time
+    )
+    async with async_session() as session:
+        session.add(new_qapair)
+        await session.commit()
+
     return {"answer": answer}
+
+
+@app.get("/chat_history/", summary="Get Q&A history for a user (optionally filtered by project)")
+async def get_chat_history(
+        user_id: UUID4 = Query(..., description="User UUID (must be UUID4)"),
+        project_id: UUID4 | None = Query(None, description="Optional Project UUID")
+):
+    async with async_session() as session:
+        query = select(QAPair).where(QAPair.user_id == str(user_id))
+        if project_id is not None:
+            query = query.where(QAPair.project_id == str(project_id))
+        result = await session.execute(query)
+        history = result.scalars().all()
+    return [
+        {
+            "user_id": entry.user_id,
+            "project_id": entry.project_id,
+            "question": entry.question,
+            "answer": entry.answer,
+            "question_time": entry.question_time.isoformat(),
+            "answer_time": entry.answer_time.isoformat()
+        }
+        for entry in history
+    ]
