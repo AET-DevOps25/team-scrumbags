@@ -19,7 +19,10 @@ import { environment } from './environment';
 
 // Configure which URLs should include the Bearer token
 const urlCondition = createInterceptorCondition<IncludeBearerTokenCondition>({
-  urlPattern: new RegExp(`^(${environment.apiUrl})(/.*)?$`, 'i'),
+  urlPattern: new RegExp(
+    `^(${environment.projectManagementUrl}|${environment.sdlcUrl}|${environment.meetingNotesUrl}|${environment.communicationUrl}|${environment.genAiUrl})(/.*)?$`,
+    'i'
+  ),
   bearerPrefix: 'Bearer',
 });
 
@@ -38,7 +41,6 @@ export const appConfig: ApplicationConfig = {
         onLoad: 'login-required',
         checkLoginIframe: false, // Disable iframe checking
         flow: 'standard',
-        redirectUri: window.env?.redirectUrl || window.location.origin,
       },
     }),
     {

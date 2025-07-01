@@ -9,12 +9,11 @@ import { User } from '../models/user.model';
   providedIn: 'root',
 })
 export class UserApi {
-  private readonly baseUrl = environment.apiUrl;
   private http = inject(HttpClient);
 
   getAllUsers(): Observable<User[]> {
     return this.http
-      .get<User[]>(`${this.baseUrl}/users`)
+      .get<User[]>(`${environment.projectManagementUrl}/users`)
       .pipe(catchError(this.handleError('Error fetching project list')));
   }
 
