@@ -1,0 +1,15 @@
+meta {
+  name: Report Content
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{api_url}}/projects/1/reports/:reportId/content
+  body: none
+  auth: inherit
+}
+
+params:path {
+  reportId: 410f6e12-0f5e-420c-adb6-bb05a306cd38
+}

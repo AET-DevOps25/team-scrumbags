@@ -7,7 +7,7 @@
   window["env"]["sdlcUrl"] = "http://localhost/api/sdlc";
   window["env"]["meetingNotesUrl"] = "http://localhost:3030";
   window["env"]["communicationUrl"] = "http://localhost/api/communication";
-  window["env"]["genAiUrl"] = "http://localhost/api/gen-ai";
+  window["env"]["genAiUrl"] = "http://localhost:3031";
   window["env"]["keycloakUrl"] = "http://localhost:8081";
   window["env"]["keycloakRealm"] = "trace";
   window["env"]["keycloakClient"] = "trace-api";

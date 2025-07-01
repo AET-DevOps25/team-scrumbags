@@ -1,0 +1,10 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3031:3031"
+    environment:
+      - SERVER_PORT=3031
+      - DEBUG=${DEBUG}
