@@ -98,19 +98,31 @@ func GetReportContent(c *gin.Context) {
 }
 
 func GenerateReport(c *gin.Context) {
-	var params ReportParams
-	err := c.BindQuery(&params)
+	var body ReportParams
+	err := c.BindJSON(&body)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid parameters"})
 		return
 	}
-	if params.PeriodStart == nil {
-		params.PeriodStart = &time.Time{}
+	log.WithFields(log.Fields{
+		"PeriodStart": body.PeriodStart,
+		"PeriodEnd":   body.PeriodEnd,
+		"UserIds":     body.UserIds,
+	}).Debug("Generating report with parameters")
+
+	if body.PeriodStart == nil {
+		body.PeriodStart = &time.Time{}
 	}
-	if params.PeriodEnd == nil {
+	if body.PeriodEnd == nil {
 		now := time.Now()
-		params.PeriodEnd = &now
+		body.PeriodEnd = &now
 	}
+
+	log.WithFields(log.Fields{
+		"PeriodStart": body.PeriodStart,
+		"PeriodEnd":   body.PeriodEnd,
+		"UserIds":     body.UserIds,
+	}).Debug("Params after defaults applied")
 
 	id, err := uuid.NewRandom()
 	if err != nil {
@@ -123,9 +135,9 @@ func GenerateReport(c *gin.Context) {
 	report := Report{
 		ID:          id,
 		Name:        fmt.Sprintf("Report %s", id),
-		PeriodStart: *params.PeriodStart,
-		PeriodEnd:   *params.PeriodEnd,
-		UserIds:     params.UserIds,
+		PeriodStart: *body.PeriodStart,
+		PeriodEnd:   *body.PeriodEnd,
+		UserIds:     body.UserIds,
 		Content:     content,
 	}
 	storage[id] = report

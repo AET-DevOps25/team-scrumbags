@@ -5,11 +5,11 @@
   </tr>
   <tr>
     <th class="text-left font-medium">Start</th>
-    <td>{{ report()?.periodStart ?? '' }}</td>
+    <td>{{ report()?.periodStart ? (report()?.periodStart | date:'yyyy-MM-dd') : '' }}</td>
   </tr>
   <tr>
     <th class="text-left font-medium">End</th>
-    <td>{{ report()?.periodEnd ?? '' }}</td>
+    <td>{{ report()?.periodEnd ? (report()?.periodEnd | date:'yyyy-MM-dd') : '' }}</td>
   </tr>
 </table>
 <span class="break-words">{{report()?.content ?? ""}}</span>

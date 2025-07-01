@@ -9,10 +9,13 @@ import {
 import { ProjectService } from '../../../services/project.service';
 import { ReportService } from '../../../services/report.service';
 import { finalize } from 'rxjs';
+import { DatePipe } from '@angular/common';
 
 @Component({
   selector: 'app-report-content',
-  imports: [],
+  imports: [
+    DatePipe
+  ],
   templateUrl: './report-content.view.html',
   styleUrl: './report-content.view.scss',
 })
