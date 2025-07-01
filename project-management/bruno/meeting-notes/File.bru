@@ -1,0 +1,15 @@
+meta {
+  name: File
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{notes_url}}/projects/1/meeting-notes/:noteId/file
+  body: none
+  auth: inherit
+}
+
+params:path {
+  noteId: 1131fe80-547f-4f2e-9971-f9bf3f51d9e7
+}

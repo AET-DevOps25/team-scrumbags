@@ -1,4 +1,5 @@
-import { User } from "./user.model";
+import { User } from './user.model';
+import { MeetingNote } from './meeting-note.model';
 
 export interface Project {
   id: string;
@@ -6,4 +7,5 @@ export interface Project {
   description: string;
 
   users: User[];
+  meetingNotes: MeetingNote[];
 }

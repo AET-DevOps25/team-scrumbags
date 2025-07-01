@@ -46,9 +46,9 @@ export class ProjectAddDialog {
       const formValue = this.projectForm.value;
 
       this.service.createProject(formValue as Project).subscribe({
-        next: (newProject: Project) => {
+        next: () => {
           this.isSubmitting.set(false);
-          this.dialogRef.close(newProject);
+          this.dialogRef.close();
         },
         error: () => {
           this.isSubmitting.set(false);
