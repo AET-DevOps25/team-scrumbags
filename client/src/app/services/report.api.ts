@@ -19,12 +19,12 @@ export class ReportApi {
 
   generateReport(
     projectId: string,
-    periodStart: Date | null,
+    periodStart: Date | null,
     periodEnd: Date | null,
     userIds?: string[]
   ): Observable<Report> {
     const url = `${environment.genAiUrl}/projects/${projectId}/reports`;
-    const body: any = {};
+    const body: Partial<{ periodStart: string; periodEnd: string; userIds: string[] }> = {};
     if (periodStart) {
       body.periodStart = periodStart.toISOString();
     }

@@ -52,7 +52,6 @@
           [(ngModel)]="periodStart"
           [max]="periodEnd() ? periodEnd() : now()"
           name="startDate"
-          placeholder="Select start date"
         />
         <mat-datepicker-toggle
           matIconSuffix
@@ -69,7 +68,6 @@
           [min]="periodStart()"
           [max]="now()"
           name="endDate"
-          placeholder="Select end date"
         />
         <mat-datepicker-toggle
           matIconSuffix

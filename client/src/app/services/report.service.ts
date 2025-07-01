@@ -21,7 +21,7 @@ export class ReportService {
 
   public generateReport(
     projectId: string,
-    periodStart: Date | null,
+    periodStart: Date | null,
     periodEnd: Date | null,
     userIds?: string[]
   ): Observable<MeetingNote> {
