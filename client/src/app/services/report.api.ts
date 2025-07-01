@@ -19,18 +19,18 @@ export class ReportApi {
 
   generateReport(
     projectId: string,
-    periodStart?: string,
-    periodEnd?: string,
+    periodStart: Date | null,
+    periodEnd: Date | null,
     userIds?: string[]
   ): Observable<Report> {
     let url = `${environment.genAiUrl}/projects/${projectId}/reports`;
     const queryParams = new URLSearchParams();
     if (periodStart) {
-      queryParams.set('periodStart', periodStart || '');
+      queryParams.set('periodStart', periodStart.toISOString());
     }
 
     if (periodEnd) {
-      queryParams.set('periodEnd', periodEnd || '');
+      queryParams.set('periodEnd', periodEnd.toISOString());
     }
 
     if (userIds && userIds.length > 0) {
@@ -38,6 +38,8 @@ export class ReportApi {
     }
 
     url += `?${queryParams.toString()}`;
+
+    console.log('Generating report with URL:', url);
 
     return this.http
       .post<Report>(url, null)

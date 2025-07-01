@@ -1,1 +1,15 @@
+<table class="min-w-full border-separate border-spacing-y-2">
+  <tr>
+    <th class="text-left font-medium">Name</th>
+    <td>{{ report()?.name ?? '' }}</td>
+  </tr>
+  <tr>
+    <th class="text-left font-medium">Start</th>
+    <td>{{ report()?.periodStart ?? '' }}</td>
+  </tr>
+  <tr>
+    <th class="text-left font-medium">End</th>
+    <td>{{ report()?.periodEnd ?? '' }}</td>
+  </tr>
+</table>
 <span class="break-words">{{report()?.content ?? ""}}</span>

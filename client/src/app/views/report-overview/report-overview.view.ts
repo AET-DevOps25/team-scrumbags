@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -9,17 +9,21 @@ import { ReportService } from '../../services/report.service';
 import { ProjectService } from '../../services/project.service';
 import { ReportListView } from './report-list/report-list.view';
 import { ReportContentView } from './report-content/report-content.view';
-import { UserService } from '../../services/user.service';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 
 @Component({
   selector: 'app-report-overview',
   standalone: true,
   imports: [
     FormsModule,
+    MatInputModule,
+    MatFormFieldModule,
+    ReactiveFormsModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
     MatButtonModule,
     MatIconModule,
-    MatFormFieldModule,
-    MatInputModule,
     MatSelectModule,
     ReportListView,
     ReportContentView,
@@ -28,7 +32,6 @@ import { UserService } from '../../services/user.service';
   styleUrl: './report-overview.view.scss',
 })
 export class ReportOverviewView {
-  private userService = inject(UserService);
   private projectService = inject(ProjectService);
   private reportService = inject(ReportService);
 
@@ -38,8 +41,15 @@ export class ReportOverviewView {
     () => this.projectService.selectedProject()?.users ?? []
   );
   showForm = signal(false);
-  periodStart = signal<string | undefined>(undefined);
-  periodEnd = signal<string | undefined>(undefined);
+
+  // undefined for invalid date and null for empty date
+  periodStart = signal<Date | null>(null);
+  periodEnd = signal<Date | null>(null);
+  now = computed(() => {
+    this.periodStart();
+    this.periodEnd();
+    return new Date();
+  });
   userIds = signal<string[]>([]);
 
   displayForm() {
@@ -58,21 +68,19 @@ export class ReportOverviewView {
 
   onCancel() {
     this.showForm.set(false);
-    this.periodStart.set(undefined);
-    this.periodEnd.set(undefined);
+    this.periodStart.set(null);
+    this.periodEnd.set(null);
     this.userIds.set([]);
   }
 
   private generateReport() {
     const projectId = this.projectService.selectedProjectId();
+    const periodStart = this.periodStart();
+    const periodEnd = this.periodEnd();
+
     if (projectId) {
       this.reportService
-        .generateReport(
-          projectId,
-          this.periodStart(),
-          this.periodEnd(),
-          this.userIds()
-        )
+        .generateReport(projectId, periodStart, periodEnd, this.userIds())
         .subscribe();
     }
   }

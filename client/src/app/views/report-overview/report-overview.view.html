@@ -44,25 +44,38 @@
       <mat-icon>close</mat-icon>
     </button>
     <div class="flex flex-wrap gap-x-4">
-      <mat-form-field appearance="outline" class="!max-w-35">
+      <mat-form-field appearance="outline">
         <mat-label>Start Date</mat-label>
         <input
           matInput
-          type="date"
+          [matDatepicker]="startPicker"
           [(ngModel)]="periodStart"
+          [max]="periodEnd() ? periodEnd() : now()"
           name="startDate"
-          required
+          placeholder="Select start date"
         />
+        <mat-datepicker-toggle
+          matIconSuffix
+          [for]="startPicker"
+        ></mat-datepicker-toggle>
+        <mat-datepicker #startPicker></mat-datepicker>
       </mat-form-field>
-      <mat-form-field appearance="outline" class="!max-w-35">
+      <mat-form-field appearance="outline">
         <mat-label>End Date</mat-label>
         <input
           matInput
-          type="date"
+          [matDatepicker]="endPicker"
           [(ngModel)]="periodEnd"
+          [min]="periodStart()"
+          [max]="now()"
           name="endDate"
-          required
+          placeholder="Select end date"
         />
+        <mat-datepicker-toggle
+          matIconSuffix
+          [for]="endPicker"
+        ></mat-datepicker-toggle>
+        <mat-datepicker #endPicker></mat-datepicker>
       </mat-form-field>
       <mat-form-field appearance="outline">
         <mat-label>Users</mat-label>
@@ -73,7 +86,12 @@
         </mat-select>
       </mat-form-field>
     </div>
-    <button mat-icon-button color="primary" type="submit" aria-label="Send">
+    <button
+      mat-icon-button
+      color="primary"
+      type="submit"
+      aria-label="Send"
+    >
       <mat-icon>send</mat-icon>
     </button>
   </form>
