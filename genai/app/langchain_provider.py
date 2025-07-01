@@ -55,17 +55,19 @@ def summarize_entries(project_id: str, start: int, end: int):
         return "No entries found for the given parameters."
 
     prompt = PromptTemplate(
-        template=
-        """You are a summarizer of source control information (pull requests, commits, branches, etc.), transcripts
+        template="""You are a summarizer of source control information (pull requests, commits, branches, etc.), transcripts
         of meetings with assigned speakers, and messages between team members over
         collaboration / messaging platforms. Given the following documents containing
         information about the project dealings, produce a
         detailed summary in Markdown format. Use headings, bullet points, and code
-        blocks where appropriate. Do not use any other formatting than Markdown.\n\n
-        Here is the content to summarize:\n
-        {text}\n\n
-        Use the following format for summarizing:\n\n
-        ### [Summary Name]:\n
+        blocks where appropriate. Do not use any other formatting than Markdown.
+
+        Here is the content to summarize:
+        {text}
+
+        Use the following format for summarizing:
+
+        ### [Summary Name]:
         [Summary Content with texts, bullet points, and code blocks]""",
         input_variables=["text"]
     )
