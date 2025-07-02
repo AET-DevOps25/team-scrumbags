@@ -1,11 +1,7 @@
 package com.trace.transcription.controller;
 
 import com.trace.transcription.service.TranscriptService;
-import com.trace.transcription.model.SpeakerEntity;
 import com.trace.transcription.model.TranscriptEntity;
-import com.trace.transcription.repository.SpeakerRepository;
-import com.trace.transcription.repository.TranscriptRepository;
-import org.apache.commons.io.FilenameUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,7 +13,6 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.request.async.DeferredResult;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.*;
 
 
@@ -28,88 +23,15 @@ public class TranscriptController {
 
     private final ThreadPoolTaskExecutor executor;
 
-    private final String coreServiceUrl; // e.g. "http://core-service:8080"
+    private final String genaiServiceUrl; // e.g. "http://core-service:8080"
     private final RestTemplate restTemplate = new RestTemplate();
 
-    private final SpeakerRepository speakerRepository;
-    private final TranscriptRepository transcriptRepository;
     private final TranscriptService transcriptService;
 
-    public TranscriptController(ThreadPoolTaskExecutor executor, @Value("${core.service.url}") String coreServiceUrl, SpeakerRepository speakerRepository, TranscriptRepository transcriptRepository, TranscriptService transcriptService) {
+    public TranscriptController(ThreadPoolTaskExecutor executor, @Value("${core.service.url}") String genaiServiceUrl, TranscriptService transcriptService) {
         this.executor = executor;
-        this.coreServiceUrl = coreServiceUrl;
-        this.speakerRepository = speakerRepository;
-        this.transcriptRepository = transcriptRepository;
+        this.genaiServiceUrl = genaiServiceUrl;
         this.transcriptService = transcriptService;
-    }
-
-    @GetMapping("/test")
-    public ResponseEntity<?> getEntity() {
-        return ResponseEntity.ok("Transcription Service is running");
-    }
-
-    @GetMapping("projects/{projectId}/all-speakers")
-    public ResponseEntity<List<SpeakerEntity>> getAllSpeakers(@PathVariable("projectId") UUID projectId) {
-        List<SpeakerEntity> speakers = speakerRepository.findAllByProjectId(projectId);
-        if (speakers.isEmpty()) {
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.ok(speakers);
-    }
-
-    @GetMapping("/{id}/test")
-    public ResponseEntity<?> getEntityById(@PathVariable("id") String id) {
-        return ResponseEntity.ok("Test entity with ID: " + id);
-    }
-
-    /**
-     * POST /{projectId}/speakers
-     * <p>
-     * Request (multipart/form-data):
-     *   - speakerIds        : List of String      (e.g. ["id1","id2",...])
-     *   - speakerNames      : List of String      (must match length of speakerIds)
-     *   - speakingSamples   : List of MultipartFile (must match length of speakerIds)
-     * <p>
-     * All lists must be the same size. Each index corresponds to one Speaker record.
-     */
-    @PostMapping("projects/{projectId}/speakers")
-    public ResponseEntity<String> uploadSpeakers(
-            @PathVariable("projectId") UUID projectId,
-            @RequestParam("speakerIds") List<String> speakerIds,
-            @RequestParam("speakerNames") List<String> speakerNames,
-            @RequestParam("speakingSamples") List<MultipartFile> speakingSamples) {
-
-        // list same size check
-        int count = speakerIds.size();
-        if (speakerNames.size() != count || speakingSamples.size() != count) {
-            return ResponseEntity.badRequest()
-                    .body("Error: speakerIds, speakerNames, and speakingSamples must have the same number of elements.");
-        }
-
-        List<SpeakerEntity> toSave = new ArrayList<>(count);
-
-        try {
-            for (int i = 0; i < count; i++) {
-                String speakerId   = speakerIds.get(i);
-                String speakerName = speakerNames.get(i);
-                MultipartFile file = speakingSamples.get(i);
-                String extension = FilenameUtils.getExtension(file.getOriginalFilename());
-
-                // create and set entity
-                SpeakerEntity speaker = new SpeakerEntity(speakerId, speakerName, projectId, file.getBytes(), extension);
-
-                toSave.add(speaker);
-            }
-
-            // save speakers
-            speakerRepository.saveAll(toSave);
-
-            return ResponseEntity.ok("Successfully saved " + count + " speakers for project " + projectId);
-
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError()
-                    .body("Error saving speakers: " + e.getMessage());
-        }
     }
 
     /**
@@ -137,7 +59,7 @@ public class TranscriptController {
         executor.execute(() -> {
             try {
 
-                String transcriptJson = transcriptService.transcriptAsync(projectId, file, speakerRepository, finalTimestamp);
+                String transcriptJson = transcriptService.transcriptAsyncLocal(projectId, file, finalTimestamp);
 
                 // Save transcript to database
                 transcriptService.saveFromJson(transcriptJson);
@@ -146,7 +68,7 @@ public class TranscriptController {
                 HttpHeaders headers = new HttpHeaders();
                 headers.setContentType(MediaType.APPLICATION_JSON);
                 HttpEntity<String> entity = new HttpEntity<>(transcriptJson, headers);
-                String endpoint = coreServiceUrl + "projects/" + projectId + "/transcripts";
+                String endpoint = genaiServiceUrl + "projects/" + projectId + "/transcripts";
                 ResponseEntity<String> coreResponse = restTemplate.postForEntity(endpoint, entity, String.class);
 
                 if (!coreResponse.getStatusCode().is2xxSuccessful()) {
@@ -167,96 +89,6 @@ public class TranscriptController {
         return deferredResult;
     }
 
-
-    /**
-     * DELETE /{projectId}/speakers/{speakerId}
-     * <p>
-     * Deletes the speaker with the given ID from the project.
-     */
-    @DeleteMapping("projects/{projectId}/speakers/{speakerId}")
-    public ResponseEntity<String> deleteSpeaker(
-            @PathVariable("projectId") UUID projectId,
-            @PathVariable("speakerId") String speakerId) {
-
-        // Check if speaker exists
-        SpeakerEntity speaker = speakerRepository.findByProjectIdAndId(projectId, speakerId);
-        if (speaker == null) {
-            return ResponseEntity.notFound().build();
-        }
-
-        // Delete the speaker
-        speakerRepository.delete(speaker);
-        return ResponseEntity.ok("Speaker " + speakerId + " deleted successfully.");
-    }
-
-
-    /**
-     * PUT /{projectId}/speakers/{speakerId}
-     * <p>
-     * Request (multipart/form-data):
-     *   - speakerName: String (optional)
-     *   - speakingSample: MultipartFile (optional)
-     * <p>
-     * Updates the speaker's name and/or speaking sample.
-     */
-    @PutMapping("projects/{projectId}/speakers/{speakerId}")
-    public ResponseEntity<String> modifySpeaker(
-            @PathVariable("projectId") UUID projectId,
-            @PathVariable("speakerId") String speakerId,
-            @RequestParam(value = "speakerName", required = false) String speakerName,
-            @RequestParam(value = "speakingSample", required = false) MultipartFile speakingSample) {
-
-        SpeakerEntity speaker = speakerRepository.findByProjectIdAndId(projectId, speakerId);
-        if (speaker == null) {
-            return ResponseEntity.notFound().build();
-        }
-
-        if (speakerName != null && !speakerName.isEmpty()) {
-            speaker.setName(speakerName);
-        }
-        if (speakingSample != null && !speakingSample.isEmpty()) {
-            try {
-                String extension = FilenameUtils.getExtension(speakingSample.getOriginalFilename());
-                speaker.setSpeakingSample(speakingSample.getBytes());
-                speaker.setSampleExtension(extension);
-            } catch (IOException e) {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body("Error saving speaking sample: " + e.getMessage());
-            }
-        }
-
-        speakerRepository.save(speaker);
-        return ResponseEntity.ok("Speaker " + speakerId + " updated successfully.");
-    }
-
-    /**
-     * GET /{projectId}/samples
-     * <p>
-     * Returns a list of all samples (speaker IDs with their sample extensions) for the given project.
-     */
-    @GetMapping("projects/{projectId}/samples")
-    public ResponseEntity<List<String>> getAllRecordings(
-            @PathVariable("projectId") UUID projectId) {
-
-        List<SpeakerEntity> speakers = speakerRepository.findAllByProjectId(projectId);
-
-        if (speakers == null || speakers.isEmpty()) {
-            return ResponseEntity.noContent().build();
-        }
-
-        List<String> recordings = new ArrayList<>();
-        for (SpeakerEntity speaker : speakers) {
-            if (speaker.getSpeakingSample() != null && speaker.getSpeakingSample().length > 0) {
-                recordings.add(speaker.getId() + "." + speaker.getSampleExtension());
-            }
-        }
-        if (recordings.isEmpty()) {
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.ok(recordings);
-    }
-
-
     /**
      * GET /{projectId}/transcripts
      * <p>
@@ -264,14 +96,11 @@ public class TranscriptController {
      */
     @GetMapping("projects/{projectId}/transcripts")
     public ResponseEntity<List<TranscriptEntity>> getAllTranscripts(@PathVariable("projectId") UUID projectId) {
-        List<TranscriptEntity> transcripts = transcriptRepository.findAllByProjectId(projectId);
+        List<TranscriptEntity> transcripts = transcriptService.getAllTranscripts(projectId);
         if (transcripts.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.ok(transcripts);
     }
-
-    //request timeout parameterized
-    //make separate controllers for speakers and transcripts?
 
 }

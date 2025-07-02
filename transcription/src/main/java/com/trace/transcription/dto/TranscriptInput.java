@@ -1,4 +1,4 @@
-package com.trace.transcription.service;
+package com.trace.transcription.dto;
 
 import java.util.UUID;
 

@@ -1,5 +1,6 @@
 package com.trace.transcription.model;
 
+import com.trace.transcription.dto.TranscriptSegment;
 import jakarta.persistence.*;
 
 import java.util.Date;
