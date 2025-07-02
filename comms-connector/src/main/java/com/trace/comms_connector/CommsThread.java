@@ -71,8 +71,7 @@ public class CommsThread extends Thread {
                     String messageJsonArray = msgConverter.convertListToJsonArray(
                         messages, connection.getProjectId(), connection.getPlatform());
 
-                    // TODO: uncomment this after integrating the gen AI microservice
-                    //commsClient.sendMessageListToGenAi(messageJsonArray);
+                    commsClient.sendMessageListToGenAi(messageJsonArray);
 
                     // Update last message ID
                     commsService.saveConnection(
