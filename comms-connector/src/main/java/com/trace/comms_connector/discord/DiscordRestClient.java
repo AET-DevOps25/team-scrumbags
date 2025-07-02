@@ -17,8 +17,11 @@ import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
 public class DiscordRestClient {
-    @Value("${trace.discord.secret}")
+    @Value("Bot ${trace.discord.secret}")
     private String token;
+
+    @Value("${trace.discord.bot-id}")
+    private String botId;
 
     @Value("${trace.discord.api-version}")
     private String apiVersion;
@@ -54,12 +57,14 @@ public class DiscordRestClient {
             .get()
             .uri(uriBuilder -> uriBuilder
                 .path("/guilds/" + guildId + "/members")
+                .queryParam("limit", 1000)
                 .build())
             .header("Authorization", token)
             .retrieve()
             .body(new ParameterizedTypeReference<>() {});
 
         return users.stream()
+            .filter(user -> user.getId() != botId)
             .map(user -> user.getUsername())
             .toList();
     }
