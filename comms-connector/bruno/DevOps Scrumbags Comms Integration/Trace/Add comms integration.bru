@@ -1,0 +1,20 @@
+meta {
+  name: Add comms integration
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/projects/:projectId/comms/:platform?serverId
+  body: none
+  auth: inherit
+}
+
+params:query {
+  serverId: 
+}
+
+params:path {
+  platform: DISCORD
+  projectId: 
+}

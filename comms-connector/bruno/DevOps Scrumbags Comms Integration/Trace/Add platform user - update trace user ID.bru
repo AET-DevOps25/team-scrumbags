@@ -1,0 +1,21 @@
+meta {
+  name: Add platform user / update trace user ID
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/projects/:projectId/comms/:platform/users?platformUserId&userId
+  body: none
+  auth: inherit
+}
+
+params:query {
+  platformUserId: 
+  userId: 
+}
+
+params:path {
+  projectId: 
+  platform: DISCORD
+}

@@ -1,0 +1,16 @@
+meta {
+  name: Delete platform comms integrations from project
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{baseUrl}}/projects/:projectId/comms/:platform
+  body: none
+  auth: inherit
+}
+
+params:path {
+  projectId: 
+  platform: DISCORD
+}

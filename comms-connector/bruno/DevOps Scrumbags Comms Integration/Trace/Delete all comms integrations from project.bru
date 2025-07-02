@@ -1,0 +1,15 @@
+meta {
+  name: Delete all comms integrations from project
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/projects/:projectId/comms
+  body: none
+  auth: inherit
+}
+
+params:path {
+  projectId: 
+}
