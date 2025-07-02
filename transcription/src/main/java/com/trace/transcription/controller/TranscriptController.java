@@ -23,12 +23,12 @@ public class TranscriptController {
 
     private final ThreadPoolTaskExecutor executor;
 
-    private final String genaiServiceUrl; // e.g. "http://core-service:8080"
+    private final String genaiServiceUrl; // e.g. "http://genai:8080"
     private final RestTemplate restTemplate = new RestTemplate();
 
     private final TranscriptService transcriptService;
 
-    public TranscriptController(ThreadPoolTaskExecutor executor, @Value("${core.service.url}") String genaiServiceUrl, TranscriptService transcriptService) {
+    public TranscriptController(ThreadPoolTaskExecutor executor, @Value("${genai.service.url}") String genaiServiceUrl, TranscriptService transcriptService) {
         this.executor = executor;
         this.genaiServiceUrl = genaiServiceUrl;
         this.transcriptService = transcriptService;
