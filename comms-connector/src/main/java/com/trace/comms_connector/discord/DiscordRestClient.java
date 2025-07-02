@@ -44,7 +44,7 @@ public class DiscordRestClient {
     }
 
     public List<String> getGuildMemberNames(String guildId) {
-        List<DiscordUser> users = getRestClient()
+        List<DiscordGuildMember> guildMembers = getRestClient()
             .get()
             .uri(uriBuilder -> uriBuilder
                 .path("/guilds/" + guildId + "/members")
@@ -54,8 +54,9 @@ public class DiscordRestClient {
             .retrieve()
             .body(new ParameterizedTypeReference<>() {});
 
-        return users.stream()
-            .filter(user -> user.getId() != botId)
+        return guildMembers.stream()
+            .map(member -> (DiscordUser) member.getDetail("user"))
+            .filter(user -> !user.getId().equals(botId))
             .map(user -> user.getUsername())
             .toList();
     }

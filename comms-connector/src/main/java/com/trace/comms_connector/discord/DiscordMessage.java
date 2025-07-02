@@ -30,8 +30,8 @@ public class DiscordMessage implements CommsMessage {
     }
 
     @JsonAnyGetter
-    public void getDetail(String key) {
-        this.details.get(key);
+    public Object getDetail(String key) {
+        return this.details.get(key);
     }
 
     public String getJsonString(UUID userId, UUID projectId) throws NullPointerException {

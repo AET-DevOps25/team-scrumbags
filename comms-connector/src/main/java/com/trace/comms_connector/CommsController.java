@@ -48,7 +48,7 @@ public class CommsController {
         }
 
         try {
-            var connectionList = commsService.addCommIntegration(projectId, platform, serverId);
+            var connectionList = commsService.addCommsIntegration(projectId, platform, serverId);
             return ResponseEntity.ok(connectionList);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(e.getMessage());

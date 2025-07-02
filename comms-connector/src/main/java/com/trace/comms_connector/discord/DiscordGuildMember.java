@@ -5,18 +5,13 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
-import com.trace.comms_connector.model.CommsPlatformUser;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @NoArgsConstructor @Getter @Setter
-public class DiscordUser implements CommsPlatformUser {
-    private String id;
-    private String username;
-    private String discriminator;
-    private String global_name;
+public class DiscordGuildMember {
     private Map<String, Object> details = new LinkedHashMap<>();
 
     @JsonAnySetter

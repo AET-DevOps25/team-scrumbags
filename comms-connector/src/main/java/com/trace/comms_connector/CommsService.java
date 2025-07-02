@@ -117,7 +117,7 @@ public class CommsService {
 
     // Add a communication integration to a project by saving the corresponding channel and user IDs in the repos
     @Transactional
-    public List<ConnectionEntity> addCommIntegration(
+    public List<ConnectionEntity> addCommsIntegration(
         @NonNull UUID projectId,
         @NonNull Platform platform,
         @NonNull String serverId
@@ -131,7 +131,7 @@ public class CommsService {
         } else {
             throw new Exception("Platform not supported.");
         }
-
+        
         for (String channel : channelIdList) {
             var connection = this.saveConnection(projectId, channel, platform, null); 
             connections.add(connection);
