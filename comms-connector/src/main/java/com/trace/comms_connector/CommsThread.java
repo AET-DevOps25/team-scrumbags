@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 
 import com.trace.comms_connector.connection.ConnectionEntity;
 import com.trace.comms_connector.discord.DiscordRestClient;
+import com.trace.comms_connector.model.CommsMessage;
+import com.trace.comms_connector.util.CommsMessageConverter;
 
 import jakarta.annotation.PreDestroy;
 import lombok.NoArgsConstructor;
@@ -21,6 +23,15 @@ public class CommsThread extends Thread {
     @Autowired
     private CommsService commsService;
 
+    @Autowired
+    private DiscordRestClient discordClient;
+
+    @Autowired
+    private CommsRestClient commsClient;
+
+    @Autowired
+    private CommsMessageConverter msgConverter;
+
     /* 
      * Thread that pulls messages from external communication platforms and sends
      * these to the gen AI microservice every 24 hours
@@ -28,29 +39,41 @@ public class CommsThread extends Thread {
     @Override
     public void run() {
         System.out.println("Comms thread running!");
-        
-        CommsRestClient client = new CommsRestClient();
 
         while (true) {
             Instant before = Instant.now();
 
             List<ConnectionEntity> connections = commsService.getAllConnections();
 
-            // TODO: maybe abstract this switch case logic to an interface which all platforms' classes implement
             for (ConnectionEntity connection : connections) {
                 if (interrupted()) {
                     return;
                 }
 
+                List<? extends CommsMessage> messages = null;
+
                 switch (connection.getPlatform()) {
                     case DISCORD:
-                        DiscordRestClient discordClient = new DiscordRestClient();
-                        String messageJsonArray = discordClient.getChannelMessages(
+                        messages = discordClient.getChannelMessages(
                             connection.getPlatformChannelId(),
                             connection.getLastMessageId(),
                             connection.getProjectId());
-                        client.sendMessageListToGenAi(messageJsonArray);
                         break;
+                }
+
+                if (!messages.isEmpty() || messages != null) {
+                    String messageJsonArray = msgConverter.convertListToJsonArray(
+                        messages, connection.getProjectId(), connection.getPlatform());
+
+                    commsClient.sendMessageListToGenAi(messageJsonArray);
+
+                    // Update last message ID
+                    commsService.saveConnection(
+                        connection.getProjectId(),
+                        connection.getPlatformChannelId(),
+                        connection.getPlatform(),
+                        messages.get(0).getId()
+                    );
                 }
             }
 

@@ -4,18 +4,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.trace.comms_connector.CommsService;
-import com.trace.comms_connector.Platform;
-
-import lombok.NoArgsConstructor;
-
-@NoArgsConstructor
+@Component
 public class DiscordRestClient {
     @Value("Bot ${trace.discord.secret}")
     private String token;
@@ -28,9 +22,6 @@ public class DiscordRestClient {
 
     @Value("${trace.discord.base-url}")
     private String baseUrl;
-
-    @Autowired
-    private CommsService commsService;
 
     private RestClient getRestClient() {
         return RestClient.builder().baseUrl(baseUrl + "/" + apiVersion).build();
@@ -73,7 +64,7 @@ public class DiscordRestClient {
      * Returns a string representing a JSON array that contains the messages in a form
      * that is ready to be send to the gen AI microservice
      */
-    public String getChannelMessages(String channelId, String lastMessageId, UUID projectId) {
+    public List<DiscordMessage> getChannelMessages(String channelId, String lastMessageId, UUID projectId) {
         List<DiscordMessage> messages = getRestClient()
             .get()
             .uri(uriBuilder -> uriBuilder
@@ -85,24 +76,6 @@ public class DiscordRestClient {
             .retrieve()
             .body(new ParameterizedTypeReference<>() {});
 
-        // Update last message ID
-        commsService.saveConnection(projectId, channelId, Platform.DISCORD, messages.get(0).getId());
-
-        // Convert to list of JSON strings according to the gen AI microservice
-        List<String> jsonMessages = messages.stream()
-            .map(msg -> {
-                UUID userId = commsService.getUserIdByProjectIdAndPlatformDetails(
-                    projectId, Platform.DISCORD, msg.getAuthor().getId());
-                return msg.getJsonString(userId, projectId);
-            })
-            .toList();
-
-        // Convert to a single string of a JSON array
-        ObjectMapper mapper = new ObjectMapper();
-        try {
-            return mapper.writeValueAsString(jsonMessages);
-        } catch (Exception e) {
-            return "{}";
-        }
+        return messages;
     }
 }

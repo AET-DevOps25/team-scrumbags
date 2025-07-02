@@ -7,11 +7,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-import lombok.NoArgsConstructor;
-
-@NoArgsConstructor
+@Component
 public final class CommsRestClient {
     @Value("${trace.genai.base-url}")
     private String genAiBaseUrl;

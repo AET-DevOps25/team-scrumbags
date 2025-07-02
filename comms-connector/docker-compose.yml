@@ -22,12 +22,8 @@ services:
       - "8080:8080"
     depends_on:
       - db
-    environment:
-      - DEBUG=${DEBUG}
-      - COMM_DISCORD_SECRET=${COMM_DISCORD_SECRET}
-      - COMM_DB_URL=jdbc:mysql://db:3306/${MYSQL_DATABASE}
-      - COMM_DB_USER=root
-      - COMM_DB_PASSWORD=${MYSQL_ROOT_PASSWORD} 
+    env_file:
+      - .env
 
 volumes:
   db_data:

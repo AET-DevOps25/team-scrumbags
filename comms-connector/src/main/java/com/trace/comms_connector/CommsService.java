@@ -27,6 +27,9 @@ public class CommsService {
     @Autowired
     private UserRepo userRepo;
 
+    @Autowired
+    private DiscordRestClient discordClient;
+
     // Save connection to the connection database
     @Transactional
     public ConnectionEntity saveConnection(
@@ -123,7 +126,6 @@ public class CommsService {
         List<String> channelIdList, platformUserIdList;
 
         if (platform.equals(Platform.DISCORD)) {
-            DiscordRestClient discordClient = new DiscordRestClient();
             channelIdList = discordClient.getGuildChannelIds(serverId);
             platformUserIdList = discordClient.getGuildMemberNames(serverId);
         } else {

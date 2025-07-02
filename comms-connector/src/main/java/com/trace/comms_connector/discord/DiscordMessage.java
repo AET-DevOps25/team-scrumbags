@@ -9,7 +9,7 @@ import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.trace.comms_connector.CommsMessage;
+import com.trace.comms_connector.model.CommsMessage;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
