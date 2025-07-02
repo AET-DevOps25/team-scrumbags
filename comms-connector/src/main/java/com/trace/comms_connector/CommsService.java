@@ -2,6 +2,7 @@ package com.trace.comms_connector;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.trace.comms_connector.connection.ConnectionEntity;
 import com.trace.comms_connector.connection.ConnectionRepo;
 import com.trace.comms_connector.discord.DiscordRestClient;
+import com.trace.comms_connector.user.UserCompositeKey;
 import com.trace.comms_connector.user.UserEntity;
 import com.trace.comms_connector.user.UserRepo;
 
@@ -150,6 +152,7 @@ public class CommsService {
     // Get the trace user ID for a user in the communication channel, used while creating
     // the JSON to send to the gen AI microservice
     public UUID getUserIdByProjectIdAndPlatformDetails(UUID projectId, Platform platform, String platformUserId) {
-        return userRepo.findByProjectIdAndPlatformAndPlatformUserId(projectId, platform, platformUserId);
+        Optional<UserEntity> user = userRepo.findById(new UserCompositeKey(projectId, platformUserId, platform));
+        return user.isPresent() ? user.get().getUserId() : null;
     }
 }

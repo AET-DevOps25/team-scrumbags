@@ -17,8 +17,6 @@ public interface UserRepo extends JpaRepository<UserEntity, UserCompositeKey> {
 
     List<UserEntity> findAllByProjectIdAndPlatform(UUID projectId, Platform platform);
 
-    UUID findByProjectIdAndPlatformAndPlatformUserId(UUID projectId, Platform platform, String platformUserId);
-
     void deleteInBulkByProjectId(UUID projectId);
     
     void deleteInBulkByUserId(UUID userId);
