@@ -55,7 +55,7 @@ public class DiscordRestClient {
             .body(new ParameterizedTypeReference<>() {});
 
         return guildMembers.stream()
-            .map(member -> (DiscordUser) member.getDetail("user"))
+            .map(member -> member.getUser())
             .filter(user -> !user.getId().equals(botId))
             .map(user -> user.getUsername())
             .toList();

@@ -21,7 +21,7 @@ public class CommsMessageConverter {
         List<String> jsonMessages = messages.stream()
             .map(msg -> {
                 UUID userId = commsService.getUserIdByProjectIdAndPlatformDetails(
-                    projectId, platform, msg.getAuthor().getId());
+                    projectId, platform, msg.getAuthor().getIdentifier());
                 return msg.getJsonString(userId, projectId);
             })
             .toList();

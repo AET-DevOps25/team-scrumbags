@@ -12,6 +12,7 @@ import lombok.Setter;
 
 @NoArgsConstructor @Getter @Setter
 public class DiscordGuildMember {
+    private DiscordUser user;
     private Map<String, Object> details = new LinkedHashMap<>();
 
     @JsonAnySetter

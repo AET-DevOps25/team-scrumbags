@@ -64,7 +64,7 @@ public class CommsController {
      * @param platformUserId
      * @return new or updated user entity
      */
-    @PostMapping("/{platform}/users/")
+    @PostMapping("/{platform}/users")
     public ResponseEntity<?> addPlatformUser(
         @PathVariable UUID projectId,
         @PathVariable Platform platform,
@@ -88,8 +88,8 @@ public class CommsController {
      * @return
      */
     @DeleteMapping("/{platform}")
-    public ResponseEntity<?> deleteAllCommIntegrations(@PathVariable UUID projectId, @PathVariable Platform platform) {
-        commsService.deleteCommIntegration(projectId, platform);
+    public ResponseEntity<?> deletePlatformCommIntegrations(@PathVariable UUID projectId, @PathVariable Platform platform) {
+        commsService.deleteCommsIntegration(projectId, platform);
 
         return ResponseEntity.ok().build();
     }
@@ -102,7 +102,7 @@ public class CommsController {
      */
     @DeleteMapping("")
     public ResponseEntity<?> deleteAllCommIntegrations(@PathVariable UUID projectId) {
-        commsService.deleteCommIntegration(projectId, null);
+        commsService.deleteCommsIntegration(projectId, null);
 
         return ResponseEntity.ok().build();
     }

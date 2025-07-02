@@ -4,6 +4,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -32,18 +34,22 @@ public class CommsThread extends Thread {
     @Autowired
     private CommsMessageConverter msgConverter;
 
+    private Logger logger = LoggerFactory.getLogger(CommsThread.class);
+
     /* 
      * Thread that pulls messages from external communication platforms and sends
      * these to the gen AI microservice every 24 hours
      */
     @Override
     public void run() {
-        System.out.println("Comms thread running!");
+        logger.info("Comms thread running!");
 
         while (true) {
             Instant before = Instant.now();
 
             List<ConnectionEntity> connections = commsService.getAllConnections();
+
+            logger.info("Pulling messages...");
 
             for (ConnectionEntity connection : connections) {
                 if (interrupted()) {
@@ -65,7 +71,9 @@ public class CommsThread extends Thread {
                     String messageJsonArray = msgConverter.convertListToJsonArray(
                         messages, connection.getProjectId(), connection.getPlatform());
 
-                    commsClient.sendMessageListToGenAi(messageJsonArray);
+                    // TODO: change this after integrating the gen AI microservice
+                    logger.info(messageJsonArray);
+                    //commsClient.sendMessageListToGenAi(messageJsonArray);
 
                     // Update last message ID
                     commsService.saveConnection(
@@ -81,9 +89,13 @@ public class CommsThread extends Thread {
 
             // Sleep until the next 24-hour cycle
             Duration timeSpent = Duration.between(after, before);
+            Duration timeToSleep = Duration.ofDays(1).minus(timeSpent).abs();
+
+            logger.info("Sleeping until " + Instant.now().plus(timeToSleep).toString() + "...");
+
             try {
                 // TODO: possibly allow custom waiting time instead of default 1 day
-                sleep(Duration.ofDays(1).minus(timeSpent).abs());
+                sleep(timeToSleep);
             } catch (InterruptedException e) {
                 return;
             }
@@ -101,7 +113,7 @@ public class CommsThread extends Thread {
 
     @PreDestroy
     public void stopCommsThreadOnDestroy() {
-        System.out.println("Comms thread stopping!");
+        logger.info("Comms thread stopping!");
         this.cancel();
     }
 }

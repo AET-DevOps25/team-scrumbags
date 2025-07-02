@@ -28,4 +28,8 @@ public class DiscordUser implements CommsPlatformUser {
     public Object getDetail(String key) {
         return this.details.get(key);
     }
+
+    public String getIdentifier() {
+        return this.username;
+    }
 }

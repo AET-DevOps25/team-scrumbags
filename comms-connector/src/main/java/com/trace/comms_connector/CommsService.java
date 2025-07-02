@@ -110,7 +110,7 @@ public class CommsService {
 
     // Delete communication integrations for a given project (optionally only in given platform)
     @Transactional
-    public void deleteCommIntegration(@NonNull UUID projectId, @Nullable Platform platform) {
+    public void deleteCommsIntegration(@NonNull UUID projectId, @Nullable Platform platform) {
         this.deleteConnections(projectId, platform);
         this.deleteUsersByProjectId(projectId, platform);
     }
@@ -131,7 +131,7 @@ public class CommsService {
         } else {
             throw new Exception("Platform not supported.");
         }
-        
+
         for (String channel : channelIdList) {
             var connection = this.saveConnection(projectId, channel, platform, null); 
             connections.add(connection);
