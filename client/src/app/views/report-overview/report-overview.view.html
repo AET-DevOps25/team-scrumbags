@@ -7,20 +7,24 @@
   >
     <mat-icon>arrow_back</mat-icon>
   </button>
-  <h2 class="text-xl font-semibold">Reports</h2>
+  <h2 class="text-xl font-semibold">
+    {{selectedReport() ? selectedReport()!.name : "Reports"}}
+  </h2>
 </div>
 
 <!-- switch between list and content -->
-@if (selectedReportId()){
-<app-report-content [reportId]="selectedReportId()!"></app-report-content>
-} @else {
-<app-report-list
-  (selectedReportId)="selectedReportId.set($event)"
-></app-report-list>
-}
+<div class="flex-1 overflow-y-auto">
+  @if (selectedReportId()){
+  <app-report-content [report]="selectedReport()!"></app-report-content>
+  } @else {
+  <app-report-list
+    (selectedReportId)="selectedReportId.set($event)"
+  ></app-report-list>
+  }
+</div>
 
 <!-- Always show the form below -->
-<div class="mt-4">
+<div>
   @if (!showForm()) {
   <button
     mat-mini-fab
@@ -84,12 +88,7 @@
         </mat-select>
       </mat-form-field>
     </div>
-    <button
-      mat-icon-button
-      color="primary"
-      type="submit"
-      aria-label="Send"
-    >
+    <button mat-icon-button color="primary" type="submit" aria-label="Send">
       <mat-icon>send</mat-icon>
     </button>
   </form>

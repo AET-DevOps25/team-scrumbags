@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"maps"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -166,12 +168,14 @@ func GenerateReport(c *gin.Context) {
 }
 
 type Message struct {
+	ID        uuid.UUID `json:"id"`
 	Timestamp time.Time `json:"timestamp"`
 	UserId    *string   `json:"userId"`
 	Content   string    `json:"content"`
+	Loading   bool      `json:"loading"`
 }
 
-var messageStorage = make(map[string][]Message)
+var messageStorage = make(map[string]map[uuid.UUID]Message)
 
 func messageKey(projectId string, userId string) string {
 	return fmt.Sprintf("%s:%s", projectId, userId)
@@ -196,7 +200,7 @@ func GetAllMessages(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, messages)
+	c.JSON(200, slices.Collect(maps.Values(messages)))
 }
 
 type IncomingMessageDTO struct {
@@ -222,6 +226,7 @@ func SendMessage(c *gin.Context) {
 		return
 	}
 	incomingMessage := Message{
+		ID:        uuid.New(),
 		Timestamp: time.Now(),
 		UserId:    &userId,
 		Content:   incomingMessageDTO.Message,
@@ -229,18 +234,25 @@ func SendMessage(c *gin.Context) {
 
 	key := messageKey(projectIdString, userId)
 	if _, ok := messageStorage[key]; !ok {
-		messageStorage[key] = []Message{}
+		messageStorage[key] = make(map[uuid.UUID]Message)
 	}
 
-	messageStorage[key] = append(messageStorage[key], incomingMessage)
+	messageStorage[key][incomingMessage.ID] = incomingMessage
 
-	outgoingMessageContent := GenerateRandomTextByLength(100)
 	outgoingMessage := Message{
+		ID:        uuid.New(),
 		Timestamp: time.Now(),
 		UserId:    nil, // No user ID for ai messages
-		Content:   outgoingMessageContent,
+		Content:   "",
+		Loading:   true,
 	}
-	messageStorage[key] = append(messageStorage[key], outgoingMessage)
+	messageStorage[key][outgoingMessage.ID] = outgoingMessage
+
+	// Simulate AI response generation
+	time.Sleep(2 * time.Second) // Simulate processing delay
+	outgoingMessage.Content = GenerateRandomTextByLength(100)
+	outgoingMessage.Loading = false
+	messageStorage[key][outgoingMessage.ID] = outgoingMessage
 
 	c.JSON(200, []Message{incomingMessage, outgoingMessage})
 }

@@ -3,7 +3,7 @@
   <mat-sidenav
     mode="side"
     [opened]="sidebarOpened()"
-    class="flex flex-col transition-all duration-300 !outline !outline-(--mat-sys-outline-variant) !w-70 !shadow-(--mat-sys-level2) !sidebar-shadow-offset"
+    class="flex flex-col !w-1/5 transition-all duration-300 !outline !outline-(--mat-sys-outline-variant) !shadow-(--mat-sys-level2) !sidebar-shadow-offset"
   >
     <mat-toolbar color="primary" class="flex justify-between items-center px-2">
       <button mat-icon-button (click)="openAddProjectDialog()" class="mr-1">
@@ -53,7 +53,7 @@
       <mat-icon>chevron_right</mat-icon>
     </button>
     }
-    <div class="container py-4 mx-auto {{sidebarOpened() ? 'px-8' : 'px-0'}}">
+    <div class="container p-4 mx-auto h-full">
       <router-outlet></router-outlet>
     </div>
   </mat-sidenav-content>

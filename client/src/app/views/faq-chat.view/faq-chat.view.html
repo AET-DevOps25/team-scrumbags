@@ -1,0 +1,52 @@
+<div class="flex flex-1 flex-col h-full justify-between">
+  <div class="flex-1 overflow-y-auto mb-4">
+    @if (messages().length > 0) { @for (msg of messages(); track msg.id) {
+    <div class="mb-2 flex {{ msg.userId ? 'justify-end' : 'justify-start' }}">
+      <div
+        class="rounded px-4 py-2 
+        bg-(--mat-sys-primary-container) text-(--mat-sys-on-primary-container) 
+        w-fit max-w-9/10
+        {{ msg.userId ? 'text-right' : 'text-left' }}"
+      >
+        <span class="text-xs ml-2">{{ msg.timestamp | date:'shortTime' }}</span>
+        <div class="mt-1 break-words">{{ msg.content }}</div>
+      </div>
+    </div>
+    } } @else if(!isLoading()) {
+    <div class="text-center text-(--mat-sys-on-surface-variant)">
+      No messages yet.
+    </div>
+    } @if (isLoading()) {
+    <div class="flex justify-center mt-2">
+      <mat-progress-spinner
+        diameter="24"
+        mode="indeterminate"
+        color="primary"
+      ></mat-progress-spinner>
+    </div>
+    }
+  </div>
+  <form class="flex gap-2 items-end" (ngSubmit)="sendMessage(inputMessage())">
+    <mat-form-field class="flex-1" appearance="outline">
+      <input
+        matInput
+        placeholder="Type your question..."
+        [disabled]="isLoading()"
+        [(ngModel)]="inputMessage"
+        name="messageInput"
+        required
+        autocomplete="off"
+      />
+      <button
+        mat-icon-button
+        matSuffix
+        color="primary"
+        type="submit"
+        [disabled]="isLoading() || !inputMessage().trim()"
+        aria-label="Send"
+      >
+        <mat-icon>send</mat-icon>
+      </button>
+    </mat-form-field>
+  </form>
+</div>

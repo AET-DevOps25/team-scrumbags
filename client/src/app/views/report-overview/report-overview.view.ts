@@ -36,6 +36,14 @@ export class ReportOverviewView {
   private reportService = inject(ReportService);
 
   selectedReportId = signal<string | undefined>(undefined);
+  selectedReport = computed(() => {
+    const project = this.projectService.selectedProject();
+    if (!project) {
+      return undefined;
+    }
+    
+    return project.reports.find((report => report.id === this.selectedReportId()));
+  });
 
   possibleUsers = computed(
     () => this.projectService.selectedProject()?.users ?? []

@@ -4,6 +4,7 @@ import {
   effect,
   inject,
   input,
+  signal,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { ProjectService } from '../../services/project.service';
@@ -22,10 +23,22 @@ export class MeetingNotesView {
   projectService = inject(ProjectService);
   meetingNotesService = inject(MeetingNotesService);
 
-  prelookCount = input<number | undefined>(undefined);
+  prelookInput = input<number | undefined>(undefined, {
+    alias: 'prelookCount',
+  });
+  prelookCount = signal<number | undefined>(undefined);
+  // flag thats true if 
+  displayMoreButton = computed(() => {
+    const notesMetadata =
+      this.projectService.selectedProject()?.meetingNotes ?? [];
+    const prelookInputValue = this.prelookInput();
+    return prelookInputValue ? notesMetadata.length > prelookInputValue : false;
+  });
+
   prelookMetadata = computed(() => {
     const end = this.prelookCount();
-    const notesMetadata = this.projectService.selectedProject()?.meetingNotes ?? [];
+    const notesMetadata =
+      this.projectService.selectedProject()?.meetingNotes ?? [];
     return end ? notesMetadata.slice(0, end) : notesMetadata;
   });
 
@@ -35,12 +48,17 @@ export class MeetingNotesView {
       if (projectId) {
         this.meetingNotesService.loadMeetingNotes(projectId).subscribe();
       }
+
+      this.prelookCount.set(this.prelookInput());
+      console.log(this.prelookInput());
     });
   }
 
   viewAllNotes() {
-    this.router.navigate([
-      `/projects/${this.projectService.selectedProjectId()}/meetings`,
-    ]);
+    this.prelookCount.set(undefined);
+  }
+
+  viewLess() {
+    this.prelookCount.set(this.prelookInput());
   }
 }

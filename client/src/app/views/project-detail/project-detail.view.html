@@ -1,18 +1,23 @@
-<div class="flex justify-between items-center align-center mb-8">
-  <h1 class="text-3xl font-bold">Project {{project()?.name ?? ""}}</h1>
-  <button mat-raised-button color="primary" (click)="navigateToSettings()">
-    <mat-icon>settings</mat-icon>
-    Settings
-  </button>
-</div>
-<div class="flex flex-row flex-wrap gap-4">
-  <div class="flex flex-1 flex-col gap-4 max-w-1/2">
-    <app-meeting-notes [prelookCount]="3"></app-meeting-notes>
-    <app-report-overview></app-report-overview>
+<div class="flex flex-col h-full gap-4">
+  <div class="flex justify-between items-center align-center">
+    <h1 class="text-3xl font-bold">Project {{project()?.name ?? ""}}</h1>
+    <button mat-raised-button color="primary" (click)="navigateToSettings()">
+      <mat-icon>settings</mat-icon>
+      Settings
+    </button>
   </div>
-  <span
-    class="flex-1 max-w-1/2 h-150 bg-(--mat-sys-secondary) text-(--mat-sys-on-secondary) flex items-center justify-center"
-  >
-    Chat placeholder
-  </span>
+  <div class="flex flex-row gap-4 justify-center h-full flex-1">
+    <div class="flex flex-1 max-w-1/2 h-full flex-col gap-4 self-start">
+      <app-meeting-notes
+        class="flex flex-col flex-1 h-1/2 p-4 outline !outline-(--mat-sys-outline-variant) rounded !shadow-(--mat-sys-level2)"
+        [prelookCount]="3"
+      ></app-meeting-notes>
+      <app-report-overview
+        class="flex flex-col flex-1 h-1/2 p-4 outline !outline-(--mat-sys-outline-variant) rounded !shadow-(--mat-sys-level2)"
+      ></app-report-overview>
+    </div>
+    <app-faq-chat
+      class="w-full max-w-1/2 p-4 outline !outline-(--mat-sys-outline-variant) rounded !shadow-(--mat-sys-level2) h-full"
+    ></app-faq-chat>
+  </div>
 </div>

@@ -3,6 +3,7 @@ import { Project } from '../models/project.model';
 import { User } from '../models/user.model';
 import { MeetingNote } from '../models/meeting-note.model';
 import { Report } from '../models/report.model';
+import { Message } from '../models/message.model';
 
 @Injectable({
   providedIn: 'root',
@@ -94,7 +95,26 @@ export class ProjectState {
     } else {
       reports.push(report);
     }
-    
+
     this.updateProject(id, { reports: reports });
+  }
+
+  setMessages(id: string, messages: Message[]) {
+    const messageMap = new Map(messages.map((msg) => [msg.id, msg]));
+    this.updateProject(id, { messages: messageMap });
+  }
+
+  addMessages(id: string, messages: Message[]) {
+    const project = this.allProjects().get(id);
+    if (!project) {
+      return;
+    }
+
+    const projectMessages = project.messages || new Map<string, Message>();
+    for (const message of messages) {
+      projectMessages.set(message.id, message);
+    }
+
+    this.updateProject(id, { messages: projectMessages });
   }
 }
