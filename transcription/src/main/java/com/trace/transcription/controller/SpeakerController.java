@@ -52,7 +52,7 @@ public class SpeakerController {
             @PathVariable("projectId") UUID projectId,
             @RequestParam("speakerIds") List<String> speakerIds,
             @RequestParam("speakerNames") List<String> speakerNames,
-            @RequestParam("speakingSamples") List<MultipartFile> speakingSamples) throws IOException {
+            @RequestParam("speakingSamples") List<MultipartFile> speakingSamples) {
 
         // list same size check
         int count = speakerIds.size();
