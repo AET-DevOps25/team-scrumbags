@@ -1,8 +1,9 @@
 package com.trace.transcription.service;
 
+import com.trace.transcription.dto.TranscriptInput;
 import com.trace.transcription.model.SpeakerEntity;
 import com.trace.transcription.model.TranscriptEntity;
-import com.trace.transcription.model.TranscriptSegment;
+import com.trace.transcription.dto.TranscriptSegment;
 import com.trace.transcription.repository.SpeakerRepository;
 import com.trace.transcription.repository.TranscriptRepository;
 import org.springframework.stereotype.Service;
@@ -21,17 +22,20 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.trace.transcription.controller.TranscriptController.logger;
 
 @Service
 public class TranscriptService {
 
-    private final TranscriptRepository repository;
+    private final TranscriptRepository transcriptRepository;
+    private final SpeakerRepository speakerRepository;
     private final ObjectMapper mapper;
 
-    public TranscriptService(TranscriptRepository repository, ObjectMapper mapper) {
-        this.repository = repository;
+    public TranscriptService(TranscriptRepository transcriptRepository, SpeakerRepository speakerRepository, ObjectMapper mapper) {
+        this.transcriptRepository = transcriptRepository;
+        this.speakerRepository = speakerRepository;
         this.mapper = mapper;
     }
 
@@ -51,10 +55,10 @@ public class TranscriptService {
                 .collect(Collectors.toList());
 
         TranscriptEntity entity = new TranscriptEntity(UUID.randomUUID(), segments, meta.project_id, meta.timestamp);
-        repository.save(entity);
+        transcriptRepository.save(entity);
     }
 
-    public String transcriptAsync(UUID projectId, MultipartFile file, SpeakerRepository speakerRepository, long timestamp) throws IOException, InterruptedException {
+    public String transcriptAsyncLocal(UUID projectId, MultipartFile file, long timestamp) throws IOException, InterruptedException {
         Path tempDir = Files.createTempDirectory("media-" + projectId + "_" + UUID.randomUUID() + "-");
         try {
             // Save incoming file
@@ -105,12 +109,22 @@ public class TranscriptService {
             logger.info("Read transcript from file: {}", resultPath);
             return transcriptJson;
         } finally {
-            // Cleanup
-            Files.walk(tempDir)
-                    .sorted(Comparator.reverseOrder())
-                    .map(Path::toFile)
-                    .forEach(File::delete);
-            logger.info("Cleaned up temp directory: {}", tempDir);
+            try (Stream<Path> walk = Files.walk(tempDir)) {
+                walk.sorted(Comparator.reverseOrder())
+                        .map(Path::toFile)
+                        .forEach(f -> {
+                            if (!f.delete()) {
+                                logger.warn("Failed to delete file: {}", f.getAbsolutePath());
+                            }
+                        });
+                logger.info("Cleaned up temp directory: {}", tempDir);
+            } catch (IOException e) {
+                logger.error("Failed to clean up temp directory: {}", tempDir, e);
+            }
         }
+    }
+
+    public List<TranscriptEntity> getAllTranscripts(UUID projectId) {
+        return transcriptRepository.findAllByProjectId(projectId);
     }
 }

@@ -1,4 +1,4 @@
-package com.trace.transcription.model;
+package com.trace.transcription.dto;
 
 import jakarta.persistence.Embeddable;
 
