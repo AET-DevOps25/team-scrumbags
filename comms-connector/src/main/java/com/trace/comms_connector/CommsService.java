@@ -147,7 +147,7 @@ public class CommsService {
         return connectionRepo.findAll();
     }
 
-    // Get the trace user ID for a user in the communication channel, user while creating
+    // Get the trace user ID for a user in the communication channel, used while creating
     // the JSON to send to the gen AI microservice
     public UUID getUserIdByProjectIdAndPlatformDetails(UUID projectId, Platform platform, String platformUserId) {
         return userRepo.findByProjectIdAndPlatformAndPlatformUserId(projectId, platform, platformUserId);

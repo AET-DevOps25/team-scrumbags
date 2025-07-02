@@ -15,6 +15,13 @@ public class CommsController {
     @Autowired
     private CommsService commsService;
 
+    /**
+     * Get the platform users for a given project ID and platform
+     * 
+     * @param projectId
+     * @param platform
+     * @return list of user entities
+     */
     @GetMapping("/{platform}/users")
     public ResponseEntity<?> getPlatformUsers(@PathVariable UUID projectId, @PathVariable Platform platform) {
         var userList = commsService.getUsersByProjectId(projectId, platform);
@@ -22,6 +29,14 @@ public class CommsController {
         return ResponseEntity.ok(userList);
     }
 
+    /**
+     * Add a comms integration, e.g. for Discord it adds every text channel in the server
+     * 
+     * @param projectId
+     * @param platform
+     * @param serverId
+     * @return list of newly added connections
+     */
     @PostMapping("/{platform}")
     public ResponseEntity<?> addCommsIntegration(
         @PathVariable UUID projectId,
@@ -40,6 +55,15 @@ public class CommsController {
         }
     }
 
+    /**
+     * Add a platform user, can be used to update the trace ID for a give platform user ID
+     * 
+     * @param projectId
+     * @param platform
+     * @param userId
+     * @param platformUserId
+     * @return new or updated user entity
+     */
     @PostMapping("/{platform}/users/")
     public ResponseEntity<?> addPlatformUser(
         @PathVariable UUID projectId,
@@ -56,6 +80,13 @@ public class CommsController {
         return ResponseEntity.ok(userEntity);
     }
 
+    /**
+     * Delete every comms integration on a given platform for a given project ID
+     * 
+     * @param projectId
+     * @param platform
+     * @return
+     */
     @DeleteMapping("/{platform}")
     public ResponseEntity<?> deleteAllCommIntegrations(@PathVariable UUID projectId, @PathVariable Platform platform) {
         commsService.deleteCommIntegration(projectId, platform);
@@ -63,7 +94,12 @@ public class CommsController {
         return ResponseEntity.ok().build();
     }
 
-
+    /**
+     * Delete every comms integration for the given project ID
+     * 
+     * @param projectId
+     * @return
+     */
     @DeleteMapping("")
     public ResponseEntity<?> deleteAllCommIntegrations(@PathVariable UUID projectId) {
         commsService.deleteCommIntegration(projectId, null);
