@@ -95,6 +95,7 @@ public class TranscriptService {
 
             int exitCode = proc.waitFor();
             if (exitCode != 0) {
+            //TODO CHANGE TO INTERNAL SERVER ERROR
                 throw new RuntimeException("Python exited with code " + exitCode + ". Check logs for details.");
             }
 
