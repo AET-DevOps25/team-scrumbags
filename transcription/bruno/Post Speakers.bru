@@ -1,0 +1,20 @@
+meta {
+  name: Post Speakers
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/projects/123e4567-e89b-12d3-a456-426614174000/speakers
+  body: multipartForm
+  auth: inherit
+}
+
+body:multipart-form {
+  speakingSamples: @file(/home/chernogop/Documents/GitHub/team-scrumbags/transcription/audio/sample-jeremy_1234.mp3)
+  speakingSamples: @file(/home/chernogop/Documents/GitHub/team-scrumbags/transcription/audio/sample-nataliya_1111.mp3)
+  speakerIds: spk1
+  speakerIds: spk2
+  speakerNames: Jeremy
+  speakerNames: Nataliya
+}
