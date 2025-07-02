@@ -29,7 +29,7 @@ public class CommsThread extends Thread {
     public void run() {
         System.out.println("Comms thread running!");
         
-        GenAiRestClient client = new GenAiRestClient();
+        CommsRestClient client = new CommsRestClient();
 
         while (true) {
             Instant before = Instant.now();
