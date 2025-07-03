@@ -5,21 +5,26 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatMenuModule } from '@angular/material/menu';
 import { ReportService } from '../../services/report.service';
 import { ProjectService } from '../../services/project.service';
 import { ReportListView } from './report-list/report-list.view';
 import { ReportContentView } from './report-content/report-content.view';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
+import { MatNativeDateModule, MatOptionModule } from '@angular/material/core';
+import { MatToolbarModule } from '@angular/material/toolbar';
 
 @Component({
   selector: 'app-report-overview',
   standalone: true,
   imports: [
+    MatToolbarModule,
     FormsModule,
     MatInputModule,
     MatFormFieldModule,
     ReactiveFormsModule,
+    MatMenuModule,
+    MatOptionModule,
     MatDatepickerModule,
     MatNativeDateModule,
     MatButtonModule,
@@ -41,14 +46,17 @@ export class ReportOverviewView {
     if (!project) {
       return undefined;
     }
-    
-    return project.reports.find((report => report.id === this.selectedReportId()));
+
+    return project.reports?.find(
+      (report) => report.id === this.selectedReportId()
+    );
   });
 
-  possibleUsers = computed(
-    () => this.projectService.selectedProject()?.users ?? []
-  );
-  showForm = signal(false);
+  possibleUsers = computed(() => {
+    const users = this.projectService.selectedProject()?.users ?? [];
+    console.log('Possible users:', users);
+    return users;
+  });
 
   // undefined for invalid date and null for empty date
   periodStart = signal<Date | null>(null);
@@ -60,8 +68,7 @@ export class ReportOverviewView {
   });
   userIds = signal<string[]>([]);
 
-  displayForm() {
-    this.showForm.set(true);
+  openMenu() {
     const projectId = this.projectService.selectedProjectId();
     if (!projectId) {
       return;
@@ -71,11 +78,9 @@ export class ReportOverviewView {
 
   onSubmit() {
     this.generateReport();
-    this.showForm.set(false);
   }
 
   onCancel() {
-    this.showForm.set(false);
     this.periodStart.set(null);
     this.periodEnd.set(null);
     this.userIds.set([]);

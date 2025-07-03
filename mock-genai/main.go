@@ -152,7 +152,7 @@ func GenerateReport(c *gin.Context) {
 		c.JSON(500, gin.H{"error": "Internal server error"})
 		return
 	}
-	content := GenerateRandomText()
+	content := GenerateRandomTextByLength(5000)
 
 	report := Report{
 		ID:          id,

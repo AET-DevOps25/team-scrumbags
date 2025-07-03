@@ -1,9 +1,12 @@
-<div class="flex flex-row flex-wrap gap-4 mb-4">
-  <span>Timeperiod</span>
-  <span>
-    {{ report().periodStart ? (report().periodStart | date:'dd.MM.yyyy') : '' }}
-    - {{ report().periodEnd ? (report().periodEnd | date:'dd.MM.yyyy') : '' }}
-  </span>
-</div>
+<div class="h-full flex flex-col">
+  <div class="flex flex-row flex-wrap gap-4 mb-4">
+    <span>Timeperiod</span>
+    <span>
+      {{ report().periodStart ? (report().periodStart | date:'dd.MM.yyyy') : ''
+      }} - {{ report().periodEnd ? (report().periodEnd | date:'dd.MM.yyyy') : ''
+      }}
+    </span>
+  </div>
 
-<span class="break-words">{{report().content}}</span>
+  <span class="break-words">{{report().content}}</span>
+</div>

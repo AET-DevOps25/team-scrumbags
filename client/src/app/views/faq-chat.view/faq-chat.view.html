@@ -1,5 +1,5 @@
-<div class="flex flex-1 flex-col h-full justify-between">
-  <div class="flex-1 overflow-y-auto mb-4">
+<div class="flex-1 flex flex-col h-full justify-between">
+  <div class="flex-1 flex flex-col gap-4 overflow-y-auto mb-4">
     @if (messages().length > 0) { @for (msg of messages(); track msg.id) {
     <div class="mb-2 flex {{ msg.userId ? 'justify-end' : 'justify-start' }}">
       <div
@@ -8,8 +8,8 @@
         w-fit max-w-9/10
         {{ msg.userId ? 'text-right' : 'text-left' }}"
       >
-        <span class="text-xs ml-2">{{ msg.timestamp | date:'shortTime' }}</span>
         <div class="mt-1 break-words">{{ msg.content }}</div>
+        <span class="text-xs">{{ msg.timestamp | date:'shortTime' }}</span>
       </div>
     </div>
     } } @else if(!isLoading()) {
