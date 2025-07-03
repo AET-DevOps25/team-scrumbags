@@ -3,8 +3,10 @@ import {
   computed,
   effect,
   inject,
-  OnInit,
   signal,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
 } from '@angular/core';
 import { Message } from '../../models/message.model';
 import { ProjectService } from '../../services/project.service';
@@ -33,7 +35,8 @@ import { MatIcon } from '@angular/material/icon';
   templateUrl: './faq-chat.view.html',
   styleUrl: './faq-chat.view.scss',
 })
-export class FaqChatView {
+export class FaqChatView implements AfterViewInit {
+  @ViewChild('scrollContainer') scrollContainer?: ElementRef<HTMLDivElement>;
   private projectService = inject(ProjectService);
   private chatService = inject(ChatService);
 
@@ -70,6 +73,25 @@ export class FaqChatView {
         this.isLoading.set(messages.at(messages.length - 1)?.loading ?? false);
       }
     });
+
+    // Auto-scroll effect
+    effect(() => {
+      const _ = this.messages();
+      setTimeout(() => {
+        this.scrollToBottom();
+      });
+    });
+  }
+
+  ngAfterViewInit() {
+    this.scrollToBottom();
+  }
+
+  private scrollToBottom() {
+    if (this.scrollContainer?.nativeElement) {
+      this.scrollContainer.nativeElement.scrollTop =
+        this.scrollContainer.nativeElement.scrollHeight;
+    }
   }
 
   sendMessage(content: string) {

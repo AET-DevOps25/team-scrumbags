@@ -1,5 +1,5 @@
-<div class="flex-1 flex flex-col h-full justify-between">
-  <div class="flex-1 flex flex-col gap-4 overflow-y-auto mb-4">
+<div class="h-full flex flex-col justify-between gap-4">
+  <div #scrollContainer class="flex-1 flex flex-col gap-4 overflow-y-auto">
     @if (messages().length > 0) { @for (msg of messages(); track msg.id) {
     <div class="mb-2 flex {{ msg.userId ? 'justify-end' : 'justify-start' }}">
       <div
@@ -17,7 +17,7 @@
       No messages yet.
     </div>
     } @if (isLoading()) {
-    <div class="flex justify-center mt-2">
+    <div class="flex justify-center">
       <mat-progress-spinner
         diameter="24"
         mode="indeterminate"
@@ -26,7 +26,10 @@
     </div>
     }
   </div>
-  <form class="flex gap-2 items-end" (ngSubmit)="sendMessage(inputMessage())">
+  <form
+    class="flex flex-row gap-2 items-end"
+    (ngSubmit)="sendMessage(inputMessage())"
+  >
     <mat-form-field class="flex-1" appearance="outline">
       <input
         matInput
@@ -37,16 +40,26 @@
         required
         autocomplete="off"
       />
+      @if(isLoading()) {
+      <mat-progress-spinner
+        matSuffix
+        diameter="24"
+        mode="indeterminate"
+        color="primary"
+        class="mx-2"
+      ></mat-progress-spinner>
+      } @else {
       <button
         mat-icon-button
         matSuffix
         color="primary"
         type="submit"
-        [disabled]="isLoading() || !inputMessage().trim()"
+        [disabled]="!inputMessage() || inputMessage().trim() === ''"
         aria-label="Send"
       >
         <mat-icon>send</mat-icon>
       </button>
+      }
     </mat-form-field>
   </form>
 </div>
