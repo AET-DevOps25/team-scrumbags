@@ -279,6 +279,7 @@ def transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_
             sys.exit(1)
 
     logger.info("Transcription completed successfully.")
+    print(f"\nTranscription result: {result}")
 
     # Extract utterances (segments) from transcript
     # Each utterance has start, end, speaker, text
@@ -299,7 +300,12 @@ def transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_
     segment_counter = 0
     print(speaker_ids)
     print(empty_speaker_ids)
+    print(f"Total segments: {len(segments)}")
+    print(segments)
     for speaker_id in empty_speaker_ids.keys():
+        print(f"Processing speaker ID: {speaker_id}")
+        print(f"Current segment counter: {segment_counter}")
+        print(f"Current segment: {segments[segment_counter]}")
         empty_speaker_ids[speaker_id] = segments[segment_counter]["speaker"]
         segments[segment_counter] = speaker_ids[speaker_id]
         segment_counter += 1
