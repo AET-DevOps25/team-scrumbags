@@ -3,7 +3,7 @@ services:
   app:
     build: .
     ports:
-      - "8000:8000"
+      - "4242:4242"
     depends_on:
       ollama:
         condition: service_healthy
@@ -32,12 +32,12 @@ services:
       - --host
       - 0.0.0.0
       - --port
-      - '8080'
+      - '6969'
       - --scheme
       - http
     image: cr.weaviate.io/semitechnologies/weaviate:1.31.2
     ports:
-      - "8080:8080"
+      - "6969:6969"
       - "50051:50051"
     volumes:
       - weaviate_data:/var/lib/weaviate
@@ -98,7 +98,7 @@ services:
       MYSQL_USER: ${MYSQL_USER:-user}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
     ports:
-      - "3306:3306"
+      - "6699:6699"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
