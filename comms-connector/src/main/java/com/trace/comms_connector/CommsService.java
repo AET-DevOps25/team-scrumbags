@@ -11,6 +11,7 @@ import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trace.comms_connector.connection.ConnectionEntity;
 import com.trace.comms_connector.connection.ConnectionRepo;
 import com.trace.comms_connector.discord.DiscordMessage;
@@ -18,7 +19,6 @@ import com.trace.comms_connector.discord.DiscordRestClient;
 import com.trace.comms_connector.user.UserCompositeKey;
 import com.trace.comms_connector.user.UserEntity;
 import com.trace.comms_connector.user.UserRepo;
-import com.trace.comms_connector.util.CommsMessageConverter;
 
 import lombok.NoArgsConstructor;
 
@@ -36,9 +36,6 @@ public class CommsService {
 
     @Autowired
     private CommsRestClient commsClient;
-    
-    @Autowired
-    private CommsMessageConverter msgConverter;
 
     // Save connection to the connection database
     @Transactional
@@ -172,8 +169,21 @@ public class CommsService {
             projectId);
 
         if (!messages.isEmpty() && messages != null) {
-            String messageJsonArray = msgConverter.convertListToJsonArray(
-                messages, projectId, platform);
+            List<String> jsonMessages = messages.stream()
+                .map(msg -> {
+                    UUID userId = getUserIdByProjectIdAndPlatformDetails(
+                        projectId, platform, msg.getAuthor().getIdentifier());
+                    return msg.getJsonString(userId, projectId);
+                })
+                .toList();
+
+            String messageJsonArray = "";
+            
+            // Convert to a single string of a JSON array
+            ObjectMapper mapper = new ObjectMapper();
+            try {
+                messageJsonArray = mapper.writeValueAsString(jsonMessages);
+            } catch (Exception e) {}
 
             commsClient.sendMessageListToGenAi(messageJsonArray);
 
