@@ -12,6 +12,9 @@ services:
       - RABBITMQ_URL=${RABBITMQ_URL:-amqp://guest:guest@rabbitmq/}
     volumes:
       - .:/app
+    networks:
+      - default
+      - trace-network
 
   rabbitmq:
     image: rabbitmq:management
@@ -116,3 +119,8 @@ volumes:
     driver: local
   ollama:
   genai_db_data:
+
+
+networks:
+  trace-network:
+    external: true
