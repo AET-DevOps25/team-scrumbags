@@ -37,9 +37,7 @@ export class MeetingNotesView {
   meetingNotesService = inject(MeetingNotesService);
   private dialog = inject(MatDialog);
 
-  prelookInput = input<number | undefined>(undefined, {
-    alias: 'prelookCount',
-  });
+  prelookInput = input<number | undefined>(undefined);
   prelookCount = signal<number | undefined>(undefined);
   // flag thats true if
   displayMoreButton = computed(() => {

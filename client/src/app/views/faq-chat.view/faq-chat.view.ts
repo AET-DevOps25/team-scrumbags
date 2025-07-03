@@ -76,7 +76,7 @@ export class FaqChatView implements AfterViewInit {
 
     // Auto-scroll effect
     effect(() => {
-      const _ = this.messages();
+      this.messages();
       setTimeout(() => {
         this.scrollToBottom();
       });

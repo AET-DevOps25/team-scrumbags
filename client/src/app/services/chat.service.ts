@@ -1,8 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable, tap } from 'rxjs';
-import { MeetingNote } from '../models/meeting-note.model';
 import { ProjectState } from '../states/project.state';
-import { ReportApi } from './report.api';
 import { ChatApi } from './chat.api';
 import { Message } from '../models/message.model';
 
