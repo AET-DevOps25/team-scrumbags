@@ -1,7 +1,10 @@
 package com.trace.transcription.model;
 
 import com.trace.transcription.dto.TranscriptSegment;
+import org.hibernate.annotations.GenericGenerator;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.UuidGenerator;
 
 import java.util.Date;
 import java.util.List;
@@ -12,8 +15,10 @@ import java.util.UUID;
 public class TranscriptEntity {
 
     @Id
-    @GeneratedValue
-    private UUID id;
+    @GeneratedValue                         // ← use the default generator
+    @UuidGenerator                         // ← Hibernate’s built‑in UUID generator
+    @Column(columnDefinition = "BINARY(16)")
+    private UUID id;;
 
     @ElementCollection
     @CollectionTable(name = "transcript_segments", joinColumns = @JoinColumn(name = "transcript_id"))

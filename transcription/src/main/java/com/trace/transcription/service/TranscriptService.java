@@ -48,16 +48,16 @@ public class TranscriptService {
                         input.content.text,
                         input.content.start,
                         input.content.end,
-                        input.content.speaker_id,
-                        input.content.speaker
+                        input.content.speaker,
+                        input.content.speaker_id
                 ))
                 .collect(Collectors.toList());
 
-        TranscriptEntity entity = new TranscriptEntity(UUID.randomUUID(), segments, meta.project_id, meta.timestamp);
+        TranscriptEntity entity = new TranscriptEntity(null, segments, meta.project_id, meta.timestamp);
         transcriptRepository.save(entity);
     }
 
-    public String transcriptAsyncLocal(UUID projectId, MultipartFile file, long timestamp) throws IOException, InterruptedException {
+    public String transcriptAsync(UUID projectId, MultipartFile file, long timestamp) throws IOException, InterruptedException {
         Path tempDir = Files.createTempDirectory("media-" + projectId + "_" + UUID.randomUUID() + "-");
         try {
             // Save incoming file
@@ -69,12 +69,16 @@ public class TranscriptService {
 
             // Dump speaker samples
             List<SpeakerEntity> speakers = speakerRepository.findAllByProjectId(projectId);
-            for (SpeakerEntity speaker : speakers) {
-                byte[] audio = speaker.getSpeakingSample();
-                String ext = speaker.getSampleExtension();
-                if (audio != null && audio.length > 0) {
-                    Path spath = tempDir.resolve("sample-" + speaker.getName() + "_" + speaker.getId() + "." + ext);
-                    Files.write(spath, audio, StandardOpenOption.CREATE);
+            if (speakers.isEmpty()) {
+                logger.warn("No speakers found for project {}", projectId);
+            } else {
+                for (SpeakerEntity speaker : speakers) {
+                    byte[] audio = speaker.getSpeakingSample();
+                    String ext = speaker.getSampleExtension();
+                    if (audio != null && audio.length > 0) {
+                        Path spath = tempDir.resolve("sample-" + speaker.getName() + "_" + speaker.getId() + "." + ext);
+                        Files.write(spath, audio, StandardOpenOption.CREATE);
+                    }
                 }
             }
 
@@ -95,8 +99,8 @@ public class TranscriptService {
 
             int exitCode = proc.waitFor();
             if (exitCode != 0) {
-            //TODO CHANGE TO INTERNAL SERVER ERROR
-                throw new RuntimeException("Python exited with code " + exitCode + ". Check logs for details.");
+            // INTERNAL SERVER ERROR
+                throw new RuntimeException("Transcription process failed with exit code: " + exitCode);
             }
 
             // Read JSON output from file

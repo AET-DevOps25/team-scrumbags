@@ -2,6 +2,7 @@ package com.trace.transcription.controller;
 
 import com.trace.transcription.model.SpeakerEntity;
 import com.trace.transcription.service.SpeakerService;
+import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -13,6 +14,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
+@RestController
 public class SpeakerController {
 
     public static final Logger logger = LoggerFactory.getLogger(SpeakerController.class);
@@ -114,13 +116,11 @@ public class SpeakerController {
     /**
      * GET /{projectId}/samples
      * <p>
-     * Returns a list of all samples (speaker IDs with their sample extensions) for the given project.
+     * Streams back a zip with all samples (speaker IDs with their sample extensions) for the given project.
      */
     @GetMapping("projects/{projectId}/samples")
-    public ResponseEntity<List<String>> getAllSamples(
-            @PathVariable("projectId") UUID projectId) {
-
-        return ResponseEntity.ok(speakerService.getAllSamples(projectId));
+    public void streamAllSamples(@PathVariable("projectId") UUID projectId, HttpServletResponse response) {
+        speakerService.streamAllSamples(projectId, response);
     }
 
 
