@@ -1,11 +1,11 @@
-from typing import Dict, Any
+from typing import Dict, Any, Union
 
 from pydantic import BaseModel, UUID4
 
 
 class Metadata(BaseModel):
     type: str
-    user: UUID4
+    user: Union[UUID4, None]
     timestamp: int  # UNIX time
     projectId: UUID4
 
