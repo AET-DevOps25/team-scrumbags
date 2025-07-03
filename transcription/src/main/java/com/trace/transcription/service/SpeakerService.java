@@ -8,8 +8,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -45,6 +47,28 @@ public class SpeakerService {
                 String speakerId   = speakerIds.get(i);
                 String speakerName = speakerNames.get(i);
                 MultipartFile file = speakingSamples.get(i);
+
+                File tmp = File.createTempFile("durationcheck-", file.getOriginalFilename());
+
+                try (InputStream in = file.getInputStream()) {
+                    Files.copy(in, tmp.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                }
+
+                Duration d = getDurationWithFFprobe(tmp);
+
+                //check if duration is more than 15 seconds
+                if (d.isZero() || d.toMillis() < 15000) {
+                    //todo return proper error response
+                    logger.warn("Speaker {} has zero duration, skipping", speakerId);
+                    continue; // Skip speakers with zero duration
+                }
+
+                boolean deleted = tmp.delete();
+
+                if (!deleted) {
+                    logger.warn("Temporary file {} could not be deleted", tmp.getAbsolutePath());
+                }
+
                 String extension = FilenameUtils.getExtension(file.getOriginalFilename());
 
                 // create and set entity
@@ -149,5 +173,24 @@ public class SpeakerService {
             logger.error("Error creating ZIP file for project {}: {}", projectId, e.getMessage(), e);
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    public Duration getDurationWithFFprobe(File file) throws IOException, InterruptedException {
+        ProcessBuilder pb = new ProcessBuilder(
+                "ffprobe", "-v", "error",
+                "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1",
+                file.getAbsolutePath()
+        );
+        Process p = pb.start();
+        try (BufferedReader out = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
+            String line = out.readLine();
+            p.waitFor();
+            if (line != null) {
+                double seconds = Double.parseDouble(line.trim());
+                return Duration.ofMillis((long)(seconds * 1000));
+            }
+        }
+        return Duration.ZERO;
     }
 }
