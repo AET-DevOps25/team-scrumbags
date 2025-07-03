@@ -1,0 +1,21 @@
+meta {
+  name: Get all messages from Discord channel
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/projects/:projectId/comms/:platform/messages?channelId
+  body: none
+  auth: inherit
+}
+
+params:query {
+  channelId: 
+  ~lastMessageId: 
+}
+
+params:path {
+  projectId: 52db9da6-0c9e-4528-babb-c85eb6e7f27d
+  platform: DISCORD
+}
