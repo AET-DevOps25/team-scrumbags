@@ -5,7 +5,7 @@ services:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - MYSQL_DATABASE=${MYSQL_DATABASE}
     ports:
-      - "4270:3306"
+      - "4567:3306"
     volumes:
       - db_data:/var/lib/mysql/
     healthcheck:
@@ -19,7 +19,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "6666:8080"
     depends_on:
       - db
     env_file:

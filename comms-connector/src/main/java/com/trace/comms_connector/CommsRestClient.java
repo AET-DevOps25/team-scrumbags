@@ -33,11 +33,10 @@ public final class CommsRestClient {
      * @return reponse entity
      */
     public ResponseEntity<?> sendMessageListToGenAi(String messageJsons) {
-        // TODO: Adjust the path and other stuff based on the endpoint in the gen AI service
         return getGenAiClient()
             .post()
             .uri(uriBuilder -> uriBuilder
-                .path("/")
+                .path("/content")
                 .build())
             .contentType(MediaType.APPLICATION_JSON)
             .body(messageJsons)
