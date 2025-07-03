@@ -13,6 +13,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - default
+      - trace-network
 
   comms-connector:
     build:
@@ -27,3 +30,7 @@ services:
 
 volumes:
   comms_db_data:
+
+networks:
+  trace-network:
+    external: true
