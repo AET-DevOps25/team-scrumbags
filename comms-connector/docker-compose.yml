@@ -13,9 +13,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - default
-      - trace-network
 
   comms-connector:
     build:
@@ -27,6 +24,9 @@ services:
       - comms-db
     env_file:
       - .env
+    networks:
+      - default
+      - trace-network
 
 volumes:
   comms_db_data:
