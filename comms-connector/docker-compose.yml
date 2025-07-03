@@ -1,5 +1,5 @@
 services:
-  db:
+  comms-db:
     image: mysql:latest
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
@@ -7,7 +7,7 @@ services:
     ports:
       - "4567:3306"
     volumes:
-      - db_data:/var/lib/mysql/
+      - comms_db_data:/var/lib/mysql/
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
       interval: 10s
@@ -21,9 +21,9 @@ services:
     ports:
       - "6666:8080"
     depends_on:
-      - db
+      - comms-db
     env_file:
       - .env
 
 volumes:
-  db_data:
+  comms_db_data:
