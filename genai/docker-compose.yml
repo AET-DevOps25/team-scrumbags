@@ -90,7 +90,7 @@ services:
 
   mysql:
     image: mysql:8.0
-    container_name: mysql
+    container_name: genai-db
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-password}
@@ -100,7 +100,7 @@ services:
     ports:
       - "6699:6699"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - genai_db_data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 30s
@@ -115,4 +115,4 @@ volumes:
   rabbitmq-log:
     driver: local
   ollama:
-  mysql_data:
+  genai_db_data:

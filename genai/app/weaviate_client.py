@@ -10,7 +10,7 @@ from app.models import ContentEntry
 # Init v4 client
 client = weaviate.connect_to_local(
     host="weaviate",  # Use a string to specify the host
-    port=8080,
+    port=6969,
     grpc_port=50051,
 )
 COLLECTION_NAME = "ProjectContent"
