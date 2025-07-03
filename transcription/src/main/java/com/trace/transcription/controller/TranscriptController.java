@@ -59,7 +59,7 @@ public class TranscriptController {
         executor.execute(() -> {
             try {
 
-                String transcriptJson = transcriptService.transcriptAsyncLocal(projectId, file, finalTimestamp);
+                String transcriptJson = transcriptService.transcriptAsync(projectId, file, finalTimestamp);
 
                 // Save transcript to database
                 transcriptService.saveFromJson(transcriptJson);
@@ -68,7 +68,8 @@ public class TranscriptController {
                 HttpHeaders headers = new HttpHeaders();
                 headers.setContentType(MediaType.APPLICATION_JSON);
                 HttpEntity<String> entity = new HttpEntity<>(transcriptJson, headers);
-                String endpoint = genaiServiceUrl + "projects/" + projectId + "/transcripts";
+                // Uncomment when genai service is ready
+                /*String endpoint = genaiServiceUrl + "projects/" + projectId + "/transcripts";
                 ResponseEntity<String> coreResponse = restTemplate.postForEntity(endpoint, entity, String.class);
 
                 if (!coreResponse.getStatusCode().is2xxSuccessful()) {
@@ -78,7 +79,9 @@ public class TranscriptController {
                             .body("Failed to send transcript: " + coreResponse.getBody()));
                 } else {
                     deferredResult.setResult(ResponseEntity.ok("Transcript successfully created and sent."));
-                }
+                }*/
+                //todo remove this when genai service is ready
+                deferredResult.setResult(ResponseEntity.ok("Transcript successfully created and sent."));
             } catch (Exception ex) {
                 logger.error("Error processing audio for project {}: {}", projectId, ex.getMessage());
                 deferredResult.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

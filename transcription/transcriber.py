@@ -1,4 +1,3 @@
-import whisperx
 import sys
 import argparse
 import os
@@ -113,108 +112,108 @@ def transcribe_local_whisperx(merged, offset, silence_gap, empty_speaker_ids, sp
     # --- LOAD MODEL ---
     print("Loading WhisperX...")
     model_dir = "whisper_model/"
-    model = whisperx.load_model("turbo", device, compute_type=compute_type, download_root=model_dir)
+    #model = whisperx.load_model("turbo", device, compute_type=compute_type, download_root=model_dir)
 
     # --- PROCESS FILE ---
     print(f"Transcribing {merged}...")
-    result = model.transcribe(merged, batch_size=batch_size)
-    model_a, metadata = whisperx.load_align_model(language_code=result["language"], device=device)
-    result = whisperx.align(result["segments"], model_a, metadata, merged, device)
+    #result = model.transcribe(merged, batch_size=batch_size)
+    #model_a, metadata = whisperx.load_align_model(language_code=result["language"], device=device)
+    #result = whisperx.align(result["segments"], model_a, metadata, merged, device)
 
     # --- PRINT TRANSCRIPTION ---
     print(f"\nTranscription for {merged}:")
-    for segment in result["segments"]:
-        print(f"{segment['start']:.2f} - {segment['end']:.2f}: {segment['text']}")
+    #for segment in result["segments"]:
+        #print(f"{segment['start']:.2f} - {segment['end']:.2f}: {segment['text']}")
 
     print(f"Diarizing {merged}...")
-    diarize_model = whisperx.diarize.DiarizationPipeline(use_auth_token=HF_TOKEN, device=device)
-    diarize_segments = diarize_model(merged)
-    result = whisperx.assign_word_speakers(diarize_segments, result)
+    #diarize_model = whisperx.diarize.DiarizationPipeline(use_auth_token=HF_TOKEN, device=device)
+    #diarize_segments = diarize_model(merged)
+    #result = whisperx.assign_word_speakers(diarize_segments, result)
 
     # --- CONFIGURE DIARIZATION ---
     speaker_counter = 0
     segment_counter = 0
     segment_index_counter = 0
-    for actual_id in empty_speaker_ids.keys():
-        current_speaker = result["segments"][segment_counter].get("speaker", None)
-        for segment in result["segments"][segment_counter:]:
-            segment["index"] = segment_index_counter
-            segment_index_counter += 1
-            if segment.get("speaker") == current_speaker:
-                empty_speaker_ids[actual_id] = current_speaker
-                segment["speaker_id"] = actual_id
-                segment["speaker"] = speaker_ids[actual_id]
-            elif segment.get("speaker") is None:
-                segment["speaker_id"] = "Unknown ID"
-                segment["speaker"] = "Unknown Speaker"
-            else:
-                segment_counter = result["segments"].index(segment)
-                break
+    # for actual_id in empty_speaker_ids.keys():
+    #     current_speaker = result["segments"][segment_counter].get("speaker", None)
+    #     for segment in result["segments"][segment_counter:]:
+    #         segment["index"] = segment_index_counter
+    #         segment_index_counter += 1
+    #         if segment.get("speaker") == current_speaker:
+    #             empty_speaker_ids[actual_id] = current_speaker
+    #             segment["speaker_id"] = actual_id
+    #             segment["speaker"] = speaker_ids[actual_id]
+    #         elif segment.get("speaker") is None:
+    #             segment["speaker_id"] = "Unknown ID"
+    #             segment["speaker"] = "Unknown Speaker"
+    #         else:
+    #             segment_counter = result["segments"].index(segment)
+    #             break
+    #
+    # for segment in result["segments"][segment_counter:]:
+    #     segment["index"] = segment_index_counter
+    #     segment_index_counter += 1
+    #     if segment.get("speaker") is None:
+    #         segment["speaker_id"] = "Unknown ID"
+    #         segment["speaker"] = "Unknown Speaker"
+    #         continue
+    #     key = next((k for k, v in empty_speaker_ids.items() if v == segment["speaker"]), None)
+    #     if key is not None:
+    #         segment["speaker_id"] = key
+    #         segment["speaker"] = speaker_ids.get(segment["speaker_id"], "Unknown Speaker")
+    #     else:
+    #         segment["speaker_id"] = "Unknown ID"
+    #         segment["speaker"] = "Unknown Speaker"
+    #
+    # # --- PRINT DIARIZATION ---
+    # print("\nSpeaker assignment results:")
+    # print("Speaker\tStart\tEnd\tText")
+    # for segment in result["segments"]:
+    #     print(
+    #         f"{segment['speaker']}\t{segment['speaker_id']}\t{segment['start']:.2f}\t{segment['end']:.2f}\t{segment['text']}")
+    #
+    # # --- FILTER & REBASE ---
+    # real_segments = []
+    # index = 0
+    # for seg in result["segments"]:
+    #     if seg["start"] >= offset:
+    #         rebased = seg.copy()
+    #         rebased["index"] = index
+    #         rebased["start"] -= max(0, offset - (int(silence_gap / 2)))
+    #         rebased["end"] -= max(0, offset - (int(silence_gap / 2)))
+    #         real_segments.append(rebased)
+    #         index += 1
 
-    for segment in result["segments"][segment_counter:]:
-        segment["index"] = segment_index_counter
-        segment_index_counter += 1
-        if segment.get("speaker") is None:
-            segment["speaker_id"] = "Unknown ID"
-            segment["speaker"] = "Unknown Speaker"
-            continue
-        key = next((k for k, v in empty_speaker_ids.items() if v == segment["speaker"]), None)
-        if key is not None:
-            segment["speaker_id"] = key
-            segment["speaker"] = speaker_ids.get(segment["speaker_id"], "Unknown Speaker")
-        else:
-            segment["speaker_id"] = "Unknown ID"
-            segment["speaker"] = "Unknown Speaker"
-
-    # --- PRINT DIARIZATION ---
-    print("\nSpeaker assignment results:")
-    print("Speaker\tStart\tEnd\tText")
-    for segment in result["segments"]:
-        print(
-            f"{segment['speaker']}\t{segment['speaker_id']}\t{segment['start']:.2f}\t{segment['end']:.2f}\t{segment['text']}")
-
-    # --- FILTER & REBASE ---
-    real_segments = []
-    index = 0
-    for seg in result["segments"]:
-        if seg["start"] >= offset:
-            rebased = seg.copy()
-            rebased["index"] = index
-            rebased["start"] -= max(0, offset - (int(silence_gap / 2)))
-            rebased["end"] -= max(0, offset - (int(silence_gap / 2)))
-            real_segments.append(rebased)
-            index += 1
-
-    # create result json structure with each segment containing speaker, start, end, and text
-    result_json = []
-    for segment in real_segments:
-        result_json.append({
-            "metadata": {
-                "type": "transcription",
-                "user": segment["speaker_id"],
-                "timestamp": args.timestamp,
-                "project_id": project_id
-            },
-            "content": {
-                "index": segment["index"],
-                "start": segment["start"],
-                "end": segment["end"],
-                "text": segment["text"],
-                "speaker": segment["speaker"],
-                "speaker_id": segment["speaker_id"]
-            }
-        })
-
-    print(result_json)
-
-    # save result to json file
-    output_json = f"{args.directory}/transcription_result.json"
-    try:
-        with open(output_json, "w", encoding="utf-8") as f:
-            json.dump(result_json, f, ensure_ascii=False, indent=2)
-        print(f"\nTranscription and diarization results saved to: {output_json}")
-    except Exception as e:
-        print(f"Error saving result to JSON: {e}")
+    # # create result json structure with each segment containing speaker, start, end, and text
+    # result_json = []
+    # for segment in real_segments:
+    #     result_json.append({
+    #         "metadata": {
+    #             "type": "transcription",
+    #             "user": segment["speaker_id"],
+    #             "timestamp": args.timestamp,
+    #             "project_id": project_id
+    #         },
+    #         "content": {
+    #             "index": segment["index"],
+    #             "start": segment["start"],
+    #             "end": segment["end"],
+    #             "text": segment["text"],
+    #             "speaker": segment["speaker"],
+    #             "speaker_id": segment["speaker_id"]
+    #         }
+    #     })
+    #
+    # print(result_json)
+    #
+    # # save result to json file
+    # output_json = f"{args.directory}/transcription_result.json"
+    # try:
+    #     with open(output_json, "w", encoding="utf-8") as f:
+    #         json.dump(result_json, f, ensure_ascii=False, indent=2)
+    #     print(f"\nTranscription and diarization results saved to: {output_json}")
+    # except Exception as e:
+    #     print(f"Error saving result to JSON: {e}")
 
 def transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_id):
     # Upload file to AssemblyAI
@@ -298,6 +297,8 @@ def transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_
     # --- CONFIGURE DIARIZATION ---
 
     segment_counter = 0
+    print(speaker_ids)
+    print(empty_speaker_ids)
     for speaker_id in empty_speaker_ids.keys():
         empty_speaker_ids[speaker_id] = segments[segment_counter]["speaker"]
         segments[segment_counter] = speaker_ids[speaker_id]
@@ -397,7 +398,10 @@ if __name__ == "__main__":
         print("No match for project id found.")
 
     merged = f"{args.directory}/merged.wav"
-    offset, silence_gap = convert_and_merge(inputs, merged, args.directory)
+    if USE_CLOUD:
+        offset, silence_gap = convert_and_merge(inputs, merged, args.directory, use_file_separator=False, silence_gap=5)
+    else:
+        offset, silence_gap = convert_and_merge(inputs, merged, args.directory, use_file_separator=True, silence_gap=10)
 
     if USE_CLOUD:
         transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_id)
