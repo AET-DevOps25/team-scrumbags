@@ -251,6 +251,7 @@ func SendMessage(c *gin.Context) {
 	// Simulate AI response generation
 	time.Sleep(2 * time.Second) // Simulate processing delay
 	outgoingMessage.Content = GenerateRandomTextByLength(100)
+	outgoingMessage.Timestamp = time.Now()
 	outgoingMessage.Loading = false
 	messageStorage[key][outgoingMessage.ID] = outgoingMessage
 
