@@ -64,7 +64,6 @@ export class MeetingNotesView {
       }
 
       this.prelookCount.set(this.prelookInput());
-      console.log(this.prelookInput());
     });
   }
 

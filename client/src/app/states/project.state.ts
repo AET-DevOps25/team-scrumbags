@@ -79,7 +79,9 @@ export class ProjectState {
   }
 
   setReports(id: string, reports: Report[]) {
-    this.updateProject(id, { reports: reports });
+    const reportMap = new Map(reports.map((report) => [report.id, report]));
+
+    this.updateProject(id, { reports: reportMap });
   }
 
   updateReport(id: string, report: Report) {
@@ -88,13 +90,8 @@ export class ProjectState {
       return;
     }
 
-    const reports = project.reports || [];
-    const existingReportIndex = reports.findIndex((r) => r.id === report.id);
-    if (existingReportIndex !== -1) {
-      reports[existingReportIndex] = report;
-    } else {
-      reports.push(report);
-    }
+    const reports = project.reports || new Map<string, Report>();
+    reports.set(report.id, report);
 
     this.updateProject(id, { reports: reports });
   }

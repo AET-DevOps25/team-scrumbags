@@ -43,18 +43,16 @@ export class ReportOverviewView {
   selectedReportId = signal<string | undefined>(undefined);
   selectedReport = computed(() => {
     const project = this.projectService.selectedProject();
-    if (!project) {
+    const reportId = this.selectedReportId();
+    if (!project || !reportId) {
       return undefined;
     }
 
-    return project.reports?.find(
-      (report) => report.id === this.selectedReportId()
-    );
+    return project.reports?.get(reportId) ?? undefined;
   });
 
   possibleUsers = computed(() => {
     const users = this.projectService.selectedProject()?.users ?? [];
-    console.log('Possible users:', users);
     return users;
   });
 

@@ -27,12 +27,14 @@ export class ReportContentView {
   report = input.required<Report>();
 
   isLoading = signal(false);
+  private lastReportId: string | undefined = undefined
 
   constructor() {
     effect(() => {
       const projectId = this.projectService.selectedProjectId();
       const reportId = this.report().id;
-      if (projectId && reportId) {
+      if (projectId && reportId && reportId !== this.lastReportId) {
+        this.lastReportId = reportId;
         this.loadContent(projectId, reportId);
       }
     });

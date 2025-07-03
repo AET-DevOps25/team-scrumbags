@@ -11,6 +11,6 @@ export interface Project {
 
   users: User[];
   meetingNotes: MeetingNote[];
-  reports: Report[];
+  reports: Map<string, Report>;
   messages: Map<string, Message>;
 }
