@@ -44,9 +44,9 @@ def find_speakers_and_inputs(directory):
     input_media.append(to_be_transcribed)
     return empty_ids, ids, input_media
 
-def convert_to_wav(input_file, output_wav):
+def cut_and_convert_to_wav(input_file, output_wav):
     """Convert any audio/video file to WAV using FFmpeg."""
-    subprocess.run(["ffmpeg", "-y", "-i", input_file, output_wav], check=True)
+    subprocess.run(["ffmpeg", "-y", "-i", input_file, "-t", "30", output_wav], check=True)
 
 def merge_wav_files(wav_paths, output_path):
     """Merge a list of WAV files sequentially into one."""
@@ -66,7 +66,7 @@ def convert_and_merge(inputs, output, directory, use_file_separator=True, silenc
     sample_wavs = []
     for idx, inp in enumerate(sample_inputs):
         out = os.path.join(directory, f"tmp_sample_{idx}.wav")
-        convert_to_wav(inp, out)
+        cut_and_convert_to_wav(inp, out)
         sample_wavs.append(out)
 
     if use_file_separator:
@@ -74,7 +74,7 @@ def convert_and_merge(inputs, output, directory, use_file_separator=True, silenc
 
     # Convert real input
     real_wav = os.path.join(directory, "tmp_real.wav")
-    convert_to_wav(real_input, real_wav)
+    cut_and_convert_to_wav(real_input, real_wav)
 
     # Calculate total sample duration
     sample_duration = sum(AudioSegment.from_wav(w).duration_seconds for w in sample_wavs)
@@ -302,41 +302,51 @@ def transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_
     print(empty_speaker_ids)
     print(f"Total segments: {len(segments)}")
     print(segments)
-    for speaker_id in empty_speaker_ids.keys():
-        print(f"Processing speaker ID: {speaker_id}")
-        print(f"Current segment counter: {segment_counter}")
-        print(f"Current segment: {segments[segment_counter]}")
-        empty_speaker_ids[speaker_id] = segments[segment_counter]["speaker"]
-        segments[segment_counter] = speaker_ids[speaker_id]
-        segment_counter += 1
 
-    print(f"Empty speaker IDs: {empty_speaker_ids}")
-    print(f"Speaker IDs: {speaker_ids}")
+    if len(segments) < len(empty_speaker_ids):
+        logger.warning("Not enough segments for the number of speakers. Assigning unknown speakers and ids.")
+        # Assign unknown speaker IDs to segments
+        for i in range(len(segments)):
+            segments[i]["speaker_id"] = "Unknown ID"
+            segments[i]["speaker"] = "Unknown Speaker"
 
-    real_segments = segments[len(empty_speaker_ids):]
+        real_segments = segments
+    else:
+        for speaker_id in empty_speaker_ids.keys():
+            print(f"Processing speaker ID: {speaker_id}")
+            print(f"Current segment counter: {segment_counter}")
+            print(f"Current segment: {segments[segment_counter]}")
+            empty_speaker_ids[speaker_id] = segments[segment_counter]["speaker"]
+            segments[segment_counter] = speaker_ids[speaker_id]
+            segment_counter += 1
 
-    index_counter = 0
-    first=True
-    start_offset = 0
-    for segment in real_segments:
-        if segment.get("speaker") is None:
-            segment["speaker_id"] = "Unknown ID"
-            segment["speaker"] = "Unknown Speaker"
-            continue
-        segment["index"] = index_counter
-        if first:
-            start_offset = segment["start"]
-            first = False
-        segment["start"] -= start_offset
-        segment["end"] -= start_offset
-        key = next((k for k, v in empty_speaker_ids.items() if v == segment["speaker"]), None)
-        if key is not None:
-            segment["speaker_id"] = key
-            segment["speaker"] = speaker_ids.get(segment["speaker_id"], "Unknown Speaker")
-        else:
-            segment["speaker_id"] = "Unknown ID"
-            segment["speaker"] = "Unknown Speaker"
-        index_counter += 1
+        print(f"Empty speaker IDs: {empty_speaker_ids}")
+        print(f"Speaker IDs: {speaker_ids}")
+
+        real_segments = segments[len(empty_speaker_ids):]
+
+        index_counter = 0
+        first=True
+        start_offset = 0
+        for segment in real_segments:
+            if segment.get("speaker") is None:
+                segment["speaker_id"] = "Unknown ID"
+                segment["speaker"] = "Unknown Speaker"
+                continue
+            segment["index"] = index_counter
+            if first:
+                start_offset = segment["start"]
+                first = False
+            segment["start"] -= start_offset
+            segment["end"] -= start_offset
+            key = next((k for k, v in empty_speaker_ids.items() if v == segment["speaker"]), None)
+            if key is not None:
+                segment["speaker_id"] = key
+                segment["speaker"] = speaker_ids.get(segment["speaker_id"], "Unknown Speaker")
+            else:
+                segment["speaker_id"] = "Unknown ID"
+                segment["speaker"] = "Unknown Speaker"
+            index_counter += 1
 
     print(real_segments)
     # --- PRINT DIARIZATION ---
@@ -405,7 +415,7 @@ if __name__ == "__main__":
 
     merged = f"{args.directory}/merged.wav"
     if USE_CLOUD:
-        offset, silence_gap = convert_and_merge(inputs, merged, args.directory, use_file_separator=False, silence_gap=5)
+        offset, silence_gap = convert_and_merge(inputs, merged, args.directory, use_file_separator=False, silence_gap=10)
     else:
         offset, silence_gap = convert_and_merge(inputs, merged, args.directory, use_file_separator=True, silence_gap=10)
 
