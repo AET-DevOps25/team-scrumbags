@@ -52,7 +52,8 @@ public class DiscordMessage implements CommsMessage {
 
         content.put("platform", "discord");
         content.put("message", this.getContent());
-        content.put("platformUserId", this.getAuthor().getGlobal_name());
+        content.put("platformUserId", this.getAuthor().getUsername());
+        content.put("platformGlobalName", this.getAuthor().getGlobal_name());
 
         root.set("metadata", metadata);
         root.set("content", content);
