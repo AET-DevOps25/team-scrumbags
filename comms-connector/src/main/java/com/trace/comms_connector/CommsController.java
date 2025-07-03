@@ -106,4 +106,29 @@ public class CommsController {
 
         return ResponseEntity.ok().build();
     }
+
+    /**
+     * Get every message from Discord text channel, for testing
+     * 
+     * @param projectId
+     * @param platform
+     * @param channelId
+     * @param lastMessageId
+     * @return String in the format of a JSON array of objects with the format of the gen AI microservice
+     */
+    @GetMapping("/{platform}/messages")
+    public ResponseEntity<?> getAllMessagesFromChannel(
+        @PathVariable UUID projectId,
+        @PathVariable Platform platform,
+        @RequestParam(required = false) String channelId,
+        @RequestParam(required = false) String lastMessageId
+    ) {
+        if (channelId == null) {
+            return ResponseEntity.badRequest().body("Communication platorm server ID must be specified!"); 
+        }
+
+        String messageJsonList = commsService.getAllMessagesFromChannel(projectId, platform, channelId, lastMessageId);
+
+        return ResponseEntity.ok(messageJsonList);
+    }
 }

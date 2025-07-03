@@ -13,10 +13,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.trace.comms_connector.connection.ConnectionEntity;
 import com.trace.comms_connector.connection.ConnectionRepo;
+import com.trace.comms_connector.discord.DiscordMessage;
 import com.trace.comms_connector.discord.DiscordRestClient;
 import com.trace.comms_connector.user.UserCompositeKey;
 import com.trace.comms_connector.user.UserEntity;
 import com.trace.comms_connector.user.UserRepo;
+import com.trace.comms_connector.util.CommsMessageConverter;
 
 import lombok.NoArgsConstructor;
 
@@ -31,6 +33,12 @@ public class CommsService {
 
     @Autowired
     private DiscordRestClient discordClient;
+
+    @Autowired
+    private CommsRestClient commsClient;
+    
+    @Autowired
+    private CommsMessageConverter msgConverter;
 
     // Save connection to the connection database
     @Transactional
@@ -154,5 +162,24 @@ public class CommsService {
     public UUID getUserIdByProjectIdAndPlatformDetails(UUID projectId, Platform platform, String platformUserId) {
         Optional<UserEntity> user = userRepo.findById(new UserCompositeKey(projectId, platformUserId, platform));
         return user.isPresent() ? user.get().getUserId() : null;
+    }
+
+    // Used for testing getting the messages from a Discord channel
+    public String getAllMessagesFromChannel(UUID projectId, Platform platform, String channelId, String lastMessageId) {
+        List<DiscordMessage> messages = discordClient.getChannelMessages(
+            channelId,
+            lastMessageId,
+            projectId);
+
+        if (!messages.isEmpty() && messages != null) {
+            String messageJsonArray = msgConverter.convertListToJsonArray(
+                messages, projectId, platform);
+
+            commsClient.sendMessageListToGenAi(messageJsonArray);
+
+            return messageJsonArray;
+        } else {
+            return "";
+        }
     }
 }

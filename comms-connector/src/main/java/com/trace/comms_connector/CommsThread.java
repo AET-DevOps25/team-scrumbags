@@ -67,7 +67,7 @@ public class CommsThread extends Thread {
                         break;
                 }
 
-                if (!messages.isEmpty() || messages != null) {
+                if (!messages.isEmpty() && messages != null) {
                     String messageJsonArray = msgConverter.convertListToJsonArray(
                         messages, connection.getProjectId(), connection.getPlatform());
 
