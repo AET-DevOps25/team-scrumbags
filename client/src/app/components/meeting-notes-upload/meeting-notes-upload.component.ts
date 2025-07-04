@@ -2,17 +2,17 @@ import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MeetingNotesService } from '../../../services/meeting-notes.service';
-import { ProjectService } from '../../../services/project.service';
+import { MeetingNotesService } from '../../services/meeting-notes.service';
+import { ProjectService } from '../../services/project.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { catchError, finalize, tap } from 'rxjs';
 import { MatInputModule } from '@angular/material/input';
 
 @Component({
-  selector: 'app-notes-upload',
+  selector: 'app-meeting-notes-upload',
   imports: [CommonModule, MatDialogModule, MatInputModule, MatButtonModule],
-  templateUrl: './notes-upload.component.html',
-  styleUrl: './notes-upload.component.scss',
+  templateUrl: './meeting-notes-upload.component.html',
+  styleUrl: './meeting-notes-upload.component.scss',
 })
 export class NotesUploadDialog {
   private projectService = inject(ProjectService);

@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { ProjectService } from '../../services/project.service';
 import { MeetingNotesView } from '../meeting-notes/meeting-notes.view';
 import { ReportOverviewView } from '../report-overview/report-overview.view';
+import { FaqChatView } from '../faq-chat.view/faq-chat.view';
 
 @Component({
   selector: 'app-project-detail',
@@ -19,6 +20,7 @@ import { ReportOverviewView } from '../report-overview/report-overview.view';
     MatIconModule,
     MeetingNotesView,
     ReportOverviewView,
+    FaqChatView
   ],
   templateUrl: './project-detail.view.html',
   styleUrl: './project-detail.view.scss',

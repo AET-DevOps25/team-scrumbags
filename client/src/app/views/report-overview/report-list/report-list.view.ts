@@ -1,4 +1,11 @@
-import { Component, computed, effect, inject, output, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  output,
+  signal,
+} from '@angular/core';
 import { ProjectService } from '../../../services/project.service';
 import { ReportService } from '../../../services/report.service';
 import { finalize } from 'rxjs';
@@ -9,7 +16,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
   selector: 'app-report-list',
   imports: [MatListModule, MatProgressSpinnerModule],
   templateUrl: './report-list.view.html',
-  styleUrl: './report-list.view.scss'
+  styleUrl: './report-list.view.scss',
 })
 export class ReportListView {
   projectService = inject(ProjectService);
@@ -19,7 +26,11 @@ export class ReportListView {
 
   reports = computed(() => {
     const project = this.projectService.selectedProject();
-    return project?.reports ?? [];
+    if (!project || !project.reports) {
+      return [];
+    }
+
+    return Array.from(project.reports.values());
   });
 
   isLoading = signal(false);
