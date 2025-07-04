@@ -81,7 +81,7 @@ public class TranscriptController {
                     deferredResult.setResult(ResponseEntity.ok("Transcript successfully created and sent."));
                 }*/
                 //todo remove this when genai service is ready
-                deferredResult.setResult(ResponseEntity.ok("Transcript successfully created and sent."));
+                deferredResult.setResult(ResponseEntity.ok(transcriptJson));
             } catch (Exception ex) {
                 logger.error("Error processing audio for project {}: {}", projectId, ex.getMessage());
                 deferredResult.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
