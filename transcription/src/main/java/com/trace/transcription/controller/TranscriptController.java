@@ -46,10 +46,24 @@ public class TranscriptController {
     public DeferredResult<ResponseEntity<String>> receiveMediaAndSendTranscript(
             @PathVariable("projectId") UUID projectId,
             @RequestParam("file") MultipartFile file,
+            @RequestParam("speakerAmount") int speakerAmount,
             @RequestParam(value = "timestamp", required = false) Long timestamp
     ) {
 
         DeferredResult<ResponseEntity<String>> deferredResult = new DeferredResult<>(300_000L);
+
+        // Validate inputs
+        if (projectId == null || file == null || file.isEmpty()) {
+            logger.error("Invalid request: projectId or file is missing");
+            deferredResult.setErrorResult(ResponseEntity.badRequest().body("Project ID and file are required."));
+            return deferredResult;
+        }
+
+        if (speakerAmount < 1) {
+            logger.error("Invalid request: speakerAmount must be at least 1");
+            deferredResult.setErrorResult(ResponseEntity.badRequest().body("Speaker amount must be at least 1."));
+            return deferredResult;
+        }
 
         if (timestamp == null) {
             timestamp = System.currentTimeMillis(); // Use current time if not provided
@@ -59,7 +73,7 @@ public class TranscriptController {
         executor.execute(() -> {
             try {
 
-                String transcriptJson = transcriptService.transcriptAsync(projectId, file, finalTimestamp);
+                String transcriptJson = transcriptService.transcriptAsync(projectId, file, speakerAmount, finalTimestamp);
 
                 // Save transcript to database
                 transcriptService.saveFromJson(transcriptJson);

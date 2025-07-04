@@ -107,7 +107,8 @@ def convert_and_merge(inputs, output, directory, use_file_separator=True, silenc
     # Total offset is sample_duration
     return sample_duration + silence_gap * (len(sample_wavs) - 1) + (int(silence_gap / 2)), silence_gap
 
-def transcribe_local_whisperx(merged, offset, silence_gap, empty_speaker_ids, speaker_ids, project_id):
+def transcribe_local_whisperx(merged, offset, silence_gap, empty_speaker_ids, speaker_ids, project_id, speaker_amount):
+    # TODO ADD SPEAKER NUMBER
     device = "cpu"  # or "cpu"
     batch_size = 16
     compute_type = "int8"  # use "int8" for CPU
@@ -130,7 +131,7 @@ def transcribe_local_whisperx(merged, offset, silence_gap, empty_speaker_ids, sp
 
     print(f"Diarizing {merged}...")
     #diarize_model = whisperx.diarize.DiarizationPipeline(use_auth_token=HF_TOKEN, device=device)
-    #diarize_segments = diarize_model(merged)
+    #diarize_segments = diarize_model(merged, min_speakers=speaker_amount, max_speakers=speaker_amount)
     #result = whisperx.assign_word_speakers(diarize_segments, result)
 
     # --- CONFIGURE DIARIZATION ---
@@ -207,7 +208,7 @@ def transcribe_local_whisperx(merged, offset, silence_gap, empty_speaker_ids, sp
     #     result_json.append({
     #         "metadata": {
     #             "type": "transcription",
-    #             "user": segment["speaker_id"],
+    #             "user": segment["speaker_id"] if not segment["speaker_id"].startswith("Unknown ID") else None,
     #             "timestamp": args.timestamp,
     #             "project_id": project_id
     #         },
@@ -232,7 +233,7 @@ def transcribe_local_whisperx(merged, offset, silence_gap, empty_speaker_ids, sp
     # except Exception as e:
     #     print(f"Error saving result to JSON: {e}")
 
-def transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_id):
+def transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_id, speaker_amount):
     # Upload file to AssemblyAI
     upload_url = "https://api.eu.assemblyai.com/v2/upload"
     headers = {"authorization": ASSEMBLY_KEY, "content-type": "application/octet-stream"}
@@ -261,7 +262,7 @@ def transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_
         "format_text": True,
         "punctuate": True,
         "speech_model": "slam-1",
-        "speakers_expected": 5
+        "speakers_expected": speaker_amount
     }
     headers = {"authorization": ASSEMBLY_KEY, "content-type": "application/json"}
     logger.info("Submitting transcription request (speaker diarization enabled)...")
@@ -387,7 +388,7 @@ def transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_
         result_json.append({
             "metadata": {
                 "type": "transcription",
-                "user": segment["speaker_id"],
+                "user": segment["speaker_id"] if not segment["speaker_id"].startswith("Unknown ID") else None,
                 "timestamp": args.timestamp,
                 "project_id": project_id
             },
@@ -424,6 +425,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Process media files in a directory with a timestamp.")
     parser.add_argument("directory", help="Directory containing media files")
+    parser.add_argument("speaker_amount", type=int, help="Number of speakers in the recording")
     parser.add_argument("timestamp", help="Unix Timestamp for the recording")
     args = parser.parse_args()
 
@@ -445,6 +447,6 @@ if __name__ == "__main__":
         offset, silence_gap = convert_and_merge(inputs, merged, args.directory, use_file_separator=True, silence_gap=10)
 
     if USE_CLOUD:
-        transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_id)
+        transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_id, args.speaker_amount)
     else:
-        transcribe_local_whisperx(merged, offset, silence_gap, empty_speaker_ids, speaker_ids, project_id)
+        transcribe_local_whisperx(merged, offset, silence_gap, empty_speaker_ids, speaker_ids, project_id, args.speaker_amount)

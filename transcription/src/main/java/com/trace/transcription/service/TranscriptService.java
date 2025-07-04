@@ -57,7 +57,7 @@ public class TranscriptService {
         transcriptRepository.save(entity);
     }
 
-    public String transcriptAsync(UUID projectId, MultipartFile file, long timestamp) throws IOException, InterruptedException {
+    public String transcriptAsync(UUID projectId, MultipartFile file, int speakerAmount, long timestamp) throws IOException, InterruptedException {
         Path tempDir = Files.createTempDirectory("media-" + projectId + "_" + UUID.randomUUID() + "-");
         try {
             // Save incoming file
@@ -83,7 +83,7 @@ public class TranscriptService {
             }
 
             // Launch Python process
-            ProcessBuilder pb = new ProcessBuilder("python3", "transcriber.py", tempDir.toString(), String.valueOf(timestamp))
+            ProcessBuilder pb = new ProcessBuilder("python3", "transcriber.py", tempDir.toString(), Integer.toString(speakerAmount), String.valueOf(timestamp))
                     .redirectErrorStream(true);
 
             Process proc = pb.start();
