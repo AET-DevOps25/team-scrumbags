@@ -1,10 +1,10 @@
 services:
   mysql:
-    container_name: mysql
+    container_name: transcription-db
     image: mysql:8.0
     restart: always
     environment:
-      MYSQL_URL: dbc:mysql://mysql:3306/${MYSQL_DATABASE}
+      MYSQL_URL: dbc:mysql://transcription-db:9966/${MYSQL_DATABASE}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
