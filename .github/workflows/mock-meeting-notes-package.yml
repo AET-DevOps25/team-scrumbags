@@ -1,17 +1,17 @@
-name: Project Management docker build and push
+name: Mock meeting notes docker build and push
 on:
   push:
     branches:
       - main
     paths:
-      - 'project-management/**'
-      - '.github/workflows/project-management-package.yml'
+      - 'mock-meeting-notes/**'
+      - '.github/workflows/mock-meeting-notes-package.yml'
   release:
     types: [released]
 
 jobs:
   build:
-    uses: ./.github/workflows/project-management-build.yml
+    uses: ./.github/workflows/mock-meeting-notes-build.yml
 
   docker-build-and-push:
     needs: build
@@ -37,7 +37,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}/project-management
+          images: ghcr.io/${{ github.repository }}/mock-meeting-notes
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -46,7 +46,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./project-management
+          context: ./mock-meeting-notes
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
