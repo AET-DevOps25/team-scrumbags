@@ -210,7 +210,7 @@ def transcribe_local_whisperx(merged, offset, silence_gap, empty_speaker_ids, sp
     #             "type": "transcription",
     #             "user": segment["speaker_id"] if not segment["speaker_id"].startswith("Unknown ID") else None,
     #             "timestamp": args.timestamp,
-    #             "project_id": project_id
+    #             "projectId": project_id
     #         },
     #         "content": {
     #             "index": segment["index"],
@@ -390,7 +390,7 @@ def transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_
                 "type": "transcription",
                 "user": segment["speaker_id"] if not segment["speaker_id"].startswith("Unknown ID") else None,
                 "timestamp": args.timestamp,
-                "project_id": project_id
+                "projectId": project_id
             },
             "content": {
                 "index": segment["index"],
