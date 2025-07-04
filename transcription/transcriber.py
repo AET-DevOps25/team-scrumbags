@@ -44,9 +44,12 @@ def find_speakers_and_inputs(directory):
     input_media.append(to_be_transcribed)
     return empty_ids, ids, input_media
 
-def cut_and_convert_to_wav(input_file, output_wav):
+def cut_and_convert_to_wav(input_file, output_wav, limit_duration=True):
     """Convert any audio/video file to WAV using FFmpeg."""
-    subprocess.run(["ffmpeg", "-y", "-i", input_file, "-t", "30", output_wav], check=True)
+    if limit_duration:
+        subprocess.run(["ffmpeg", "-y", "-i", input_file, "-t", "20", output_wav], check=True)
+    else:
+        subprocess.run(["ffmpeg", "-y", "-i", input_file, output_wav], check=True)
 
 def merge_wav_files(wav_paths, output_path):
     """Merge a list of WAV files sequentially into one."""
@@ -74,7 +77,7 @@ def convert_and_merge(inputs, output, directory, use_file_separator=True, silenc
 
     # Convert real input
     real_wav = os.path.join(directory, "tmp_real.wav")
-    cut_and_convert_to_wav(real_input, real_wav)
+    cut_and_convert_to_wav(real_input, real_wav, False)
 
     # Calculate total sample duration
     sample_duration = sum(AudioSegment.from_wav(w).duration_seconds for w in sample_wavs)
@@ -134,43 +137,57 @@ def transcribe_local_whisperx(merged, offset, silence_gap, empty_speaker_ids, sp
     speaker_counter = 0
     segment_counter = 0
     segment_index_counter = 0
-    # for actual_id in empty_speaker_ids.keys():
-    #     current_speaker = result["segments"][segment_counter].get("speaker", None)
+    # if len(result["segments"]) < len(empty_speaker_ids):
+    #     logger.warning("Not enough segments for the number of speakers. Assigning unknown speakers and ids.")
+    #     # Assign unknown speaker IDs to segments
+    #     for i in range(len(result["segments"])):
+    #         result["segments"][i]["speaker_id"] = "Unknown ID"
+    #         result["segments"][i]["speaker"] = "Unknown Speaker"
+    #         result["segments"][i]["index"] = i
+    #
+    # else:
+    #     for actual_id in empty_speaker_ids.keys():
+    #         current_speaker = result["segments"][segment_counter].get("speaker", None)
+    #         for segment in result["segments"][segment_counter:]:
+    #             segment["index"] = segment_index_counter
+    #             segment_index_counter += 1
+    #             if segment.get("speaker") == current_speaker:
+    #                 empty_speaker_ids[actual_id] = current_speaker
+    #                 segment["speaker_id"] = actual_id
+    #                 segment["speaker"] = speaker_ids[actual_id]
+    #             elif segment.get("speaker") is None:
+    #                 segment["speaker_id"] = "Unknown ID"
+    #                 segment["speaker"] = "Unknown Speaker"
+    #             else:
+    #                 segment_counter = result["segments"].index(segment)
+    #                 break
+    #
+    #     unknown_speaker_index = 0
+    #     unknown_speakers = {
     #     for segment in result["segments"][segment_counter:]:
     #         segment["index"] = segment_index_counter
     #         segment_index_counter += 1
-    #         if segment.get("speaker") == current_speaker:
-    #             empty_speaker_ids[actual_id] = current_speaker
-    #             segment["speaker_id"] = actual_id
-    #             segment["speaker"] = speaker_ids[actual_id]
-    #         elif segment.get("speaker") is None:
+    #         if segment.get("speaker") is None:
     #             segment["speaker_id"] = "Unknown ID"
     #             segment["speaker"] = "Unknown Speaker"
+    #             continue
+    #         key = next((k for k, v in empty_speaker_ids.items() if v == segment["speaker"]), None)
+    #         if key is not None:
+    #             segment["speaker_id"] = key
+    #             segment["speaker"] = speaker_ids.get(segment["speaker_id"], "Unknown Speaker")
     #         else:
-    #             segment_counter = result["segments"].index(segment)
-    #             break
+    #             if not segment["speaker"] in unknown_speakers.keys():
+#                     unknown_speakers[segment["speaker"]] = unknown_speaker_index
+#                     unknown_speaker_index += 1
+#                 segment["speaker_id"] = f"Unknown ID {unknown_speakers[segment['speaker']]}"
+#                 segment["speaker"] = f"Unknown Speaker {unknown_speakers[segment['speaker']]}"
     #
-    # for segment in result["segments"][segment_counter:]:
-    #     segment["index"] = segment_index_counter
-    #     segment_index_counter += 1
-    #     if segment.get("speaker") is None:
-    #         segment["speaker_id"] = "Unknown ID"
-    #         segment["speaker"] = "Unknown Speaker"
-    #         continue
-    #     key = next((k for k, v in empty_speaker_ids.items() if v == segment["speaker"]), None)
-    #     if key is not None:
-    #         segment["speaker_id"] = key
-    #         segment["speaker"] = speaker_ids.get(segment["speaker_id"], "Unknown Speaker")
-    #     else:
-    #         segment["speaker_id"] = "Unknown ID"
-    #         segment["speaker"] = "Unknown Speaker"
-    #
-    # # --- PRINT DIARIZATION ---
-    # print("\nSpeaker assignment results:")
-    # print("Speaker\tStart\tEnd\tText")
-    # for segment in result["segments"]:
-    #     print(
-    #         f"{segment['speaker']}\t{segment['speaker_id']}\t{segment['start']:.2f}\t{segment['end']:.2f}\t{segment['text']}")
+    #     # --- PRINT DIARIZATION ---
+    #     print("\nSpeaker assignment results:")
+    #     print("Speaker\tStart\tEnd\tText")
+    #     for segment in result["segments"]:
+    #         print(
+    #             f"{segment['speaker']}\t{segment['speaker_id']}\t{segment['start']:.2f}\t{segment['end']:.2f}\t{segment['text']}")
     #
     # # --- FILTER & REBASE ---
     # real_segments = []
@@ -184,7 +201,7 @@ def transcribe_local_whisperx(merged, offset, silence_gap, empty_speaker_ids, sp
     #         real_segments.append(rebased)
     #         index += 1
 
-    # # create result json structure with each segment containing speaker, start, end, and text
+    # create result json structure with each segment containing speaker, start, end, and text
     # result_json = []
     # for segment in real_segments:
     #     result_json.append({
@@ -217,7 +234,7 @@ def transcribe_local_whisperx(merged, offset, silence_gap, empty_speaker_ids, sp
 
 def transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_id):
     # Upload file to AssemblyAI
-    upload_url = "https://api.assemblyai.com/v2/upload"
+    upload_url = "https://api.eu.assemblyai.com/v2/upload"
     headers = {"authorization": ASSEMBLY_KEY, "content-type": "application/octet-stream"}
     logger.info(f"Uploading {merged} to AssemblyAI...")
     try:
@@ -236,13 +253,15 @@ def transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_
     logger.info(f"Upload successful. URL: {audio_url}")
 
     # Submit transcription request
-    transcribe_url = "https://api.assemblyai.com/v2/transcript"
+    transcribe_url = "https://api.eu.assemblyai.com/v2/transcript"
     # Configure transcription: enable speaker labels and text formatting
     transcript_request = {
         "audio_url": audio_url,
         "speaker_labels": True,
         "format_text": True,
-        "punctuate": True
+        "punctuate": True,
+        "speech_model": "slam-1",
+        "speakers_expected": 5
     }
     headers = {"authorization": ASSEMBLY_KEY, "content-type": "application/json"}
     logger.info("Submitting transcription request (speaker diarization enabled)...")
@@ -307,8 +326,9 @@ def transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_
         logger.warning("Not enough segments for the number of speakers. Assigning unknown speakers and ids.")
         # Assign unknown speaker IDs to segments
         for i in range(len(segments)):
-            segments[i]["speaker_id"] = "Unknown ID"
-            segments[i]["speaker"] = "Unknown Speaker"
+            segments[i]["speaker_id"] = f"Unknown ID {i}"
+            segments[i]["speaker"] = f"Unknown Speaker {i}"
+            segments[i]["index"] = i
 
         real_segments = segments
     else:
@@ -328,6 +348,8 @@ def transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_
         index_counter = 0
         first=True
         start_offset = 0
+        unknown_speaker_index = 0
+        unknown_speakers = {}
         for segment in real_segments:
             if segment.get("speaker") is None:
                 segment["speaker_id"] = "Unknown ID"
@@ -344,8 +366,11 @@ def transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_
                 segment["speaker_id"] = key
                 segment["speaker"] = speaker_ids.get(segment["speaker_id"], "Unknown Speaker")
             else:
-                segment["speaker_id"] = "Unknown ID"
-                segment["speaker"] = "Unknown Speaker"
+                if not segment["speaker"] in unknown_speakers.keys():
+                    unknown_speakers[segment["speaker"]] = unknown_speaker_index
+                    unknown_speaker_index += 1
+                segment["speaker_id"] = f"Unknown ID {unknown_speakers[segment['speaker']]}"
+                segment["speaker"] = f"Unknown Speaker {unknown_speakers[segment['speaker']]}"
             index_counter += 1
 
     print(real_segments)
