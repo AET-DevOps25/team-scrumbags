@@ -10,7 +10,7 @@ public class TranscriptInput {
         public String type;
         public String user;
         public long timestamp;
-        public UUID project_id;
+        public UUID projectId;
     }
 
     public static class Content {

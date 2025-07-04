@@ -53,7 +53,7 @@ public class TranscriptService {
                 ))
                 .collect(Collectors.toList());
 
-        TranscriptEntity entity = new TranscriptEntity(null, segments, meta.project_id, meta.timestamp);
+        TranscriptEntity entity = new TranscriptEntity(null, segments, meta.projectId, meta.timestamp);
         transcriptRepository.save(entity);
     }
 
