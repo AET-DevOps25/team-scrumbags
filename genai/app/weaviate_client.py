@@ -38,9 +38,12 @@ def store_entry(entry):
     # Convert UNIX timestamp to ISO 8601 with timezone
     dt = datetime.fromtimestamp(entry.metadata.timestamp, tz=timezone.utc)
 
+    entry.metadata.user = None if entry.metadata.user in [None, "None", "null"] else entry.metadata.user
+    entry.metadata.type = None if entry.metadata.type in [None, "None", "null"] else entry.metadata.type
+
     entry_obj = {
         "type": entry.metadata.type,
-        "user": str(entry.metadata.user),
+        "user": entry.metadata.user,
         "timestamp": dt.isoformat(),
         "projectId": str(entry.metadata.projectId),
         "content": str(entry.content),  # serialize nested content
