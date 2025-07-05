@@ -34,7 +34,8 @@ def store_entry(entry):
     collection = client.collections.get(COLLECTION_NAME)
     entry = ContentEntry(**entry)  # Validate and convert to ContentEntry model
     print(str(entry.metadata.projectId) + str(entry.metadata.timestamp))
-    content_uuid = generate_uuid5(str(entry.metadata.projectId) + str(entry.metadata.timestamp))
+    # Generate a UUID5 based on projectId and hash of content
+    content_uuid = generate_uuid5(str(entry.metadata.projectId) + str(entry.metadata.timestamp) + str(entry.content))
     # Convert UNIX timestamp to ISO 8601 with timezone
     dt = datetime.fromtimestamp(entry.metadata.timestamp, tz=timezone.utc)
 
