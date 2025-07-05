@@ -5,11 +5,22 @@ RUN ./gradlew build --no-daemon
 
 FROM python:3.12-slim AS python-builder
 WORKDIR /app
+
+ARG USE_WHISPERX=false
+ENV USE_WHISPERX=${USE_WHISPERX}
+
 COPY requirements.txt .
 RUN apt-get update && apt-get install -y gcc g++ libsndfile1 ffmpeg \
  && pip install --upgrade pip setuptools wheel \
- && pip install --no-cache-dir --prefer-binary -r requirements.txt \
- && apt-get purge -y gcc g++ \
+ && pip install --no-cache-dir --prefer-binary -r requirements.txt
+
+RUN if [ "$USE_WHISPERX" = "true" ]; then \
+        pip install --no-cache-dir --prefer-binary whisperx ; \
+        else \
+            echo "Skipping WhisperX install" ; \
+        fi
+
+RUN apt-get purge -y gcc g++ \
  && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 FROM python:3.12-slim
