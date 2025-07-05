@@ -48,11 +48,14 @@ else:
     )
 
 
-def summarize_entries(project_id: str, start: int, end: int):
+def summarize_entries(projectId: str, start: int, end: int):
     # raw content strings
-    contents = wc.get_entries(project_id, start, end)
+    contents = wc.get_entries(projectId, start, end)
+
     if not contents:
         return "No entries found for the given parameters."
+
+    print(contents)
 
     prompt = PromptTemplate(
         template="""You are a summarizer of source control information (pull requests, commits, branches, etc.), transcripts
@@ -79,12 +82,12 @@ def summarize_entries(project_id: str, start: int, end: int):
     # LangChain Documents
     docs = [Document(id=str(obj.uuid),
                      metadata={
-                         "type": obj.properties["type"],
-                         "user": obj.properties["user"],
+                         "type": obj.properties.get("type", "unknown"),
+                         "user": obj.properties.get("user", "unknown"),
                          "timestamp": obj.properties["timestamp"],
                          "projectId": obj.properties["projectId"]
                      },
-                     page_content=obj.properties["content"]) for obj in contents]
+                     page_content=obj.properties.get("content", "empty")) for obj in contents]
 
     chain = load_summarize_chain(llm, chain_type="stuff", verbose=False, prompt=prompt)
 
@@ -94,16 +97,16 @@ def summarize_entries(project_id: str, start: int, end: int):
     return summary
 
 
-def answer_question(project_id: str, start: int, end: int, question: str):
-    contents = wc.get_entries(project_id, start, end)
+def answer_question(projectId: str, start: int, end: int, question: str):
+    contents = wc.get_entries(projectId, start, end)
     if not contents or len(contents) == 0:
         return "No entries found for the given parameters."
 
     # LangChain Documents
     docs = [Document(id=str(obj.uuid),
                      metadata={
-                         "type": obj.properties["type"],
-                         "user": obj.properties["user"],
+                         "type": obj.properties.get("type", "unknown"),
+                         "user": obj.properties.get("user", "unknown"),
                          "timestamp": obj.properties["timestamp"],
                          "projectId": obj.properties["projectId"]
                      },
