@@ -1,0 +1,15 @@
+meta {
+  name: Put Sample
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{base_url}}/projects/123e4567-e89b-12d3-a456-426614174000/speakers/spk2
+  body: multipartForm
+  auth: inherit
+}
+
+body:multipart-form {
+  speakingSample: @file(/home/chernogop/Documents/GitHub/team-scrumbags/transcription/audio/sample-nata_3433.mp3)
+}

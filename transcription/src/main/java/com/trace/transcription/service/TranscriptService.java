@@ -1,8 +1,9 @@
 package com.trace.transcription.service;
 
+import com.trace.transcription.dto.TranscriptInput;
 import com.trace.transcription.model.SpeakerEntity;
 import com.trace.transcription.model.TranscriptEntity;
-import com.trace.transcription.model.TranscriptSegment;
+import com.trace.transcription.dto.TranscriptSegment;
 import com.trace.transcription.repository.SpeakerRepository;
 import com.trace.transcription.repository.TranscriptRepository;
 import org.springframework.stereotype.Service;
@@ -11,7 +12,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -21,17 +21,20 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.trace.transcription.controller.TranscriptController.logger;
 
 @Service
 public class TranscriptService {
 
-    private final TranscriptRepository repository;
+    private final TranscriptRepository transcriptRepository;
+    private final SpeakerRepository speakerRepository;
     private final ObjectMapper mapper;
 
-    public TranscriptService(TranscriptRepository repository, ObjectMapper mapper) {
-        this.repository = repository;
+    public TranscriptService(TranscriptRepository transcriptRepository, SpeakerRepository speakerRepository, ObjectMapper mapper) {
+        this.transcriptRepository = transcriptRepository;
+        this.speakerRepository = speakerRepository;
         this.mapper = mapper;
     }
 
@@ -45,16 +48,16 @@ public class TranscriptService {
                         input.content.text,
                         input.content.start,
                         input.content.end,
-                        input.content.speaker_id,
-                        input.content.speaker
+                        input.content.speaker,
+                        input.content.speaker_id
                 ))
                 .collect(Collectors.toList());
 
-        TranscriptEntity entity = new TranscriptEntity(UUID.randomUUID(), segments, meta.project_id, meta.timestamp);
-        repository.save(entity);
+        TranscriptEntity entity = new TranscriptEntity(null, segments, meta.projectId, meta.timestamp);
+        transcriptRepository.save(entity);
     }
 
-    public String transcriptAsync(UUID projectId, MultipartFile file, SpeakerRepository speakerRepository, long timestamp) throws IOException, InterruptedException {
+    public String transcriptAsync(UUID projectId, MultipartFile file, int speakerAmount, long timestamp) throws IOException, InterruptedException {
         Path tempDir = Files.createTempDirectory("media-" + projectId + "_" + UUID.randomUUID() + "-");
         try {
             // Save incoming file
@@ -66,17 +69,21 @@ public class TranscriptService {
 
             // Dump speaker samples
             List<SpeakerEntity> speakers = speakerRepository.findAllByProjectId(projectId);
-            for (SpeakerEntity speaker : speakers) {
-                byte[] audio = speaker.getSpeakingSample();
-                String ext = speaker.getSampleExtension();
-                if (audio != null && audio.length > 0) {
-                    Path spath = tempDir.resolve("sample-" + speaker.getName() + "_" + speaker.getId() + "." + ext);
-                    Files.write(spath, audio, StandardOpenOption.CREATE);
+            if (speakers.isEmpty()) {
+                logger.warn("No speakers found for project {}", projectId);
+            } else {
+                for (SpeakerEntity speaker : speakers) {
+                    byte[] audio = speaker.getSpeakingSample();
+                    String ext = speaker.getSampleExtension();
+                    if (audio != null && audio.length > 0) {
+                        Path spath = tempDir.resolve("sample-" + speaker.getName() + "_" + speaker.getId() + "." + ext);
+                        Files.write(spath, audio, StandardOpenOption.CREATE);
+                    }
                 }
             }
 
             // Launch Python process
-            ProcessBuilder pb = new ProcessBuilder("python3", "transcriber.py", tempDir.toString(), String.valueOf(timestamp))
+            ProcessBuilder pb = new ProcessBuilder("python3", "transcriber.py", tempDir.toString(), Integer.toString(speakerAmount), String.valueOf(timestamp))
                     .redirectErrorStream(true);
 
             Process proc = pb.start();
@@ -92,25 +99,35 @@ public class TranscriptService {
 
             int exitCode = proc.waitFor();
             if (exitCode != 0) {
-                throw new RuntimeException("Python exited with code " + exitCode + ". Check logs for details.");
+                return null;
             }
 
             // Read JSON output from file
             Path resultPath = tempDir.resolve("transcription_result.json");
             if (!Files.exists(resultPath)) {
-                throw new RuntimeException("Transcription result file not found: " + resultPath);
+                return null;
             }
 
             String transcriptJson = Files.readString(resultPath, StandardCharsets.UTF_8);
             logger.info("Read transcript from file: {}", resultPath);
             return transcriptJson;
         } finally {
-            // Cleanup
-            Files.walk(tempDir)
-                    .sorted(Comparator.reverseOrder())
-                    .map(Path::toFile)
-                    .forEach(File::delete);
-            logger.info("Cleaned up temp directory: {}", tempDir);
+            try (Stream<Path> walk = Files.walk(tempDir)) {
+                walk.sorted(Comparator.reverseOrder())
+                        .map(Path::toFile)
+                        .forEach(f -> {
+                            if (!f.delete()) {
+                                logger.warn("Failed to delete file: {}", f.getAbsolutePath());
+                            }
+                        });
+                logger.info("Cleaned up temp directory: {}", tempDir);
+            } catch (IOException e) {
+                logger.error("Failed to clean up temp directory: {}", tempDir, e);
+            }
         }
+    }
+
+    public List<TranscriptEntity> getAllTranscripts(UUID projectId) {
+        return transcriptRepository.findAllByProjectId(projectId);
     }
 }
