@@ -99,14 +99,13 @@ public class TranscriptService {
 
             int exitCode = proc.waitFor();
             if (exitCode != 0) {
-            // INTERNAL SERVER ERROR
-                throw new RuntimeException("Transcription process failed with exit code: " + exitCode);
+                return null;
             }
 
             // Read JSON output from file
             Path resultPath = tempDir.resolve("transcription_result.json");
             if (!Files.exists(resultPath)) {
-                throw new RuntimeException("Transcription result file not found: " + resultPath);
+                return null;
             }
 
             String transcriptJson = Files.readString(resultPath, StandardCharsets.UTF_8);

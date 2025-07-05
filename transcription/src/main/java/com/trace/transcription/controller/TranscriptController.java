@@ -75,14 +75,23 @@ public class TranscriptController {
 
                 String transcriptJson = transcriptService.transcriptAsync(projectId, file, speakerAmount, finalTimestamp);
 
+                if (transcriptJson == null || transcriptJson.isEmpty()) {
+                    logger.error("Transcript generation failed for project {}. See logs for details.", projectId);
+                    deferredResult.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .body("Transcript generation failed. See logs for details."));
+                    return;
+                }
+
                 // Save transcript to database
                 transcriptService.saveFromJson(transcriptJson);
+
+                logger.info("Transcript successfully created for project {}: {}", projectId, transcriptJson);
 
                 // Forward JSON to core service
                 HttpHeaders headers = new HttpHeaders();
                 headers.setContentType(MediaType.APPLICATION_JSON);
                 HttpEntity<String> entity = new HttpEntity<>(transcriptJson, headers);
-                // Uncomment when genai service is ready
+                // todo uncomment when merge services
                 /*String endpoint = genaiServiceUrl + "projects/" + projectId + "/transcripts";
                 ResponseEntity<String> coreResponse = restTemplate.postForEntity(endpoint, entity, String.class);
 
