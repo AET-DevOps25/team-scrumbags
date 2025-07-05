@@ -1,71 +1,116 @@
-from langchain.chains.summarize import load_summarize_chain
-from langchain_ollama import OllamaLLM, OllamaEmbeddings
-import weaviate
-from langchain_weaviate.vectorstores import WeaviateVectorStore
+import os
+
+from dotenv import load_dotenv
 from langchain.chains import RetrievalQA
-from langchain.schema import Document
+from langchain.chains.summarize import load_summarize_chain
 from langchain.prompts import PromptTemplate
+from langchain.schema import Document
+# from langchain.chains.combine_documents import create_stuff_documents_chain
+# from langchain_core.prompts import ChatPromptTemplate
+from langchain_ollama import OllamaLLM, OllamaEmbeddings, ChatOllama
+from langchain_weaviate.vectorstores import WeaviateVectorStore
+from pydantic import SecretStr
 
 from app import weaviate_client as wc
 
-llm = OllamaLLM(model="llama3.2",
-                base_url="http://ollama:11434",
-                temperature=0.1)
+load_dotenv()
 
-embeddings = OllamaEmbeddings(model="llama3.2", base_url="http://ollama:11434")
+API_URL = os.getenv("OLLAMA_URL", "http://ollama:11434")  # Default Ollama API URL
 
-def summarize_entries(project_id: str, start: int, end: int):
-    #raw content strings
-    contents = wc.get_entries(project_id, start, end)
+if API_URL.startswith("https://"):
+    use_local = False
+else:
+    use_local = True
+
+if use_local:
+    # Use Ollama locally
+    llm = OllamaLLM(model="llama3.2",
+                    base_url=os.getenv("OLLAMA_URL", "http://ollama:11434"),  # Default Ollama API URL
+                    temperature=0.1)
+    embeddings = OllamaEmbeddings(model="llama3.2:latest", base_url=os.getenv("OLLAMA_URL", "http://ollama:11434"))
+
+else:
+    TOKEN = SecretStr(os.getenv("OPEN_WEBUI_BEARER"))
+
+    llm = ChatOllama(
+        model="llama3.3:latest",
+        base_url=API_URL,
+        client_kwargs={"headers": {
+            "Authorization": f"Bearer {TOKEN.get_secret_value()}"
+        }}
+    )
+    embeddings = OllamaEmbeddings(
+        model="llama3.3:latest",
+        base_url=API_URL,
+        client_kwargs={"headers": {
+            "Authorization": f"Bearer {TOKEN.get_secret_value()}"
+        }}
+    )
+
+
+def summarize_entries(projectId: str, start: int, end: int):
+    # raw content strings
+    contents = wc.get_entries(projectId, start, end)
+
     if not contents:
         return "No entries found for the given parameters."
 
-    markdown_stuff_prompt = PromptTemplate(
-        template=(
-            "You are a summarizer of source control information (pull requests, commits, branches, etc.), transcripts "
-            "of meetings with assigned speakers, and written communication (e.g., messages) between team members over "
-            "collaboration platforms like, e.g., Discord or Microsoft Teams. Given the following documents containing "
-            "information about the project dealings, produce a "
-            "detailed summary in Markdown format. Use headings, bullet points, and code "
-            "blocks where appropriate.\n\n"
-            "### Documents:\n"
-            "{text}\n\n"
-            "### Summary (in Markdown):\n"
-        ),
-        input_variables=["text"],
+    print(contents)
+
+    prompt = PromptTemplate(
+        template="""You are a summarizer of source control information (pull requests, commits, branches, etc.), transcripts
+        of meetings with assigned speakers, and messages between team members over
+        collaboration / messaging platforms. Given the following documents containing
+        information about the project dealings, produce a
+        detailed summary in Markdown format. Use headings, bullet points, and code
+        blocks where appropriate. Do not use any other formatting than Markdown.
+
+        Here is the content to summarize:
+        {text}
+
+        Use the following format for summarizing:
+
+        ### [Summary Name]:
+        [Summary Content with texts, bullet points, and code blocks]""",
+        input_variables=["text"]
     )
+
+    # prompt = ChatPromptTemplate.from_messages([ # alternative using ChatPromptTemplate
+    #    ("system", "Write a concise summary of the following text:\n\n{context}")
+    # ])
 
     # LangChain Documents
     docs = [Document(id=str(obj.uuid),
-                        metadata={
-                            "type": obj.properties["type"],
-                            "user": obj.properties["user"],
-                            "timestamp": obj.properties["timestamp"],
-                            "projectId": obj.properties["projectId"]
-                        },
-                        page_content=obj.properties["content"]
-    ) for obj in contents]
+                     metadata={
+                         "type": obj.properties.get("type", "unknown"),
+                         "user": obj.properties.get("user", "unknown"),
+                         "timestamp": obj.properties["timestamp"],
+                         "projectId": obj.properties["projectId"]
+                     },
+                     page_content=obj.properties.get("content", "empty")) for obj in contents]
 
-    chain = load_summarize_chain(llm, chain_type="stuff", verbose=False, prompt=markdown_stuff_prompt,)
+    chain = load_summarize_chain(llm, chain_type="stuff", verbose=False, prompt=prompt)
+
+    # chain = create_stuff_documents_chain(llm, prompt) # alternative using create_stuff_documents_chain
 
     summary = chain.invoke(docs)
     return summary
 
-def answer_question(project_id: str, start: int, end: int, question: str) -> str:
-    contents = wc.get_entries(project_id, start, end)
-    if not contents:
+
+def answer_question(projectId: str, start: int, end: int, question: str):
+    contents = wc.get_entries(projectId, start, end)
+    if not contents or len(contents) == 0:
         return "No entries found for the given parameters."
 
     # LangChain Documents
     docs = [Document(id=str(obj.uuid),
-                        metadata={
-                            "type": obj.properties["type"],
-                            "user": obj.properties["user"],
-                            "timestamp": obj.properties["timestamp"],
-                            "projectId": obj.properties["projectId"]
-                        },
-                        page_content=obj.properties["content"]
-    ) for obj in contents]
+                     metadata={
+                         "type": obj.properties.get("type", "unknown"),
+                         "user": obj.properties.get("user", "unknown"),
+                         "timestamp": obj.properties["timestamp"],
+                         "projectId": obj.properties["projectId"]
+                     },
+                     page_content=obj.properties["content"]) for obj in contents]
 
     vectorstore = WeaviateVectorStore.from_documents(
         documents=docs,
@@ -82,4 +127,5 @@ def answer_question(project_id: str, start: int, end: int, question: str) -> str
         return_source_documents=True
     )
     response = qa_chain.invoke(question)
+    print(response)
     return response

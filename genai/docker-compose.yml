@@ -3,15 +3,18 @@ services:
   app:
     build: .
     ports:
-      - "8000:8000"
+      - "4242:4242"
     depends_on:
       ollama:
         condition: service_healthy
     environment:
-      - WEAVIATE_URL=http://weaviate:8080
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq/
+      - WEAVIATE_URL=${WEAVIATE_URL:-http://weaviate:8080}
+      - RABBITMQ_URL=${RABBITMQ_URL:-amqp://guest:guest@rabbitmq/}
     volumes:
       - .:/app
+    networks:
+      - default
+      - trace-network
 
   rabbitmq:
     image: rabbitmq:management
@@ -32,12 +35,12 @@ services:
       - --host
       - 0.0.0.0
       - --port
-      - '8080'
+      - '6969'
       - --scheme
       - http
     image: cr.weaviate.io/semitechnologies/weaviate:1.31.2
     ports:
-      - "8080:8080"
+      - "6969:6969"
       - "50051:50051"
     volumes:
       - weaviate_data:/var/lib/weaviate
@@ -70,7 +73,7 @@ services:
           sleep 1
         done
 
-        echo "✅  Server is up! Pulling llama3.2…"
+        echo "✅  Server is up! Pulling llama3.3…"
         # Now that the daemon is running, pull the model
         ollama pull llama3.2
 
@@ -90,17 +93,17 @@ services:
 
   mysql:
     image: mysql:8.0
-    container_name: mysql
+    container_name: genai-db
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: summaries
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-summaries}
+      MYSQL_USER: ${MYSQL_USER:-user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
     ports:
-      - "3306:3306"
+      - "6699:6699"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - genai_db_data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 30s
@@ -115,4 +118,9 @@ volumes:
   rabbitmq-log:
     driver: local
   ollama:
-  mysql_data:
+  genai_db_data:
+
+
+networks:
+  trace-network:
+    external: true
