@@ -19,26 +19,26 @@ Base = declarative_base()
 class Summary(Base):
     __tablename__ = "summaries"
     id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(String(length=36), index=True)
-    start_time = Column(Integer, index=True)
-    end_time = Column(Integer, index=True)
-    generated_at = Column(DateTime)
+    projectId = Column(String(length=36), index=True)
+    startTime = Column(Integer, index=True)
+    endTime = Column(Integer, index=True)
+    generatedAt = Column(DateTime)
     summary = Column(Text)
 
     __table_args__ = (
-        UniqueConstraint("project_id", "start_time", "end_time", name="uq_project_timeframe"),
+        UniqueConstraint("projectId", "startTime", "endTime", name="uq_project_timeframe"),
     )
 
 
 class QAPair(Base):
     __tablename__ = "qa_pairs"
     id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(String(length=36), index=True)
-    user_id = Column(String(length=36), index=True)
+    projectId = Column(String(length=36), index=True)
+    userId = Column(String(length=36), index=True)
     question = Column(Text)
     answer = Column(Text)
-    question_time = Column(DateTime)
-    answer_time = Column(DateTime)
+    questionTime = Column(DateTime)
+    answerTime = Column(DateTime)
 
 
 async def init_db():

@@ -62,18 +62,18 @@ def store_entry(entry):
         print(f"Failed to import {len(collection.batch.failed_objects)} objects")
 
 
-def get_entries(project_id: str, start: int, end: int):
+def get_entries(projectId: str, start: int, end: int):
     collection = client.collections.get(COLLECTION_NAME)
     start_dt = datetime.fromtimestamp(start, tz=timezone.utc).isoformat()
     end_dt = datetime.fromtimestamp(end, tz=timezone.utc).isoformat()
 
     results = collection.query.fetch_objects(
         filters=(
-                Filter.by_property("projectId").equal(project_id) &
+                Filter.by_property("projectId").equal(projectId) &
                 Filter.by_property("timestamp").greater_or_equal(start_dt) &
                 Filter.by_property("timestamp").less_or_equal(end_dt)
         ),
-        limit=100
+        limit=1000
     )
 
     print(f"Found {len(results.objects)} objects in collection {COLLECTION_NAME}")
