@@ -9,6 +9,7 @@ import json
 import time
 import logging
 import requests
+import whisperx
 
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
@@ -108,130 +109,119 @@ def convert_and_merge(inputs, output, directory, use_file_separator=True, silenc
     return sample_duration + silence_gap * (len(sample_wavs) - 1) + (int(silence_gap / 2)), silence_gap
 
 def transcribe_local_whisperx(merged, offset, silence_gap, empty_speaker_ids, speaker_ids, project_id, speaker_amount):
-    # TODO ADD SPEAKER NUMBER
     device = "cpu"  # or "cpu"
     batch_size = 16
     compute_type = "int8"  # use "int8" for CPU
 
-    # --- LOAD MODEL ---
     print("Loading WhisperX...")
     model_dir = "whisper_model/"
-    #model = whisperx.load_model("turbo", device, compute_type=compute_type, download_root=model_dir)
+    model = whisperx.load_model("turbo", device, compute_type=compute_type, download_root=model_dir)
 
-    # --- PROCESS FILE ---
     print(f"Transcribing {merged}...")
-    #result = model.transcribe(merged, batch_size=batch_size)
-    #model_a, metadata = whisperx.load_align_model(language_code=result["language"], device=device)
-    #result = whisperx.align(result["segments"], model_a, metadata, merged, device)
-
-    # --- PRINT TRANSCRIPTION ---
-    print(f"\nTranscription for {merged}:")
-    #for segment in result["segments"]:
-        #print(f"{segment['start']:.2f} - {segment['end']:.2f}: {segment['text']}")
+    result = model.transcribe(merged, batch_size=batch_size)
+    model_a, metadata = whisperx.load_align_model(language_code=result["language"], device=device)
+    result = whisperx.align(result["segments"], model_a, metadata, merged, device)
 
     print(f"Diarizing {merged}...")
-    #diarize_model = whisperx.diarize.DiarizationPipeline(use_auth_token=HF_TOKEN, device=device)
-    #diarize_segments = diarize_model(merged, min_speakers=speaker_amount, max_speakers=speaker_amount)
-    #result = whisperx.assign_word_speakers(diarize_segments, result)
+    diarize_model = whisperx.diarize.DiarizationPipeline(use_auth_token=HF_TOKEN, device=device)
+    diarize_segments = diarize_model(merged, min_speakers=speaker_amount, max_speakers=speaker_amount)
+    result = whisperx.assign_word_speakers(diarize_segments, result)
 
-    # --- CONFIGURE DIARIZATION ---
-    speaker_counter = 0
     segment_counter = 0
     segment_index_counter = 0
-    # if len(result["segments"]) < len(empty_speaker_ids):
-    #     logger.warning("Not enough segments for the number of speakers. Assigning unknown speakers and ids.")
-    #     # Assign unknown speaker IDs to segments
-    #     for i in range(len(result["segments"])):
-    #         result["segments"][i]["speaker_id"] = "Unknown ID"
-    #         result["segments"][i]["speaker"] = "Unknown Speaker"
-    #         result["segments"][i]["index"] = i
-    #
-    # else:
-    #     for actual_id in empty_speaker_ids.keys():
-    #         current_speaker = result["segments"][segment_counter].get("speaker", None)
-    #         for segment in result["segments"][segment_counter:]:
-    #             segment["index"] = segment_index_counter
-    #             segment_index_counter += 1
-    #             if segment.get("speaker") == current_speaker:
-    #                 empty_speaker_ids[actual_id] = current_speaker
-    #                 segment["speaker_id"] = actual_id
-    #                 segment["speaker"] = speaker_ids[actual_id]
-    #             elif segment.get("speaker") is None:
-    #                 segment["speaker_id"] = "Unknown ID"
-    #                 segment["speaker"] = "Unknown Speaker"
-    #             else:
-    #                 segment_counter = result["segments"].index(segment)
-    #                 break
-    #
-    #     unknown_speaker_index = 0
-    #     unknown_speakers = {
-    #     for segment in result["segments"][segment_counter:]:
-    #         segment["index"] = segment_index_counter
-    #         segment_index_counter += 1
-    #         if segment.get("speaker") is None:
-    #             segment["speaker_id"] = "Unknown ID"
-    #             segment["speaker"] = "Unknown Speaker"
-    #             continue
-    #         key = next((k for k, v in empty_speaker_ids.items() if v == segment["speaker"]), None)
-    #         if key is not None:
-    #             segment["speaker_id"] = key
-    #             segment["speaker"] = speaker_ids.get(segment["speaker_id"], "Unknown Speaker")
-    #         else:
-    #             if not segment["speaker"] in unknown_speakers.keys():
-#                     unknown_speakers[segment["speaker"]] = unknown_speaker_index
-#                     unknown_speaker_index += 1
-#                 segment["speaker_id"] = f"Unknown ID {unknown_speakers[segment['speaker']]}"
-#                 segment["speaker"] = f"Unknown Speaker {unknown_speakers[segment['speaker']]}"
-    #
-    #     # --- PRINT DIARIZATION ---
-    #     print("\nSpeaker assignment results:")
-    #     print("Speaker\tStart\tEnd\tText")
-    #     for segment in result["segments"]:
-    #         print(
-    #             f"{segment['speaker']}\t{segment['speaker_id']}\t{segment['start']:.2f}\t{segment['end']:.2f}\t{segment['text']}")
-    #
-    # # --- FILTER & REBASE ---
-    # real_segments = []
-    # index = 0
-    # for seg in result["segments"]:
-    #     if seg["start"] >= offset:
-    #         rebased = seg.copy()
-    #         rebased["index"] = index
-    #         rebased["start"] -= max(0, offset - (int(silence_gap / 2)))
-    #         rebased["end"] -= max(0, offset - (int(silence_gap / 2)))
-    #         real_segments.append(rebased)
-    #         index += 1
+    if len(result["segments"]) < len(empty_speaker_ids):
+        logger.warning("Not enough segments for the number of speakers. Assigning unknown speakers and ids.")
+        # Assign unknown speaker IDs to segments
+        for i in range(len(result["segments"])):
+            result["segments"][i]["speaker_id"] = "Unknown ID"
+            result["segments"][i]["speaker"] = "Unknown Speaker"
+            result["segments"][i]["index"] = i
+
+    else:
+        for actual_id in empty_speaker_ids.keys():
+            current_speaker = result["segments"][segment_counter].get("speaker", None)
+            for segment in result["segments"][segment_counter:]:
+                segment["index"] = segment_index_counter
+                segment_index_counter += 1
+                if segment.get("speaker") == current_speaker:
+                    empty_speaker_ids[actual_id] = current_speaker
+                    segment["speaker_id"] = actual_id
+                    segment["speaker"] = speaker_ids[actual_id]
+                elif segment.get("speaker") is None:
+                    segment["speaker_id"] = "Unknown ID"
+                    segment["speaker"] = "Unknown Speaker"
+                else:
+                    segment_counter = result["segments"].index(segment)
+                    break
+
+        unknown_speaker_index = 0
+        unknown_speakers = {}
+        for segment in result["segments"][segment_counter:]:
+            segment["index"] = segment_index_counter
+            segment_index_counter += 1
+            if segment.get("speaker") is None:
+                segment["speaker_id"] = "Unknown ID"
+                segment["speaker"] = "Unknown Speaker"
+                continue
+            key = next((k for k, v in empty_speaker_ids.items() if v == segment["speaker"]), None)
+            if key is not None:
+                segment["speaker_id"] = key
+                segment["speaker"] = speaker_ids.get(segment["speaker_id"], "Unknown Speaker")
+            else:
+                if not segment["speaker"] in unknown_speakers.keys():
+                    unknown_speakers[segment["speaker"]] = unknown_speaker_index
+                    unknown_speaker_index += 1
+                segment["speaker_id"] = f"Unknown ID {unknown_speakers[segment['speaker']]}"
+                segment["speaker"] = f"Unknown Speaker {unknown_speakers[segment['speaker']]}"
+
+        # # --- PRINT DIARIZATION ---
+        # print("\nSpeaker assignment results:")
+        # print("Speaker\tStart\tEnd\tText")
+        # for segment in result["segments"]:
+        #     print(
+        #         f"{segment['speaker']}\t{segment['speaker_id']}\t{segment['start']:.2f}\t{segment['end']:.2f}\t{segment['text']}")
+
+    real_segments = []
+    index = 0
+    for seg in result["segments"]:
+        if seg["start"] >= offset:
+            rebased = seg.copy()
+            rebased["index"] = index
+            rebased["start"] -= max(0, offset - (int(silence_gap / 2)))
+            rebased["end"] -= max(0, offset - (int(silence_gap / 2)))
+            real_segments.append(rebased)
+            index += 1
 
     # create result json structure with each segment containing speaker, start, end, and text
-    # result_json = []
-    # for segment in real_segments:
-    #     result_json.append({
-    #         "metadata": {
-    #             "type": "transcription",
-    #             "user": segment["speaker_id"] if not segment["speaker_id"].startswith("Unknown ID") else None,
-    #             "timestamp": args.timestamp,
-    #             "projectId": project_id
-    #         },
-    #         "content": {
-    #             "index": segment["index"],
-    #             "start": segment["start"],
-    #             "end": segment["end"],
-    #             "text": segment["text"],
-    #             "speaker": segment["speaker"],
-    #             "speaker_id": segment["speaker_id"]
-    #         }
-    #     })
-    #
-    # print(result_json)
-    #
-    # # save result to json file
-    # output_json = f"{args.directory}/transcription_result.json"
-    # try:
-    #     with open(output_json, "w", encoding="utf-8") as f:
-    #         json.dump(result_json, f, ensure_ascii=False, indent=2)
-    #     print(f"\nTranscription and diarization results saved to: {output_json}")
-    # except Exception as e:
-    #     print(f"Error saving result to JSON: {e}")
+    result_json = []
+    for segment in real_segments:
+        result_json.append({
+            "metadata": {
+                "type": "transcription",
+                "user": segment["speaker_id"] if not segment["speaker_id"].startswith("Unknown ID") else None,
+                "timestamp": args.timestamp,
+                "projectId": project_id
+            },
+            "content": {
+                "index": segment["index"],
+                "start": segment["start"],
+                "end": segment["end"],
+                "text": segment["text"],
+                "speaker": segment["speaker"],
+                "speaker_id": segment["speaker_id"]
+            }
+        })
+
+    print(result_json)
+
+    # save result to json file
+    output_json = f"{args.directory}/transcription_result.json"
+    try:
+        with open(output_json, "w", encoding="utf-8") as f:
+            json.dump(result_json, f, ensure_ascii=False, indent=2)
+        print(f"\nTranscription and diarization results saved to: {output_json}")
+    except Exception as e:
+        print(f"Error saving result to JSON: {e}")
 
 def transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_id, speaker_amount):
     # Upload file to AssemblyAI
@@ -255,7 +245,6 @@ def transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_
 
     # Submit transcription request
     transcribe_url = "https://api.eu.assemblyai.com/v2/transcript"
-    # Configure transcription: enable speaker labels and text formatting
     transcript_request = {
         "audio_url": audio_url,
         "speaker_labels": True,
@@ -301,8 +290,7 @@ def transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_
     logger.info("Transcription completed successfully.")
     print(f"\nTranscription result: {result}")
 
-    # Extract utterances (segments) from transcript
-    # Each utterance has start, end, speaker, text
+    # Extract utterances from transcript
     utterances = result.get("utterances", [])
     segments = []
     for utt in utterances:
@@ -315,13 +303,7 @@ def transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_
         segments.append(segment)
     logger.info(f"Extracted {len(segments)} segments from transcription.")
 
-    # --- CONFIGURE DIARIZATION ---
-
     segment_counter = 0
-    print(speaker_ids)
-    print(empty_speaker_ids)
-    print(f"Total segments: {len(segments)}")
-    print(segments)
 
     if len(segments) < len(empty_speaker_ids):
         logger.warning("Not enough segments for the number of speakers. Assigning unknown speakers and ids.")
@@ -374,13 +356,12 @@ def transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_
                 segment["speaker"] = f"Unknown Speaker {unknown_speakers[segment['speaker']]}"
             index_counter += 1
 
-    print(real_segments)
-    # --- PRINT DIARIZATION ---
-    print("\nSpeaker assignment results:")
-    print("Speaker\tStart\tEnd\tText")
-    for segment in real_segments:
-        print(
-            f"{segment['speaker']}\t{segment['speaker_id']}\t{segment['start']:.2f}\t{segment['end']:.2f}\t{segment['text']}")
+    # # --- PRINT DIARIZATION ---
+    # print("\nSpeaker assignment results:")
+    # print("Speaker\tStart\tEnd\tText")
+    # for segment in real_segments:
+    #     print(
+    #         f"{segment['speaker']}\t{segment['speaker_id']}\t{segment['start']:.2f}\t{segment['end']:.2f}\t{segment['text']}")
 
     # create result json structure with each segment containing speaker, start, end, and text
     result_json = []
