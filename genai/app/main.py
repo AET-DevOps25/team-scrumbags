@@ -41,6 +41,12 @@ async def post_content(
     ch = await conn.channel()
 
     for entry in entries:
+        if not entry.metadata.projectId or not entry.metadata.timestamp:
+            raise HTTPException(
+                status_code=422,
+                detail="Each entry must have a projectId and timestamp."
+            )
+
         raw = entry.model_dump_json()
         message = Message(body=raw.encode())
         await ch.default_exchange.publish(
