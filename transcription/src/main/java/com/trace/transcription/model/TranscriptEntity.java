@@ -16,7 +16,7 @@ public class TranscriptEntity {
 
     @Id
     @GeneratedValue                         // ← use the default generator
-    @UuidGenerator                         // ← Hibernate’s built‑in UUID generator
+    @UuidGenerator
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;;
 
@@ -24,6 +24,7 @@ public class TranscriptEntity {
     @CollectionTable(name = "transcript_segments", joinColumns = @JoinColumn(name = "transcript_id"))
     private List<TranscriptSegment> content;
 
+    @Column(columnDefinition = "BINARY(16)")
     private UUID projectId;
 
     @Temporal(TemporalType.TIMESTAMP)
