@@ -9,7 +9,6 @@ import json
 import time
 import logging
 import requests
-import whisperx
 
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
@@ -109,6 +108,8 @@ def convert_and_merge(inputs, output, directory, use_file_separator=True, silenc
     return sample_duration + silence_gap * (len(sample_wavs) - 1) + (int(silence_gap / 2)), silence_gap
 
 def transcribe_local_whisperx(merged, offset, silence_gap, empty_speaker_ids, speaker_ids, project_id, speaker_amount):
+    import whisperx
+
     device = "cpu"  # or "cpu"
     batch_size = 16
     compute_type = "int8"  # use "int8" for CPU
@@ -223,7 +224,7 @@ def transcribe_local_whisperx(merged, offset, silence_gap, empty_speaker_ids, sp
     except Exception as e:
         print(f"Error saving result to JSON: {e}")
 
-def transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_id, speaker_amount):
+def transcribe_cloud_assemblyai(merged, offset, empty_speaker_ids, speaker_ids, project_id, speaker_amount):
     # Upload file to AssemblyAI
     upload_url = "https://api.eu.assemblyai.com/v2/upload"
     headers = {"authorization": ASSEMBLY_KEY, "content-type": "application/octet-stream"}
@@ -301,9 +302,14 @@ def transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_
             "text": utt.get("text")
         }
         segments.append(segment)
+
+    print(utterances)
+
     logger.info(f"Extracted {len(segments)} segments from transcription.")
 
     segment_counter = 0
+    speaker_counter = 0
+    current_speaker = None
 
     if len(segments) < len(empty_speaker_ids):
         logger.warning("Not enough segments for the number of speakers. Assigning unknown speakers and ids.")
@@ -323,13 +329,27 @@ def transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_
             segments[segment_counter] = speaker_ids[speaker_id]
             segment_counter += 1
 
+        print("Offset: " + str(offset * 1000))
+
+        # for segment in segments:
+        #     print(segment["start"])
+        #     if segment["speaker"] != current_speaker and speaker_counter < len(empty_speaker_ids.keys()) and segment["start"] < offset * 1000:
+        #         print("add speaker " + list(speaker_ids.values())[speaker_counter])
+        #         empty_speaker_ids[speaker_counter] = segment["speaker"]
+        #         #segment["speaker"] = list(speaker_ids.values())[speaker_counter]
+        #         speaker_counter += 1
+        #     if segment["start"] >= offset * 1000:
+        #         break
+        #     segment_counter += 1
+
+
         print(f"Empty speaker IDs: {empty_speaker_ids}")
         print(f"Speaker IDs: {speaker_ids}")
 
-        real_segments = segments[len(empty_speaker_ids):]
+        real_segments = segments[segment_counter:]
 
         index_counter = 0
-        first=True
+        first = True
         start_offset = 0
         unknown_speaker_index = 0
         unknown_speakers = {}
@@ -428,6 +448,6 @@ if __name__ == "__main__":
         offset, silence_gap = convert_and_merge(inputs, merged, args.directory, use_file_separator=True, silence_gap=10)
 
     if USE_CLOUD:
-        transcribe_cloud_assemblyai(merged, empty_speaker_ids, speaker_ids, project_id, args.speaker_amount)
+        transcribe_cloud_assemblyai(merged, offset, empty_speaker_ids, speaker_ids, project_id, args.speaker_amount)
     else:
         transcribe_local_whisperx(merged, offset, silence_gap, empty_speaker_ids, speaker_ids, project_id, args.speaker_amount)
