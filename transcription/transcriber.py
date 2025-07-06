@@ -323,7 +323,14 @@ def transcribe_cloud_assemblyai(merged, offset, empty_speaker_ids, speaker_ids, 
     else:
 
         for segment in segments:
-            print(segment["start"])
+            if segment["start"] >= offset * 1000:
+                break
+            text = segment.get("text", "")
+            words = re.findall(r'\w+', text)
+            count = len(words)
+            if count < 4:
+                segment_counter += 1
+                continue
             if segment["speaker"] != current_speaker and speaker_counter < len(empty_speaker_ids.keys()) and segment["start"] < offset * 1000:
                 empty_speaker_ids[list(speaker_ids.keys())[speaker_counter]] = segment["speaker"]
                 speaker_counter += 1
