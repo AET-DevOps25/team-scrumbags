@@ -10,7 +10,7 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
     ports:
-      - "4270:3306"
+      - "9966:9966"
     volumes:
         - db_data:/var/lib/mysql
     healthcheck:
