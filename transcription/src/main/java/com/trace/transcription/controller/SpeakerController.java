@@ -63,8 +63,9 @@ public class SpeakerController {
                     .body("Error: speakerIds, speakerNames, and speakingSamples must have the same number of elements.");
         }
 
-        if (speakerService.saveSpeakers(projectId, speakerIds, speakerNames, speakingSamples)) {
-            return ResponseEntity.ok("Speakers uploaded successfully.");
+        String speakers = speakerService.saveSpeakers(projectId, speakerIds, speakerNames, speakingSamples);
+        if (speakers != null) {
+            return ResponseEntity.ok(speakers);
         } else {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error saving speakers. Please check the logs for details.");
@@ -72,7 +73,8 @@ public class SpeakerController {
     }
 
     /**
-     * DELETE /{projectId}/speakers/{speakerId}
+     * DELETE /
+     * {projectId}/speakers/{speakerId}
      * <p>
      * Deletes the speaker with the given ID from the project.
      */

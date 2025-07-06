@@ -33,7 +33,7 @@ public class SpeakerService {
         return speakerRepository.findAllByProjectId(projectId);
     }
 
-    public boolean saveSpeakers(
+    public String saveSpeakers(
             UUID projectId,
             List<String> speakerIds,
             List<String> speakerNames,
@@ -82,9 +82,20 @@ public class SpeakerService {
             logger.info("Saved {} speakers", count);
         } catch (Exception e) {
             logger.error("Error saving speakers: {}", e.getMessage(), e);
-            return false;
+            return null;
         }
-        return true;
+        // Return saved speakers in json format with id and name
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        for (int i = 0; i < toSave.size(); i++) {
+            SpeakerEntity speaker = toSave.get(i);
+            sb.append("{\"id\":\"").append(speaker.getId()).append("\",\"name\":\"").append(speaker.getName()).append("\"}");
+            if (i < toSave.size() - 1) {
+                sb.append(",");
+            }
+        }
+        sb.append("]");
+        return sb.toString();
     }
 
     public SpeakerEntity getSpeakerById(UUID projectId, String speakerId) {
