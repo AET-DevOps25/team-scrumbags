@@ -25,8 +25,11 @@ async def consume():
                 print("Processing message...")
                 payload = json.loads(message.body)
 
-                if not payload.get("metadata") or not payload["metadata"].get("projectId") or not payload[
-                    "metadata"].get("timestamp"):
+                if (
+                        not payload.get("metadata")
+                        or not payload["metadata"].get("projectId")
+                        or not payload["metadata"].get("timestamp")
+                ):
                     print("Invalid message format, skipping...")
                     continue
 
