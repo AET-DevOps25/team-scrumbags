@@ -321,26 +321,22 @@ def transcribe_cloud_assemblyai(merged, offset, empty_speaker_ids, speaker_ids, 
 
         real_segments = segments
     else:
-        for speaker_id in empty_speaker_ids.keys():
-            print(f"Processing speaker ID: {speaker_id}")
-            print(f"Current segment counter: {segment_counter}")
-            print(f"Current segment: {segments[segment_counter]}")
-            empty_speaker_ids[speaker_id] = segments[segment_counter]["speaker"]
-            segments[segment_counter] = speaker_ids[speaker_id]
-            segment_counter += 1
-
-        print("Offset: " + str(offset * 1000))
-
-        # for segment in segments:
-        #     print(segment["start"])
-        #     if segment["speaker"] != current_speaker and speaker_counter < len(empty_speaker_ids.keys()) and segment["start"] < offset * 1000:
-        #         print("add speaker " + list(speaker_ids.values())[speaker_counter])
-        #         empty_speaker_ids[speaker_counter] = segment["speaker"]
-        #         #segment["speaker"] = list(speaker_ids.values())[speaker_counter]
-        #         speaker_counter += 1
-        #     if segment["start"] >= offset * 1000:
-        #         break
+        # for speaker_id in empty_speaker_ids.keys():
+        #     print(f"Processing speaker ID: {speaker_id}")
+        #     print(f"Current segment counter: {segment_counter}")
+        #     print(f"Current segment: {segments[segment_counter]}")
+        #     empty_speaker_ids[speaker_id] = segments[segment_counter]["speaker"]
+        #     segments[segment_counter] = speaker_ids[speaker_id]
         #     segment_counter += 1
+
+        for segment in segments:
+            print(segment["start"])
+            if segment["speaker"] != current_speaker and speaker_counter < len(empty_speaker_ids.keys()) and segment["start"] < offset * 1000:
+                empty_speaker_ids[list(speaker_ids.keys())[speaker_counter]] = segment["speaker"]
+                speaker_counter += 1
+            if segment["start"] >= offset * 1000:
+                break
+            segment_counter += 1
 
 
         print(f"Empty speaker IDs: {empty_speaker_ids}")
