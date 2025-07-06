@@ -321,13 +321,6 @@ def transcribe_cloud_assemblyai(merged, offset, empty_speaker_ids, speaker_ids, 
 
         real_segments = segments
     else:
-        # for speaker_id in empty_speaker_ids.keys():
-        #     print(f"Processing speaker ID: {speaker_id}")
-        #     print(f"Current segment counter: {segment_counter}")
-        #     print(f"Current segment: {segments[segment_counter]}")
-        #     empty_speaker_ids[speaker_id] = segments[segment_counter]["speaker"]
-        #     segments[segment_counter] = speaker_ids[speaker_id]
-        #     segment_counter += 1
 
         for segment in segments:
             print(segment["start"])
