@@ -71,7 +71,6 @@ class TokenTest {
         // query the token by api request
         var resp = mockMvc.perform(get("/projects/{projectId}/token", savedToken.getProjectId())
                         .param("system", savedToken.getSupportedSystem().toString())
-                        .content(token)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andReturn().getResponse();

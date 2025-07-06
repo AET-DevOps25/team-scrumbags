@@ -9,6 +9,15 @@ public class Metadata {
     private final long timestamp;
     private final UUID projectId;
 
+    // Default constructor for deserialization
+    private Metadata(){
+        eventId = null;
+        type = null;
+        userId = null;
+        timestamp = 0;
+        projectId = null;
+    }
+
     public Metadata(UUID eventId, String type, UUID userId, long timestamp, UUID projectId) {
         this.eventId = eventId;
         this.type = type;
