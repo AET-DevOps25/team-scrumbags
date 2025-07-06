@@ -28,7 +28,7 @@ services:
         USE_WHISPERX: ${USE_WHISPERX}
     env_file: .env
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
+      SPRING_DATASOURCE_URL: jdbc:mysql://transcription-db:9966/${MYSQL_DATABASE}
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
       HF_TOKEN: ${HF_TOKEN}
