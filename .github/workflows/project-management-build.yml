@@ -1,12 +1,5 @@
 name: Project Management build java
 on: 
-  push:
-    branches:
-      - main
-      - release/*
-    paths:
-      - 'project-management/**'
-      - '.github/workflows/project-management-package.yml'
   pull_request:
     paths:
       - 'project-management/**'
