@@ -6,6 +6,7 @@ import { environment } from '../environment';
 import { Message } from '../models/message.model';
 import { SdlcToken } from '../models/sdlc-token.model';
 import { handleError } from './api-utils';
+import { SdlcUserMapping } from '../models/sdlc-users.model';
 
 @Injectable({
   providedIn: 'root',
@@ -21,7 +22,30 @@ export class SdlcApi {
 
   saveToken(projectId: string, token: string): Observable<SdlcToken> {
     return this.http
-      .post<SdlcToken>(`${environment.sdlcUrl}/projects/${projectId}/token`, token)
+      .post<SdlcToken>(
+        `${environment.sdlcUrl}/projects/${projectId}/token`,
+        token
+      )
+      .pipe(catchError(handleError('Error sending message')));
+  }
+
+  getUserMappings(projectId: string): Observable<SdlcUserMapping[]> {
+    return this.http
+      .get<SdlcUserMapping[]>(
+        `${environment.sdlcUrl}/projects/${projectId}/users`
+      )
+      .pipe(catchError(handleError('Error fetching chat messages')));
+  }
+
+  saveUserMapping(
+    projectId: string,
+    userMapping: SdlcUserMapping
+  ): Observable<SdlcUserMapping> {
+    return this.http
+      .post<SdlcUserMapping>(
+        `${environment.sdlcUrl}/projects/${projectId}/users`,
+        userMapping
+      )
       .pipe(catchError(handleError('Error sending message')));
   }
 }
