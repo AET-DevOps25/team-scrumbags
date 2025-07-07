@@ -33,7 +33,7 @@ abstract class EventTest {
     @Autowired
     private TokenRepo tokenRepo;
 
-    private UUID projectId;
+    protected UUID projectId;
 
     private String secret;
 
