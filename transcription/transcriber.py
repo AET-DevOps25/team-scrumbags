@@ -41,7 +41,8 @@ def find_speakers_and_inputs(directory):
             elif filename != "file-separator.wav":
                 to_be_transcribed = file_path
 
-    input_media.append(to_be_transcribed)
+    if to_be_transcribed:
+        input_media.append(to_be_transcribed)
     return empty_ids, ids, input_media
 
 def cut_and_convert_to_wav(input_file, output_wav, limit_duration=True):
