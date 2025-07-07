@@ -15,6 +15,7 @@
         name="secretInput"
         placeholder="Enter webhook secret"
         [(ngModel)]="secretInput"
+        (ngModelChange)="confirmation.set(false)"
         (submit)="onSubmit()"
       />
       <button
@@ -30,24 +31,26 @@
         }}</mat-icon>
       </button>
     </mat-form-field>
-    @if(isLoading()) {
-    <mat-progress-spinner
-      matSuffix
-      diameter="24"
-      mode="indeterminate"
-      color="primary"
-      class="mx-2"
-    ></mat-progress-spinner>
-    } @else {
-    <button
-      mat-icon-button
-      type="button"
-      (click)="onSubmit()"
-      [disabled]="secretInput() == initialSecret()"
-    >
-      <mat-icon>send</mat-icon>
-    </button>
-    }
+    <div class="mb-4">
+      @if(isLoading()) {
+      <mat-progress-spinner
+        matSuffix
+        diameter="24"
+        mode="indeterminate"
+        color="primary"
+        class="mx-2"
+      ></mat-progress-spinner>
+      } @else {
+      <button
+        mat-icon-button
+        type="button"
+        (click)="onSubmit()"
+        [disabled]="confirmation() || secretInput() == initialSecret()"
+      >
+        <mat-icon>{{ confirmation() ? "check" : "send" }}</mat-icon>
+      </button>
+      }
+    </div>
   </form>
 
   <!-- User Name Mapping -->

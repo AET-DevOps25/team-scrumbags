@@ -31,6 +31,7 @@ export class SdlcSettings {
   secretInput = signal('');
 
   isLoading = signal(false);
+  confirmation = signal(false);
 
   projectsUser = computed<User[]>(() => {
     return this.projectService.selectedProject()?.users ?? [];
@@ -72,6 +73,7 @@ export class SdlcSettings {
         if (token) {
           this.initialSecret.set(token.token);
           this.secretInput.set(token.token);
+          this.confirmation.set(true);
         }
       },
       complete: () => {
