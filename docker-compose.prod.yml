@@ -21,16 +21,18 @@ services:
       - ./letsencrypt:/letsencrypt
 
   client:
-    build:
-      context: ./client
-      dockerfile: Dockerfile
+    image: ghcr.io/aet-devops25/team-scrumbags/client:${CLIENT_IMAGE_TAG:-main}
     ports:
       - "4200:80"
     environment:
-      - API_URL=${API_URL:-https://${DOMAIN}/project-management}
-      - KEYCLOAK_URL=${KEYCLOAK_URL:-https://${DOMAIN}/keycloak}
-      - KEYCLOAK_REALM=${KEYCLOAK_REALM:-trace}
-      - KEYCLOAK_CLIENT=${KEYCLOAK_CLIENT:-trace-api}
+      - PROJECT_MANAGEMENT_URL=https://${DOMAIN}/api/project-management
+      - SDLC_URL=https://${DOMAIN}/api/sdlc
+      - MEETING_NOTES_URL=https://${DOMAIN}/api/meeting-notes
+      - COMMUNICATION_URL=https://${DOMAIN}/api/communication
+      - GEN_AI_URL=https://${DOMAIN}/api/gen-ai
+      - KEYCLOAK_URL=https://${DOMAIN}/keycloak
+      - KEYCLOAK_REALM=trace
+      - KEYCLOAK_CLIENT=trace-api
       - DEBUG=${DEBUG:-false}
     labels:
       - "traefik.enable=true"
@@ -42,9 +44,7 @@ services:
       - "traefik.http.routers.client.middlewares=client-compress"
 
   project-management:
-    build:
-      context: ./project-management
-      dockerfile: Dockerfile
+    image: ghcr.io/aet-devops25/team-scrumbags/project-management:${PROJECT_IMAGE_TAG:-main}
     ports:
       - "8080:8080"
     depends_on:
@@ -54,20 +54,77 @@ services:
       - DB_URL=jdbc:postgresql://project-db:5432/project-db
       - DB_USER=${PROJECT_DB_USER}
       - DB_PASSWORD=${PROJECT_DB_PASSWORD}
-      - KEYCLOAK_REALM=${KEYCLOAK_REALM:-trace}
+      - KEYCLOAK_REALM=trace
       - KEYCLOAK_AUTH_URL=https://${DOMAIN}/keycloak
       - KEYCLOAK_ADMIN_USERNAME=${KEYCLOAK_ADMIN_USERNAME}
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
-      - SERVER_PORT=8080
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.project-management.rule=Host(`${DOMAIN}`) && PathPrefix(`/project-management`)"
+      - "traefik.http.routers.project-management.rule=Host(`${DOMAIN}`) && PathPrefix(`/api/project-management`)"
       - "traefik.http.services.project-management.loadbalancer.server.port=8080"
       - "traefik.http.routers.project-management.entrypoints=websecure"
       - "traefik.http.routers.project-management.tls.certresolver=letsencrypt"
-      - "traefik.http.middlewares.strip-project-management.stripprefix.prefixes=/project-management"
+      - "traefik.http.middlewares.strip-project-management.stripprefix.prefixes=/api/project-management"
       - "traefik.http.routers.project-management.middlewares=strip-project-management"
+
+  project-db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${PROJECT_DB_USER}
+      POSTGRES_PASSWORD: ${PROJECT_DB_PASSWORD}
+      POSTGRES_DB: project-db
+    volumes:
+      - project_db_data:/var/lib/postgresql/data
+
+  sdlc:
+    image: ghcr.io/aet-devops25/team-scrumbags/sdlc-connector:${SDLC_IMAGE_TAG:-main}
+    ports:
+      - "8081:8080"
+    depends_on:
+      - sdlc-db
+    environment:
+      - DEBUG=${DEBUG}
+      - TOKEN_SECRET=${SDLC_TOKEN_SECRET}
+      - MODE=forward
+      - DB_URL=jdbc:postgresql://sdlc:5432/sdlc-db
+      - DB_USER=${SDLC_DB_USER}
+      - DB_PASSWORD=${SDLC_DB_PASSWORD}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sdlc.rule=Host(`${DOMAIN}`) && PathPrefix(`/api/sdlc`)"
+      - "traefik.http.services.sdlc.loadbalancer.server.port=8080"
+      - "traefik.http.routers.sdlc.entrypoints=websecure"
+      - "traefik.http.routers.sdlc.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.strip-sdlc.stripprefix.prefixes=/api/sdlc"
+      - "traefik.http.routers.sdlc.middlewares=strip-sdlc"
+  
+  sdlc-db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${SDLC_DB_USER}
+      POSTGRES_PASSWORD: ${SDLC_DB_PASSWORD}
+      POSTGRES_DB: sdlc-db
+    volumes:
+      - sdlc_db_data:/var/lib/postgresql/data
+
+  mock-meeting-notes:
+    image: ghcr.io/aet-devops25/team-scrumbags/mock-meeting-notes:${MEETING_NOTES_IMAGE_TAG:-main}
+    ports:
+      - "3030:3030"
+    environment:
+      - SERVER_PORT=3030
+      - DEBUG=${DEBUG}
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.meeting-notes.rule=Host(`${DOMAIN}`) && PathPrefix(`/api/meeting-notes`)"
+      - "traefik.http.services.meeting-notes.loadbalancer.server.port=3030"
+      - "traefik.http.routers.meeting-notes.entrypoints=websecure"
+      - "traefik.http.routers.meeting-notes.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.strip-meeting-notes.stripprefix.prefixes=/api/meeting-notes"
+      - "traefik.http.routers.meeting-notes.middlewares=strip-meeting-notes"
+
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.2.5
@@ -77,7 +134,7 @@ services:
       - --proxy-headers=xforwarded # configure keycloak for reverse proxy
       - --http-relative-path=/keycloak
     ports:
-      - "8081:8080"
+      - "7999:8080"
     environment:
       KC_HOSTNAME: ${DOMAIN}
       KC_HOSTNAME_STRICT: false
@@ -94,33 +151,7 @@ services:
       - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
       - "traefik.http.routers.keycloak.entrypoints=websecure"
       - "traefik.http.routers.keycloak.tls.certresolver=letsencrypt"
-      
-  project-db:
-    image: postgres:latest
-    environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: project-db
-    ports:
-      - "5432:5432"
-    volumes:
-      - project_db_data:/var/lib/postgresql/data
-
-  # prometheus:
-  #   image: prom/prometheus
-  #   volumes:
-  #     - ./prometheus.yml:/etc/prometheus/prometheus.yml
-  #   ports:
-  #     - "9090:9090"
-  #   depends_on:
-  #     - project-management
-
-  # grafana:
-  #   image: grafana/grafana
-  #   ports:
-  #     - "3000:3000"
-  #   depends_on:
-  #     - prometheus
 
 volumes:
   project_db_data:
+  sdlc_db_data:
