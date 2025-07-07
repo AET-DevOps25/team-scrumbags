@@ -42,7 +42,7 @@
         mat-icon-button
         type="button"
         (click)="onSubmit()"
-        [disabled]="confirmation() || secretInput() == initialSecret()"
+        [disabled]="confirmation() || secretInput() === initialSecret()"
       >
         <mat-icon>{{ confirmation() ? "check" : "send" }}</mat-icon>
       </button>

@@ -1,9 +1,8 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { environment } from '../environment';
-import { Message } from '../models/message.model';
 import { SdlcToken } from '../models/sdlc-token.model';
 import { handleError } from './api-utils';
 import { SdlcUserMapping } from '../models/sdlc-users.model';
