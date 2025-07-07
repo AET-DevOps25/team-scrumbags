@@ -20,7 +20,7 @@ import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 @Component({
-  selector: 'app-project-people',
+  selector: 'app-settings-project-users',
   imports: [
     MatListModule,
     MatIconModule,
@@ -31,10 +31,10 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
     ReactiveFormsModule,
     FormsModule,
   ],
-  templateUrl: './project-people.component.html',
-  styleUrl: './project-people.component.scss',
+  templateUrl: './settings-project-users.component.html',
+  styleUrl: './settings-project-users.component.scss',
 })
-export class ProjectPeopleComponent implements OnInit {
+export class ProjectUserSettings implements OnInit {
   projectService = inject(ProjectService);
   projectState = inject(ProjectState);
   userService = inject(UserService);

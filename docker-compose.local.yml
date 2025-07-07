@@ -10,7 +10,7 @@ services:
       - SDLC_URL=http://localhost:8081
       - MEETING_NOTES_URL=http://localhost:3030
       - COMMUNICATION_URL=http://localhost/api/communication
-      - GEN_AI_URL=http://localhost/api/gen-ai
+      - GEN_AI_URL=http://localhost:3031
       - KEYCLOAK_URL=http://localhost:7999
       - KEYCLOAK_REALM=${KEYCLOAK_REALM:-trace}
       - KEYCLOAK_CLIENT=${KEYCLOAK_CLIENT:-trace-api}

@@ -1,0 +1,43 @@
+<div class="flex flex-col gap-4">
+  <h2 class="text-lg font-medium">Version Control Settings</h2>
+
+  <!-- Secret Input -->
+  <form
+    class="flex flex-row items-center gap-2"
+    (ngSubmit)="onSubmit()"
+    name="webhookSecret"
+  >
+    <mat-form-field appearance="outline" class="flex-1">
+      <input
+        matInput
+        [type]="showSecret() ? 'text' : 'password'"
+        name="secretInput"
+        placeholder="Enter webhook secret"
+        [(ngModel)]="secretInput"
+        (submit)="onSubmit()"
+      />
+      <button
+        mat-icon-button
+        matSuffix
+        type="button"
+        [disabled]="!secretInput()"
+        (click)="showSecret.set(!showSecret())"
+        [attr.aria-label]="showSecret() ? 'Hide secret' : 'Show secret'"
+      >
+        <mat-icon>{{
+          showSecret() ? "visibility_off" : "visibility"
+        }}</mat-icon>
+      </button>
+    </mat-form-field>
+    <button
+      mat-icon-button
+      type="button"
+      (click)="onSubmit()"
+      [disabled]="secretInput() == initialSecret()"
+    >
+      <mat-icon>send</mat-icon>
+    </button>
+  </form>
+
+  <!-- User Name Mapping -->
+</div>
