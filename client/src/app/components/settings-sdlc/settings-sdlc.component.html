@@ -11,6 +11,7 @@
       <input
         matInput
         [type]="showSecret() ? 'text' : 'password'"
+        [disabled]="isLoading()"
         name="secretInput"
         placeholder="Enter webhook secret"
         [(ngModel)]="secretInput"
@@ -29,6 +30,15 @@
         }}</mat-icon>
       </button>
     </mat-form-field>
+    @if(isLoading()) {
+    <mat-progress-spinner
+      matSuffix
+      diameter="24"
+      mode="indeterminate"
+      color="primary"
+      class="mx-2"
+    ></mat-progress-spinner>
+    } @else {
     <button
       mat-icon-button
       type="button"
@@ -37,6 +47,7 @@
     >
       <mat-icon>send</mat-icon>
     </button>
+    }
   </form>
 
   <!-- User Name Mapping -->

@@ -21,3 +21,9 @@ spring:
         properties:
           hibernate:
               dialect: org.hibernate.dialect.PostgreSQLDialect
+
+    security:
+        oauth2:
+            resourceserver:
+                jwt:
+                    issuer-uri: ${KEYCLOAK_AUTH_URL}/realms/${KEYCLOAK_REALM}

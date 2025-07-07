@@ -4,6 +4,7 @@ import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { environment } from '../environment';
 import { MeetingNote } from '../models/meeting-note.model';
+import { handleError } from './api-utils';
 
 @Injectable({
   providedIn: 'root',
@@ -16,7 +17,7 @@ export class MeetingNotesApi {
       .get<MeetingNote[]>(
         `${environment.meetingNotesUrl}/projects/${projectId}/meeting-notes`
       )
-      .pipe(catchError(this.handleError('Error fetching project list')));
+      .pipe(catchError(handleError('Error fetching project list')));
   }
 
   uploadMeetingNoteFile(
@@ -30,7 +31,7 @@ export class MeetingNotesApi {
         `${environment.meetingNotesUrl}/projects/${projectId}/meeting-notes`,
         formData
       )
-      .pipe(catchError(this.handleError('Error uploading meeting note')));
+      .pipe(catchError(handleError('Error uploading meeting note')));
   }
 
   getMeetingNoteFile(projectId: string, noteId: string): Observable<Blob> {
@@ -42,7 +43,7 @@ export class MeetingNotesApi {
         }
       )
       .pipe(
-        catchError(this.handleError('Error downloading meeting note file'))
+        catchError(handleError('Error downloading meeting note file'))
       );
   }
 
@@ -52,22 +53,5 @@ export class MeetingNotesApi {
       observer.next(url);
       observer.complete();
     });
-  }
-
-  private handleError(operation: string) {
-    return (error: HttpErrorResponse): Observable<never> => {
-      console.error(`${operation}:`, error);
-
-      let errorMessage = 'An unknown error occurred';
-      if (error.error instanceof ErrorEvent) {
-        // Client-side error
-        errorMessage = `Client error: ${error.error.message}`;
-      } else {
-        // Server-side error
-        errorMessage = `Server error: ${error.status} ${error.statusText}`;
-      }
-
-      return throwError(() => new Error(errorMessage));
-    };
   }
 }

@@ -5,6 +5,7 @@ import { catchError } from 'rxjs/operators';
 import { environment } from '../environment';
 import { Project } from '../models/project.model';
 import { User } from '../models/user.model';
+import { handleError } from './api-utils';
 
 @Injectable({
   providedIn: 'root',
@@ -15,20 +16,20 @@ export class ProjectApi {
   getProjectList(): Observable<Project[]> {
     return this.http
       .get<Project[]>(`${environment.projectManagementUrl}/projects`)
-      .pipe(catchError(this.handleError('Error fetching project list')));
+      .pipe(catchError(handleError('Error fetching project list')));
   }
 
   createProject(project: Project): Observable<Project> {
     return this.http
       .post<Project>(`${environment.projectManagementUrl}/projects`, project)
-      .pipe(catchError(this.handleError('Error creating project')));
+      .pipe(catchError(handleError('Error creating project')));
   }
 
   getProjectById(id: string): Observable<Project> {
     return this.http
       .get<Project>(`${environment.projectManagementUrl}/projects/${id}`)
       .pipe(
-        catchError(this.handleError(`Error fetching project by ID (${id})`))
+        catchError(handleError(`Error fetching project by ID (${id})`))
       );
   }
 
@@ -37,7 +38,7 @@ export class ProjectApi {
       .get<User[]>(`${environment.projectManagementUrl}/projects/${projectId}/users`)
       .pipe(
         catchError(
-          this.handleError(`Error fetching users in project (${projectId})`)
+          handleError(`Error fetching users in project (${projectId})`)
         )
       );
   }
@@ -50,7 +51,7 @@ export class ProjectApi {
       .post<string[]>(`${environment.projectManagementUrl}/projects/${projectId}/users`, userIds)
       .pipe(
         catchError(
-          this.handleError(`Error assigning user to project (${projectId})`)
+          handleError(`Error assigning user to project (${projectId})`)
         )
       );
   }
@@ -65,25 +66,8 @@ export class ProjectApi {
       })
       .pipe(
         catchError(
-          this.handleError(`Error removing user from project (${projectId})`)
+          handleError(`Error removing user from project (${projectId})`)
         )
       );
-  }
-
-  private handleError(operation: string) {
-    return (error: HttpErrorResponse): Observable<never> => {
-      console.error(`${operation}:`, error);
-
-      let errorMessage = 'An unknown error occurred';
-      if (error.error instanceof ErrorEvent) {
-        // Client-side error
-        errorMessage = `Client error: ${error.error.message}`;
-      } else {
-        // Server-side error
-        errorMessage = `Server error: ${error.status} ${error.statusText}`;
-      }
-
-      return throwError(() => new Error(errorMessage));
-    };
   }
 }

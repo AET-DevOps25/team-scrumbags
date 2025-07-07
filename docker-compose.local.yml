@@ -50,6 +50,8 @@ services:
       - DB_URL=jdbc:postgresql://localhost:5432/sdlc-db
       - DB_USER=${POSTGRES_DB_USER:-user}
       - DB_PASSWORD=${POSTGRES_DB_PASSWORD:-test}
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM:-trace}
+      - KEYCLOAK_AUTH_URL=http://localhost:7999
       - SERVER_PORT=8081
     restart: unless-stopped
 
