@@ -46,7 +46,7 @@ services:
       - DEBUG=true
       - TOKEN_SECRET=${SDLC_TOKEN_SECRET:-meinsecret}
       - MODE=${SDLC_MODE:-persist}
-      - GENAI_URL=http://localhost/api/gen-ai
+      - GENAI_URL=http://localhost:3031
       - DB_URL=jdbc:postgresql://localhost:5432/sdlc-db
       - DB_USER=${POSTGRES_DB_USER:-user}
       - DB_PASSWORD=${POSTGRES_DB_PASSWORD:-test}
