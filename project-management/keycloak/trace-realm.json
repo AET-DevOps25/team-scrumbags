@@ -47,6 +47,20 @@
           "temporary": false
         }
       ]
+    },
+    {
+      "username": "testuser2",
+      "enabled": true,
+      "firstName": "Test",
+      "lastName": "User2",
+      "email": "test2@example.com",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ]
     }
   ]
 }

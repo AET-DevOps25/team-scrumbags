@@ -6,6 +6,8 @@ on:
       - '.github/workflows/client-package.yml'
     branches:
       - main
+  release:
+    types: [released]
 
 jobs:
   build:

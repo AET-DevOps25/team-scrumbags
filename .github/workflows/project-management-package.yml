@@ -3,11 +3,11 @@ on:
   push:
     branches:
       - main
-      - release/*
     paths:
       - 'project-management/**'
       - '.github/workflows/project-management-package.yml'
-  workflow_dispatch:
+  release:
+    types: [released]
 
 jobs:
   build:
