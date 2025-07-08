@@ -4,13 +4,13 @@ services:
     image: mysql:8.0
     restart: always
     environment:
-      MYSQL_URL: dbc:mysql://transcription-db:9966/${MYSQL_DATABASE}
+      MYSQL_URL: jdbc:mysql://transcription-db:3306/${MYSQL_DATABASE}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
     ports:
-      - "9966:9966"
+      - "9966:3306"
     volumes:
         - db_data:/var/lib/mysql
     healthcheck:
@@ -28,7 +28,7 @@ services:
         USE_WHISPERX: ${USE_WHISPERX}
     env_file: .env
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://transcription-db:9966/${MYSQL_DATABASE}
+      SPRING_DATASOURCE_URL: jdbc:mysql://transcription-db:3306/${MYSQL_DATABASE}
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
       HF_TOKEN: ${HF_TOKEN}
