@@ -75,23 +75,23 @@ def summarize_entries(projectId: str, start: int, end: int, userIds: list[str]):
         template="""You are a summarizer of source control information (pull requests, commits, branches, etc.),
         transcripts of meetings with assigned speakers, and messages between team members over
         collaboration / messaging platforms.
-        
-        Below is a list of IDs that correspond to users you should primarily focus on when summarizing. 
+
+        Below is a list of IDs that correspond to users you should primarily focus on when summarizing.
         Do not expose the IDs in the summary, but use them to focus on the relevant users:
         {users}
-        
+
         Given the following documents containing
         information about the project dealings, produce a
         detailed summary in Markdown format. Use headings, bullet points, and code
         blocks where appropriate. Do not use any other formatting than Markdown.
-        
+
         Below is the content to summarize:
         //
-        
+
         {input_documents}
-        
+
         //
-        
+
         Use the format given below for summarizing:
         ### [Summary Name]:
         [Summary Content]""".strip(),
