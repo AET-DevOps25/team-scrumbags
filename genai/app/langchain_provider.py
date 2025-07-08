@@ -111,7 +111,8 @@ def summarize_entries(projectId: str, start: int, end: int, userIds: list[str]):
                      },
                      page_content=obj.properties.get("content", "empty")) for obj in contents]
 
-    chain = load_summarize_chain(llm, chain_type="stuff", verbose=False, prompt=prompt, document_variable_name="input_documents")
+    chain = load_summarize_chain(llm, chain_type="stuff", verbose=False, prompt=prompt,
+                                 document_variable_name="input_documents")
 
     # chain = create_stuff_documents_chain(llm, prompt) # alternative using create_stuff_documents_chain
 

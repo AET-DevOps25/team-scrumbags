@@ -43,7 +43,7 @@ def store_entry(entry):
     entry.metadata.type = None if entry.metadata.type in [None, "None", "null"] else entry.metadata.type
 
     entry_obj = {
-        #"uuid": str(content_uuid),
+        # "uuid": str(content_uuid),
         "type": entry.metadata.type,
         "user": entry.metadata.user,
         "timestamp": dt.isoformat(),

@@ -95,7 +95,8 @@ async def get_summary(
 
         print("No existing summary found, generating new one...")
         # Generate and store new summary
-        summary_md = summarize_entries(str(projectId), startTime, endTime, [str(user) for user in userIds] if userIds else [])
+        summary_md = summarize_entries(str(projectId), startTime, endTime,
+                                       [str(user) for user in userIds] if userIds else [])
 
         if not summary_md or "output_text" not in summary_md:
             return {"summary": "No content found for the given parameters."}
@@ -140,7 +141,8 @@ async def refresh_summary(
         )
 
         # Generate and insert new summary
-        summary_md = summarize_entries(str(projectId), startTime, endTime, [str(user) for user in userIds] if userIds else [])
+        summary_md = summarize_entries(str(projectId), startTime, endTime,
+                                       [str(user) for user in userIds] if userIds else [])
         new_summary = Summary(
             projectId=str(projectId),
             startTime=startTime,
@@ -184,7 +186,6 @@ async def query_project(
         projectId: UUID4 = Query(..., description="Project UUID (must be UUID4)"),
         question: str = Query(..., description="Question to ask about the project content")
 ):
-
     q_time = datetime.now(UTC)
 
     # Call the existing QA chain to get an answer
