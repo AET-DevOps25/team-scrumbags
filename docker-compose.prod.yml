@@ -1,0 +1,157 @@
+services:
+  reverse-proxy:
+    image: traefik:v3.4
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedByDefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=test@test.de"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./letsencrypt:/letsencrypt
+
+  client:
+    image: ghcr.io/aet-devops25/team-scrumbags/client:${CLIENT_IMAGE_TAG:-main}
+    ports:
+      - "4200:80"
+    environment:
+      - PROJECT_MANAGEMENT_URL=https://${DOMAIN}/api/project-management
+      - SDLC_URL=https://${DOMAIN}/api/sdlc
+      - MEETING_NOTES_URL=https://${DOMAIN}/api/meeting-notes
+      - COMMUNICATION_URL=https://${DOMAIN}/api/communication
+      - GEN_AI_URL=https://${DOMAIN}/api/gen-ai
+      - KEYCLOAK_URL=https://${DOMAIN}/keycloak
+      - KEYCLOAK_REALM=trace
+      - KEYCLOAK_CLIENT=trace-api
+      - DEBUG=${DEBUG:-false}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.client.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.services.client.loadbalancer.server.port=80"
+      - "traefik.http.routers.client.entrypoints=websecure"
+      - "traefik.http.routers.client.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.client-compress.compress=true"
+      - "traefik.http.routers.client.middlewares=client-compress"
+
+  project-management:
+    image: ghcr.io/aet-devops25/team-scrumbags/project-management:${PROJECT_IMAGE_TAG:-main}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - project-db
+    environment:
+      - DEBUG=${DEBUG:-false}
+      - DB_URL=jdbc:postgresql://project-db:5432/project-db
+      - DB_USER=${PROJECT_DB_USER}
+      - DB_PASSWORD=${PROJECT_DB_PASSWORD}
+      - KEYCLOAK_REALM=trace
+      - KEYCLOAK_AUTH_URL=https://${DOMAIN}/keycloak
+      - KEYCLOAK_ADMIN_USERNAME=${KEYCLOAK_ADMIN_USERNAME}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.project-management.rule=Host(`${DOMAIN}`) && PathPrefix(`/api/project-management`)"
+      - "traefik.http.services.project-management.loadbalancer.server.port=8080"
+      - "traefik.http.routers.project-management.entrypoints=websecure"
+      - "traefik.http.routers.project-management.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.strip-project-management.stripprefix.prefixes=/api/project-management"
+      - "traefik.http.routers.project-management.middlewares=strip-project-management"
+
+  project-db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${PROJECT_DB_USER}
+      POSTGRES_PASSWORD: ${PROJECT_DB_PASSWORD}
+      POSTGRES_DB: project-db
+    volumes:
+      - project_db_data:/var/lib/postgresql/data
+
+  sdlc:
+    image: ghcr.io/aet-devops25/team-scrumbags/sdlc-connector:${SDLC_IMAGE_TAG:-main}
+    ports:
+      - "8081:8080"
+    depends_on:
+      - sdlc-db
+    environment:
+      - DEBUG=${DEBUG}
+      - TOKEN_SECRET=${SDLC_TOKEN_SECRET}
+      - MODE=forward
+      - DB_URL=jdbc:postgresql://sdlc:5432/sdlc-db
+      - DB_USER=${SDLC_DB_USER}
+      - DB_PASSWORD=${SDLC_DB_PASSWORD}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sdlc.rule=Host(`${DOMAIN}`) && PathPrefix(`/api/sdlc`)"
+      - "traefik.http.services.sdlc.loadbalancer.server.port=8080"
+      - "traefik.http.routers.sdlc.entrypoints=websecure"
+      - "traefik.http.routers.sdlc.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.strip-sdlc.stripprefix.prefixes=/api/sdlc"
+      - "traefik.http.routers.sdlc.middlewares=strip-sdlc"
+  
+  sdlc-db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${SDLC_DB_USER}
+      POSTGRES_PASSWORD: ${SDLC_DB_PASSWORD}
+      POSTGRES_DB: sdlc-db
+    volumes:
+      - sdlc_db_data:/var/lib/postgresql/data
+
+  mock-meeting-notes:
+    image: ghcr.io/aet-devops25/team-scrumbags/mock-meeting-notes:${MEETING_NOTES_IMAGE_TAG:-main}
+    ports:
+      - "3030:3030"
+    environment:
+      - SERVER_PORT=3030
+      - DEBUG=${DEBUG}
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.meeting-notes.rule=Host(`${DOMAIN}`) && PathPrefix(`/api/meeting-notes`)"
+      - "traefik.http.services.meeting-notes.loadbalancer.server.port=3030"
+      - "traefik.http.routers.meeting-notes.entrypoints=websecure"
+      - "traefik.http.routers.meeting-notes.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.strip-meeting-notes.stripprefix.prefixes=/api/meeting-notes"
+      - "traefik.http.routers.meeting-notes.middlewares=strip-meeting-notes"
+
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.2.5
+    command:
+      - start-dev
+      - --import-realm
+      - --proxy-headers=xforwarded # configure keycloak for reverse proxy
+      - --http-relative-path=/keycloak
+    ports:
+      - "7999:8080"
+    environment:
+      KC_HOSTNAME: ${DOMAIN}
+      KC_HOSTNAME_STRICT: false
+      KC_HTTP_ENABLED: true
+      KC_PROXY_HEADERS: xforwarded
+      KC_HTTP_RELATIVE_PATH: /keycloak
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+    volumes:
+      - ./project-management/keycloak/:/opt/keycloak/data/import/
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.keycloak.rule=Host(`${DOMAIN}`) && PathPrefix(`/keycloak`)"
+      - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
+      - "traefik.http.routers.keycloak.entrypoints=websecure"
+      - "traefik.http.routers.keycloak.tls.certresolver=letsencrypt"
+
+volumes:
+  project_db_data:
+  sdlc_db_data:
