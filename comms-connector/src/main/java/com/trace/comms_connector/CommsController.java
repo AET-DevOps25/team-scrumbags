@@ -124,7 +124,7 @@ public class CommsController {
         @RequestParam(required = false) String lastMessageId
     ) {
         if (channelId == null) {
-            return ResponseEntity.badRequest().body("Communication platorm server ID must be specified!"); 
+            return ResponseEntity.badRequest().body("Communication platform server ID must be specified!"); 
         }
 
         String messageJsonList = commsService.getAllMessagesFromChannel(projectId, platform, channelId, lastMessageId);
