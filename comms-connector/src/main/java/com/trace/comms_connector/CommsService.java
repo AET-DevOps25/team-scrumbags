@@ -185,7 +185,8 @@ public class CommsService {
                 messageJsonArray = mapper.writeValueAsString(jsonMessages);
             } catch (Exception e) {}
 
-            commsClient.sendMessageListToGenAi(messageJsonArray);
+            // Send to the gen AI microservice
+            //commsClient.sendMessageListToGenAi(messageJsonArray);
 
             return messageJsonArray;
         } else {
