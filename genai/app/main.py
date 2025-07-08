@@ -61,8 +61,9 @@ async def post_content(
 @app.get("/summary/", summary="Get a summary of content entries")
 async def get_summary(
         projectId: UUID4 = Query(..., description="Project UUID (must be UUID4)"),
-        startTime: int = Query(..., ge=0, description="Start UNIX timestamp (>=0)"),
-        endTime: int = Query(..., ge=0, description="End   UNIX timestamp (>=0)")
+        startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp (>=-1)"),
+        endTime: int = Query(-1, ge=-1, description="End   UNIX timestamp (>=-1)"),
+        userIds: List[UUID4] = Query([], description="Optional list of user UUIDs to make the LLM focus on")
 ):
     if startTime > endTime:
         raise HTTPException(
@@ -75,21 +76,26 @@ async def get_summary(
             select(Summary).where(
                 Summary.projectId == str(projectId),
                 Summary.startTime == startTime,
-                Summary.endTime == endTime
+                Summary.endTime == endTime,
+                Summary.userIds.contains([str(user) for user in userIds]) if userIds else False
             )
         )
         existing_summary = result.scalars().first()
         if existing_summary:
             print("Existing summary found, returning it...")
-            summary_md = {
+            summary = {
+                "projectId": existing_summary.projectId,
+                "startTime": existing_summary.startTime,
+                "endTime": existing_summary.endTime,
+                "userIds": existing_summary.userIds,
+                "generatedAt": existing_summary.generatedAt.isoformat(),
                 "output_text": existing_summary.summary,
-                "generatedAt": existing_summary.generatedAt.isoformat()
             }
-            return {"summary": summary_md}
+            return {"summary": summary}
 
         print("No existing summary found, generating new one...")
         # Generate and store new summary
-        summary_md = summarize_entries(str(projectId), startTime, endTime)
+        summary_md = summarize_entries(str(projectId), startTime, endTime, [str(user) for user in userIds] if userIds else [])
 
         if not summary_md or "output_text" not in summary_md:
             return {"summary": "No content found for the given parameters."}
@@ -98,6 +104,7 @@ async def get_summary(
             projectId=str(projectId),
             startTime=startTime,
             endTime=endTime,
+            userIds=sorted([str(user) for user in userIds]) if userIds else [],
             generatedAt=datetime.now(UTC),
             summary=summary_md["output_text"]  # Assuming the summary is in this field
         )
@@ -111,8 +118,9 @@ async def get_summary(
           status_code=status.HTTP_201_CREATED)
 async def refresh_summary(
         projectId: UUID4 = Query(..., description="Project UUID (must be UUID4)"),
-        startTime: int = Query(..., ge=0, description="Start UNIX timestamp (>=0)"),
-        endTime: int = Query(..., ge=0, description="End   UNIX timestamp (>=0)")
+        startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp (>=1)"),
+        endTime: int = Query(-1, ge=-1, description="End UNIX timestamp (>=1"),
+        userIds: List[UUID4] = Query([], description="Optional list of user UUIDs to make the LLM focus on")
 ):
     if startTime > endTime:
         raise HTTPException(
@@ -126,16 +134,18 @@ async def refresh_summary(
             delete(Summary).where(
                 Summary.projectId == str(projectId),
                 Summary.startTime == startTime,
-                Summary.endTime == endTime
+                Summary.endTime == endTime,
+                Summary.userIds.contains([str(user) for user in userIds]) if userIds else True
             )
         )
 
         # Generate and insert new summary
-        summary_md = summarize_entries(str(projectId), startTime, endTime)
+        summary_md = summarize_entries(str(projectId), startTime, endTime, [str(user) for user in userIds] if userIds else [])
         new_summary = Summary(
             projectId=str(projectId),
             startTime=startTime,
             endTime=endTime,
+            userIds=sorted([str(user) for user in userIds]) if userIds else [],
             generatedAt=datetime.now(UTC),
             summary=str(summary_md)
         )
@@ -157,8 +167,10 @@ async def get_summaries(
 
     return [
         {
+            "projectId": s.projectId,
             "startTime": s.startTime,
             "endTime": s.endTime,
+            "userIds": s.userIds,
             "generatedAt": s.generatedAt.isoformat(),
             "summary": s.summary,
         }
@@ -170,17 +182,13 @@ async def get_summaries(
 async def query_project(
         userId: UUID4 = Query(..., description="User UUID (must be UUID4)"),
         projectId: UUID4 = Query(..., description="Project UUID (must be UUID4)"),
-        startTime: int = Query(..., ge=0, description="Start UNIX timestamp (>=0)"),
-        endTime: int = Query(..., ge=0, description="End UNIX timestamp (>=0)"),
         question: str = Query(..., description="Question to ask about the project content")
 ):
-    if startTime > endTime:
-        raise HTTPException(status_code=422, detail="startTime must be ≤ endTime")
 
     q_time = datetime.now(UTC)
 
     # Call the existing QA chain to get an answer
-    answer = answer_question(str(projectId), startTime, endTime, question)
+    answer = answer_question(str(projectId), question)
 
     a_time = datetime.now(UTC)
 

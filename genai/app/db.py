@@ -1,7 +1,7 @@
 import os
 
 from dotenv import load_dotenv
-from sqlalchemy import Column, String, Text, Integer, DateTime, UniqueConstraint
+from sqlalchemy import Column, String, Text, Integer, DateTime, UniqueConstraint, JSON, Computed
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 
@@ -24,9 +24,17 @@ class Summary(Base):
     endTime = Column(Integer, index=True)
     generatedAt = Column(DateTime)
     summary = Column(Text)
+    userIds = Column(JSON, nullable=False, default=list)
+
+    # MySQL will store the MD5 of the JSON text
+    userIdsHash = Column(
+        String(32),
+        Computed("MD5(userIds)", persisted=True),
+        index=True
+    )
 
     __table_args__ = (
-        UniqueConstraint("projectId", "startTime", "endTime", name="uq_project_timeframe"),
+        UniqueConstraint("projectId", "startTime", "endTime", "userIdsHash", name="uq_project_timeframe"),
     )
 
 

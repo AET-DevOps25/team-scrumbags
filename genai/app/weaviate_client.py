@@ -43,11 +43,12 @@ def store_entry(entry):
     entry.metadata.type = None if entry.metadata.type in [None, "None", "null"] else entry.metadata.type
 
     entry_obj = {
+        #"uuid": str(content_uuid),
         "type": entry.metadata.type,
         "user": entry.metadata.user,
         "timestamp": dt.isoformat(),
         "projectId": str(entry.metadata.projectId),
-        "content": str(entry.content),  # serialize nested content
+        "content": str(entry.content)  # serialize nested content
     }
 
     print("Adding object to collection: ", entry_obj)
@@ -68,6 +69,12 @@ def store_entry(entry):
 
 def get_entries(projectId: str, start: int, end: int):
     collection = client.collections.get(COLLECTION_NAME)
+
+    if start == -1:
+        start = 0
+    if end == -1:
+        end = int(datetime.now(timezone.utc).timestamp())
+
     start_dt = datetime.fromtimestamp(start, tz=timezone.utc).isoformat()
     end_dt = datetime.fromtimestamp(end, tz=timezone.utc).isoformat()
 

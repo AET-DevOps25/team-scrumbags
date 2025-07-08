@@ -1,5 +1,6 @@
 import os
 
+import httpx
 from dotenv import load_dotenv
 from langchain.chains import RetrievalQA
 from langchain.chains.summarize import load_summarize_chain
@@ -15,40 +16,53 @@ from app import weaviate_client as wc
 
 load_dotenv()
 
-API_URL = os.getenv("OLLAMA_URL", "http://ollama:11434")  # Default Ollama API URL
+OLLAMA_CLOUD_URL = os.getenv("OLLAMA_CLOUD_URL", "https://gpu.aet.cit.tum.de/ollama")
+OLLAMA_LOCAL_URL = os.getenv("OLLAMA_LOCAL_URL", "http://ollama:11434")  # Default local Ollama URL
 
-if API_URL.startswith("https://"):
-    use_local = False
-else:
-    use_local = True
 
-if use_local:
-    # Use Ollama locally
+def is_reachable(url: str) -> bool:
+    try:
+        response = httpx.get(f"{url}/tags", timeout=3)
+        return response.status_code == 200
+    except httpx.RequestError:
+        return False
+
+
+def is_local():
+    if OLLAMA_LOCAL_URL and is_reachable(OLLAMA_LOCAL_URL):
+        return True
+    elif OLLAMA_CLOUD_URL and is_reachable(OLLAMA_CLOUD_URL):
+        return False
+    else:
+        raise RuntimeError("Neither local nor cloud Ollama server is reachable.")
+
+
+if is_local():
     llm = OllamaLLM(model="llama3.2",
-                    base_url=os.getenv("OLLAMA_URL", "http://ollama:11434"),  # Default Ollama API URL
+                    base_url=os.getenv("OLLAMA_LOCAL_URL", "http://ollama:11434"),  # Default Ollama API URL
                     temperature=0.1)
-    embeddings = OllamaEmbeddings(model="llama3.2:latest", base_url=os.getenv("OLLAMA_URL", "http://ollama:11434"))
-
+    embeddings = OllamaEmbeddings(model="llama3.2:latest",
+                                  base_url=os.getenv("OLLAMA_LOCAL_URL", "http://ollama:11434"))
 else:
     TOKEN = SecretStr(os.getenv("OPEN_WEBUI_BEARER"))
 
     llm = ChatOllama(
         model="llama3.3:latest",
-        base_url=API_URL,
+        base_url=OLLAMA_CLOUD_URL,
         client_kwargs={"headers": {
             "Authorization": f"Bearer {TOKEN.get_secret_value()}"
         }}
     )
     embeddings = OllamaEmbeddings(
         model="llama3.3:latest",
-        base_url=API_URL,
+        base_url=OLLAMA_CLOUD_URL,
         client_kwargs={"headers": {
             "Authorization": f"Bearer {TOKEN.get_secret_value()}"
         }}
     )
 
 
-def summarize_entries(projectId: str, start: int, end: int):
+def summarize_entries(projectId: str, start: int, end: int, userIds: list[str]):
     # raw content strings
     contents = wc.get_entries(projectId, start, end)
 
@@ -58,21 +72,29 @@ def summarize_entries(projectId: str, start: int, end: int):
     print(contents)
 
     prompt = PromptTemplate(
-        template="""You are a summarizer of source control information (pull requests, commits, branches, etc.), transcripts
-        of meetings with assigned speakers, and messages between team members over
-        collaboration / messaging platforms. Given the following documents containing
+        template="""You are a summarizer of source control information (pull requests, commits, branches, etc.), 
+        transcripts of meetings with assigned speakers, and messages between team members over
+        collaboration / messaging platforms. 
+        
+        Below is a list of IDs that correspond to users you should primarily focus on when summarizing. Do not expose the IDs in the summary, but use them to focus on the relevant users:
+        {users}
+        
+        Given the following documents containing
         information about the project dealings, produce a
         detailed summary in Markdown format. Use headings, bullet points, and code
         blocks where appropriate. Do not use any other formatting than Markdown.
 
-        Here is the content to summarize:
-        {text}
+        Below is the content to summarize:
+        //
+        
+        {input_documents}
 
-        Use the following format for summarizing:
-
+        //
+        
+        Use the format given below for summarizing:
         ### [Summary Name]:
-        [Summary Content with texts, bullet points, and code blocks]""",
-        input_variables=["text"]
+        [Summary Content]""".strip(),
+        input_variables=["input_documents", "users"],
     )
 
     # prompt = ChatPromptTemplate.from_messages([ # alternative using ChatPromptTemplate
@@ -89,16 +111,17 @@ def summarize_entries(projectId: str, start: int, end: int):
                      },
                      page_content=obj.properties.get("content", "empty")) for obj in contents]
 
-    chain = load_summarize_chain(llm, chain_type="stuff", verbose=False, prompt=prompt)
+    chain = load_summarize_chain(llm, chain_type="stuff", verbose=False, prompt=prompt, document_variable_name="input_documents")
 
     # chain = create_stuff_documents_chain(llm, prompt) # alternative using create_stuff_documents_chain
 
-    summary = chain.invoke(docs)
+    joined = ", ".join(userIds)
+    summary = chain.invoke({"input_documents": docs, "users": joined})
     return summary
 
 
-def answer_question(projectId: str, start: int, end: int, question: str):
-    contents = wc.get_entries(projectId, start, end)
+def answer_question(projectId: str, question: str):
+    contents = wc.get_entries(projectId, -1, -1)
     if not contents or len(contents) == 0:
         return "No entries found for the given parameters."
 
@@ -116,10 +139,10 @@ def answer_question(projectId: str, start: int, end: int, question: str):
         documents=docs,
         embedding=embeddings,
         client=wc.client,
-        collection_name=wc.COLLECTION_NAME
+        collection_name=wc.COLLECTION_NAME,
     )
 
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
+    retriever = vectorstore.as_retriever(search_kwargs={"k": 10})
     qa_chain = RetrievalQA.from_chain_type(
         llm=llm,
         chain_type="stuff",
@@ -127,5 +150,10 @@ def answer_question(projectId: str, start: int, end: int, question: str):
         return_source_documents=True
     )
     response = qa_chain.invoke(question)
-    print(response)
+
+    # Remove ID from source_documents if present to avoid null values in JSON response
+    for doc in response["source_documents"]:
+        if hasattr(doc, "id"):
+            delattr(doc, "id")
+
     return response
