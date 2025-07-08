@@ -163,7 +163,7 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
     volumes:
-      - ./project-management/keycloak/:/opt/keycloak/data/import/
+      - ./keycloak/:/opt/keycloak/data/import/
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.keycloak.rule=Host(`${DOMAIN}`) && PathPrefix(`/keycloak`)"
