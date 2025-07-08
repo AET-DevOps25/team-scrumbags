@@ -5,6 +5,8 @@ services:
     ports:
       - "4242:4242"
     depends_on:
+      ollama:
+        condition: service_healthy
       genai-db:
         condition: service_healthy
     environment:
@@ -48,6 +50,44 @@ services:
       PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
       ENABLE_API_BASED_MODULES: 'true'
       CLUSTER_HOSTNAME: 'node1'
+
+  ollama:
+    container_name: ollama
+    image: ollama/ollama:latest
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -e
+
+        echo "▶️  Starting Ollama server…"
+        # Launch server in background
+        ollama serve &
+        SERVER_PID=$!
+
+        echo "⏳  Waiting for server to be healthy…"
+        # simple health‑check loop: try 'ollama list' until it returns success
+        until ollama list > /dev/null 2>&1; do
+          sleep 1
+        done
+
+        echo "✅  Server is up! Pulling llama3.3…"
+        # Now that the daemon is running, pull the model
+        ollama pull llama3.2
+
+        echo "🚀  Model pulled. Waiting on server (PID $SERVER_PID)…"
+        # Drop into the Ollama server process so Docker keeps the container alive
+        wait $SERVER_PID
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+    restart: always
+    healthcheck:
+      test: [ "CMD-SHELL", "ollama list | grep -q llama3.2" ]
+      interval: 15s
+      timeout: 10s
+      retries: 30
 
   genai-db:
     image: mysql:8.0
