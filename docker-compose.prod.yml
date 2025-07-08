@@ -29,7 +29,7 @@ services:
       - SDLC_URL=https://${DOMAIN}/api/sdlc
       - MEETING_NOTES_URL=https://${DOMAIN}/api/meeting-notes
       - COMMUNICATION_URL=https://${DOMAIN}/api/communication
-      - GEN_AI_URL=https://${DOMAIN}/api/gen-ai
+      - GEN_AI_URL=https://${DOMAIN}/api/genai
       - KEYCLOAK_URL=https://${DOMAIN}/keycloak
       - KEYCLOAK_REALM=trace
       - KEYCLOAK_CLIENT=trace-api
@@ -88,7 +88,7 @@ services:
       - TOKEN_SECRET=${SDLC_TOKEN_SECRET}
       - MODE=forward
       - GENAI_URL=https://${DOMAIN}/api/genai
-      - DB_URL=jdbc:postgresql://sdlc:5432/sdlc-db
+      - DB_URL=jdbc:postgresql://sdlc-db:5432/sdlc-db
       - DB_USER=${SDLC_DB_USER}
       - DB_PASSWORD=${SDLC_DB_PASSWORD}
       - KEYCLOAK_REALM=trace
