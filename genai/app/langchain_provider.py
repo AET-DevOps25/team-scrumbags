@@ -10,6 +10,7 @@ from langchain.schema import Document
 # from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import OllamaLLM, OllamaEmbeddings, ChatOllama
 from langchain_weaviate.vectorstores import WeaviateVectorStore
+from langchain_nomic import NomicEmbeddings
 from pydantic import SecretStr
 
 from app import weaviate_client as wc
@@ -18,6 +19,13 @@ load_dotenv()
 
 OLLAMA_CLOUD_URL = os.getenv("OLLAMA_CLOUD_URL", "https://gpu.aet.cit.tum.de/ollama")
 OLLAMA_LOCAL_URL = os.getenv("OLLAMA_LOCAL_URL", "http://ollama:11434")  # Default local Ollama URL
+NOMIC_API_KEY = os.getenv("NOMIC_API_KEY", None)
+
+embeddings = NomicEmbeddings(
+    model="nomic-embed-text-v1.5",
+    dimensionality=256,
+    nomic_api_key=NOMIC_API_KEY
+)
 
 
 def is_reachable(url: str) -> bool:
@@ -41,8 +49,8 @@ if is_local():
     llm = OllamaLLM(model="llama3.2",
                     base_url=os.getenv("OLLAMA_LOCAL_URL", "http://ollama:11434"),  # Default Ollama API URL
                     temperature=0.1)
-    embeddings = OllamaEmbeddings(model="llama3.2:latest",
-                                  base_url=os.getenv("OLLAMA_LOCAL_URL", "http://ollama:11434"))
+    # embeddings = OllamaEmbeddings(model="llama3.2:latest",
+    #                               base_url=os.getenv("OLLAMA_LOCAL_URL", "http://ollama:11434"))
 else:
     TOKEN = SecretStr(os.getenv("OPEN_WEBUI_BEARER"))
 
@@ -53,13 +61,13 @@ else:
             "Authorization": f"Bearer {TOKEN.get_secret_value()}"
         }}
     )
-    embeddings = OllamaEmbeddings(
-        model="llama3.3:latest",
-        base_url=OLLAMA_CLOUD_URL,
-        client_kwargs={"headers": {
-            "Authorization": f"Bearer {TOKEN.get_secret_value()}"
-        }}
-    )
+    # embeddings = OllamaEmbeddings(
+    #     model="llama3.3:latest",
+    #     base_url=OLLAMA_CLOUD_URL,
+    #     client_kwargs={"headers": {
+    #         "Authorization": f"Bearer {TOKEN.get_secret_value()}"
+    #     }}
+    # )
 
 
 def summarize_entries(projectId: str, start: int, end: int, userIds: list[str]):
@@ -84,6 +92,10 @@ def summarize_entries(projectId: str, start: int, end: int, userIds: list[str]):
         information about the project dealings, produce a
         detailed summary in Markdown format. Use headings, bullet points, and code
         blocks where appropriate. Do not use any other formatting than Markdown.
+        Use a title that accurately reflects the content.
+        Create an introduction paragraph that provides an overview of the topic.
+        Create bullet points that list the key points of the text, where appropriate.
+        Create a conclusion paragraph that summarizes the key points of the text.
 
         Below is the content to summarize:
         //
@@ -112,8 +124,7 @@ def summarize_entries(projectId: str, start: int, end: int, userIds: list[str]):
                      },
                      page_content=obj.properties.get("content", "empty")) for obj in contents]
 
-    chain = load_summarize_chain(llm, chain_type="stuff", verbose=False, prompt=prompt,
-                                 document_variable_name="input_documents")
+    chain = load_summarize_chain(llm, chain_type="stuff", verbose=True, prompt=prompt, document_variable_name="input_documents")
 
     # chain = create_stuff_documents_chain(llm, prompt) # alternative using create_stuff_documents_chain
 
@@ -144,7 +155,7 @@ def answer_question(projectId: str, question: str):
         collection_name=wc.COLLECTION_NAME,
     )
 
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 10})
+    retriever = vectorstore.as_retriever(search_kwargs={"k": 8})
     qa_chain = RetrievalQA.from_chain_type(
         llm=llm,
         chain_type="stuff",

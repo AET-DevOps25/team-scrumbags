@@ -7,6 +7,7 @@ langchain-community
 langchain-ollama
 langchain-weaviate
 langchain-openai
+langchain-nomic
 transformers
 sqlalchemy
 aiomysql
