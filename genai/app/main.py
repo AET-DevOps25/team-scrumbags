@@ -49,7 +49,6 @@ app = FastAPI(lifespan=lifespan)
 async def post_content(
         entries: List[ContentEntry] = Body(..., description="List of content entries to be processed")
 ):
-    global rabbit_channel
     if rabbit_channel is None:
         raise HTTPException(status_code=500, detail="RabbitMQ not initialized")
 
