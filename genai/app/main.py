@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, UTC
 from typing import List
 
-from aio_pika import connect_robust, Message
+from aio_pika import connect_robust, Message, RobustChannel, RobustConnection
 from fastapi import FastAPI, Query, Body, HTTPException
 from fastapi import status
 from pydantic import UUID4
@@ -19,12 +19,21 @@ from app.queue_consumer import consume
 RABBIT_URL = "amqp://guest:guest@rabbitmq/"
 QUEUE_NAME = "content_queue"
 
+rabbit_connection: RobustConnection | None = None
+rabbit_channel: RobustChannel | None = None
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
     wc.init_collection()
     task = asyncio.create_task(consume())
+    global rabbit_connection, rabbit_channel
+    # Establish one robust connection and channel for the lifetime
+    rabbit_connection = await connect_robust(RABBIT_URL)
+    rabbit_channel = await rabbit_connection.channel()
+    # Optionally configure publisher confirms
+    await rabbit_channel.set_qos(prefetch_count=100)
     yield
     task.cancel()
     wc.client.close()
@@ -33,28 +42,34 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-@app.post("/content", summary="Post content to the queue for processing")
+@app.post(
+    "/content",
+    summary="Post content to the queue for processing"
+)
 async def post_content(
         entries: List[ContentEntry] = Body(..., description="List of content entries to be processed")
 ):
-    conn = await connect_robust(RABBIT_URL)
-    ch = await conn.channel()
+    global rabbit_channel
+    if rabbit_channel is None:
+        raise HTTPException(status_code=500, detail="RabbitMQ not initialized")
 
-    for entry in entries:
+    # Validate and publish in parallel
+    async def publish(entry):
         if not entry.metadata.projectId or not entry.metadata.timestamp:
             raise HTTPException(
                 status_code=422,
                 detail="Each entry must have a projectId and timestamp."
             )
-
         raw = entry.model_dump_json()
-        message = Message(body=raw.encode())
-        await ch.default_exchange.publish(
+        message = Message(body=raw.encode(), delivery_mode=2)  # persistent
+        await rabbit_channel.default_exchange.publish(
             message,
             routing_key=QUEUE_NAME
         )
 
-    await conn.close()
+    # Use gather with fail-fast to process all entries concurrently
+    await asyncio.gather(*(publish(e) for e in entries))
+
     return {"status": f"Published {len(entries)} message(s) to queue."}
 
 

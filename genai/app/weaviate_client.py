@@ -1,11 +1,12 @@
+import asyncio
+import logging
+import traceback
 from datetime import datetime, timezone
 
 import weaviate
 import weaviate.classes.config as wc
 from weaviate.collections.classes.filters import Filter
 from weaviate.util import generate_uuid5
-
-from app.models import ContentEntry
 
 # Init v4 client
 client = weaviate.connect_to_local(
@@ -30,41 +31,52 @@ def init_collection():
         )
 
 
-def store_entry(entry):
+async def blocking_store(entry):
+    # put blocking code here
+    store_entry(entry)
+
+
+logger = logging.getLogger(__name__)
+
+
+async def store_entry_async(entry):
+    try:
+        await asyncio.to_thread(store_entry, entry)  # if store_entry is blocking
+    except Exception as e:
+        logger.error(e)
+        traceback.print_exc()  # Full traceback for debugging
+
+
+def store_entry(entry: dict):
+    # Assume already validated ContentEntry upstream
     collection = client.collections.get(COLLECTION_NAME)
-    entry = ContentEntry(**entry)  # Validate and convert to ContentEntry model
-    print(str(entry.metadata.projectId) + str(entry.metadata.timestamp))
-    # Generate a UUID5 based on projectId and hash of content
-    content_uuid = generate_uuid5(str(entry.metadata.projectId) + str(entry.metadata.timestamp) + str(entry.content))
-    # Convert UNIX timestamp to ISO 8601 with timezone
-    dt = datetime.fromtimestamp(entry.metadata.timestamp, tz=timezone.utc)
 
-    entry.metadata.user = None if entry.metadata.user in [None, "None", "null"] else entry.metadata.user
-    entry.metadata.type = None if entry.metadata.type in [None, "None", "null"] else entry.metadata.type
+    # Efficient UUID5 generation
+    content_uuid = generate_uuid5(
+        f"{entry['metadata']['projectId']}{entry['metadata']['timestamp']}{entry['content']}"
+    )
 
+    # Normalize metadata
+    metadata = entry["metadata"]
     entry_obj = {
-        # "uuid": str(content_uuid),
-        "type": entry.metadata.type,
-        "user": entry.metadata.user,
-        "timestamp": dt.isoformat(),
-        "projectId": str(entry.metadata.projectId),
-        "content": str(entry.content)  # serialize nested content
+        "type": metadata.get("type") if metadata.get("type") not in [None, "None", "null"] else None,
+        "user": metadata.get("user") if metadata.get("user") not in [None, "None", "null"] else None,
+        "timestamp": datetime.fromtimestamp(metadata["timestamp"], tz=timezone.utc).isoformat(),
+        "projectId": str(metadata["projectId"]),
+        "content": str(entry["content"]),
     }
 
-    print("Adding object to collection: ", entry_obj)
+    try:
 
-    with collection.batch.fixed_size(batch_size=200) as batch:
-        batch.add_object(
-            properties=entry_obj,
-            uuid=content_uuid
-        )
-
-    print("Failed objects: ", collection.batch.failed_objects)
-
-    print(collection.batch)
-
-    if len(collection.batch.failed_objects) > 0:
-        print(f"Failed to import {len(collection.batch.failed_objects)} objects")
+        with collection.batch.fixed_size(batch_size=1) as batch:
+            batch.add_object(
+                properties=entry_obj,
+                uuid=content_uuid
+            )
+        print(f"Stored entry with UUID {content_uuid} in collection {COLLECTION_NAME}")
+    except weaviate.exceptions as e:
+        logger.error(f"Failed to store entry: {e}")
+        traceback.print_exc()
 
 
 def get_entries(projectId: str, start: int, end: int):
