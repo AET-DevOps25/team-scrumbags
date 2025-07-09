@@ -6,11 +6,11 @@ from langchain.chains import RetrievalQA
 from langchain.chains.summarize import load_summarize_chain
 from langchain.prompts import PromptTemplate
 from langchain.schema import Document
+from langchain_nomic import NomicEmbeddings
 # from langchain.chains.combine_documents import create_stuff_documents_chain
 # from langchain_core.prompts import ChatPromptTemplate
-from langchain_ollama import OllamaLLM, OllamaEmbeddings, ChatOllama
+from langchain_ollama import OllamaLLM, ChatOllama
 from langchain_weaviate.vectorstores import WeaviateVectorStore
-from langchain_nomic import NomicEmbeddings
 from pydantic import SecretStr
 
 from app import weaviate_client as wc
@@ -49,8 +49,6 @@ if is_local():
     llm = OllamaLLM(model="llama3.2",
                     base_url=os.getenv("OLLAMA_LOCAL_URL", "http://ollama:11434"),  # Default Ollama API URL
                     temperature=0.1)
-    # embeddings = OllamaEmbeddings(model="llama3.2:latest",
-    #                               base_url=os.getenv("OLLAMA_LOCAL_URL", "http://ollama:11434"))
 else:
     TOKEN = SecretStr(os.getenv("OPEN_WEBUI_BEARER"))
 
@@ -61,13 +59,6 @@ else:
             "Authorization": f"Bearer {TOKEN.get_secret_value()}"
         }}
     )
-    # embeddings = OllamaEmbeddings(
-    #     model="llama3.3:latest",
-    #     base_url=OLLAMA_CLOUD_URL,
-    #     client_kwargs={"headers": {
-    #         "Authorization": f"Bearer {TOKEN.get_secret_value()}"
-    #     }}
-    # )
 
 
 def summarize_entries(projectId: str, start: int, end: int, userIds: list[str]):
@@ -86,6 +77,7 @@ def summarize_entries(projectId: str, start: int, end: int, userIds: list[str]):
 
         Below is a list of IDs that correspond to users you should primarily focus on when summarizing.
         Do not expose the IDs in the summary, but use them to focus on the relevant users:
+        
         {users}
 
         Given the following documents containing
@@ -124,7 +116,8 @@ def summarize_entries(projectId: str, start: int, end: int, userIds: list[str]):
                      },
                      page_content=obj.properties.get("content", "empty")) for obj in contents]
 
-    chain = load_summarize_chain(llm, chain_type="stuff", verbose=True, prompt=prompt, document_variable_name="input_documents")
+    chain = load_summarize_chain(llm, chain_type="stuff", verbose=True, prompt=prompt,
+                                 document_variable_name="input_documents")
 
     # chain = create_stuff_documents_chain(llm, prompt) # alternative using create_stuff_documents_chain
 
@@ -155,7 +148,7 @@ def answer_question(projectId: str, question: str):
         collection_name=wc.COLLECTION_NAME,
     )
 
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 8})
+    retriever = vectorstore.as_retriever(search_kwargs={"k": 8, "alpha": 0.5})
     qa_chain = RetrievalQA.from_chain_type(
         llm=llm,
         chain_type="stuff",

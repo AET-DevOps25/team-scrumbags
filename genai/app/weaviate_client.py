@@ -1,12 +1,27 @@
 import asyncio
 import logging
+import os
 import traceback
 from datetime import datetime, timezone
 
 import weaviate
 import weaviate.classes.config as wc
+# from langchain.embeddings import HuggingFaceEmbeddings
+from dotenv import load_dotenv
+from langchain_nomic import NomicEmbeddings
 from weaviate.collections.classes.filters import Filter
 from weaviate.util import generate_uuid5
+
+load_dotenv()
+
+NOMIC_API_KEY = os.getenv("NOMIC_API_KEY", None)
+
+embeddings = NomicEmbeddings(
+    model="nomic-embed-text-v1.5",
+    dimensionality=256,
+    nomic_api_key=NOMIC_API_KEY
+)
+# hf_embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
 # Init v4 client
 client = weaviate.connect_to_local(
@@ -49,30 +64,31 @@ async def store_entry_async(entry):
 
 def store_entry(entry: dict):
     # Assume already validated ContentEntry upstream
-    collection = client.collections.get(COLLECTION_NAME)
 
-    # Efficient UUID5 generation
-    content_uuid = generate_uuid5(
-        f"{entry['metadata']['projectId']}{entry['metadata']['timestamp']}{entry['content']}"
-    )
+    entry["content"]["userId"] = entry["metadata"]["user"]
+    entry["content"]["contentType"] = entry["metadata"]["type"]
+    entry["content"]["unixTimestamp"] = entry["metadata"]["timestamp"]
 
-    # Normalize metadata
+    content_text = str(entry["content"])
+    # Compute embedding using the chosen model
+    vector = embeddings.embed_documents([content_text])[0]
+
     metadata = entry["metadata"]
+
     entry_obj = {
         "type": metadata.get("type") if metadata.get("type") not in [None, "None", "null"] else None,
         "user": metadata.get("user") if metadata.get("user") not in [None, "None", "null"] else None,
         "timestamp": datetime.fromtimestamp(metadata["timestamp"], tz=timezone.utc).isoformat(),
         "projectId": str(metadata["projectId"]),
-        "content": str(entry["content"]),
+        "content": content_text,
     }
+    content_uuid = generate_uuid5(f"{entry['metadata']['projectId']}{entry['metadata']['timestamp']}{content_text}")
 
     try:
-
+        collection = client.collections.get(COLLECTION_NAME)
         with collection.batch.fixed_size(batch_size=1) as batch:
-            batch.add_object(
-                properties=entry_obj,
-                uuid=content_uuid
-            )
+            # Store the object **with** its precomputed vector
+            batch.add_object(properties=entry_obj, uuid=content_uuid, vector=vector)
         print(f"Stored entry with UUID {content_uuid} in collection {COLLECTION_NAME}")
     except weaviate.exceptions as e:
         logger.error(f"Failed to store entry: {e}")
