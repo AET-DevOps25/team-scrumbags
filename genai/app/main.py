@@ -91,7 +91,7 @@ async def get_summary(
                 Summary.projectId == str(projectId),
                 Summary.startTime == startTime,
                 Summary.endTime == endTime,
-                Summary.userIds.contains([str(user) for user in userIds]) if userIds else False
+                Summary.userIds == sorted([str(user) for user in userIds]) if userIds else []
             )
         )
         existing_summary = result.scalars().first()
@@ -150,7 +150,7 @@ async def refresh_summary(
                 Summary.projectId == str(projectId),
                 Summary.startTime == startTime,
                 Summary.endTime == endTime,
-                Summary.userIds.contains([str(user) for user in userIds]) if userIds else True
+                Summary.userIds == sorted([str(user) for user in userIds]) if userIds else []
             )
         )
 
