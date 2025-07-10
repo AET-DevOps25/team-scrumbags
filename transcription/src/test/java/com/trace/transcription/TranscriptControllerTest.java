@@ -126,15 +126,13 @@ public class TranscriptControllerTest {
         TranscriptEntity entity = new TranscriptEntity(null, segments, projectId, System.currentTimeMillis());
 
         // Persist and flush immediately so the INSERT occurs in this transaction
-        TranscriptEntity saved = transcriptRepository.save(entity);
-
-        System.out.println("Saved transcript ID: " + saved.getId());
-        System.out.println("Saved transcript content: " + saved.getContent());
-        System.out.println("Saved transcript projectId: " + saved.getProjectId());
-        System.out.println("Saved transcript timestamp: " + saved.getTimestamp());
+        TranscriptEntity saved = transcriptRepository.saveAndFlush(entity);
 
         mockMvc.perform(get("/projects/{projectId}/transcripts", projectId))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].projectId").value(projectId.toString()))
+                .andExpect(jsonPath("$[0].content[0].text").value("Hello world"))
+                .andExpect(jsonPath("$[0].content[0].speakerId").value("spk1"));
     }
 
 }
