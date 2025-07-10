@@ -7,7 +7,7 @@ from aio_pika import connect_robust, Message, RobustChannel, RobustConnection
 from fastapi import FastAPI, Query, Body, HTTPException
 from fastapi import status
 from pydantic import UUID4
-from sqlalchemy import delete, select
+from sqlalchemy import select
 
 from app import weaviate_client as wc
 from app.db import async_session, Summary, QAPair
