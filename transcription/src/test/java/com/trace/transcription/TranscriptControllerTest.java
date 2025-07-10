@@ -132,7 +132,7 @@ public class TranscriptControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].projectId").value(projectId.toString()))
                 .andExpect(jsonPath("$[0].content[0].text").value("Hello world"))
-                .andExpect(jsonPath("$[0].content[0].speakerId").value("spk1"));
+                .andExpect(jsonPath("$[0].content[0].speaker_id").value("spk1"));
     }
 
 }
