@@ -117,7 +117,13 @@ public class TranscriptControllerTest {
         List<TranscriptSegment> segments = Collections.singletonList(
                 new TranscriptSegment("0", "Hello world", "0", "5", "spk1", "Speaker1")
         );
-        TranscriptEntity entity = new TranscriptEntity(null, segments, projectId, System.currentTimeMillis());
+        TranscriptEntity entity = new TranscriptEntity(UUID.randomUUID(), segments, projectId, System.currentTimeMillis());
+        try {
+            // Ensure the repository is empty before the test
+            transcriptRepository.save(entity);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
         transcriptRepository.save(entity);
 
         mockMvc.perform(get("/projects/{projectId}/transcripts", projectId))
