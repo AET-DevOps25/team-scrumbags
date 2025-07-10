@@ -42,8 +42,16 @@ public class TranscriptControllerTest {
     public void testReceiveMedia_MissingFile() throws Exception {
         UUID projectId = UUID.randomUUID();
 
+        // Create an *empty* file part named "file"
+        MockMultipartFile emptyFile = new MockMultipartFile(
+                "file",
+                "",
+                "application/octet-stream",
+                new byte[0]
+        );
+
         MvcResult mvc = mockMvc.perform(multipart("/projects/{projectId}/receive", projectId)
-                        // no "file" part at all
+                        .file(emptyFile)
                         .param("speakerAmount", "1"))
                 .andExpect(request().asyncStarted())
                 .andReturn();
