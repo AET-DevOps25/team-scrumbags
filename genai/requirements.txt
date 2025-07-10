@@ -12,3 +12,4 @@ transformers
 sqlalchemy
 aiomysql
 asyncmy
+pytest
