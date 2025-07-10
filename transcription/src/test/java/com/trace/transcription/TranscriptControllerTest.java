@@ -104,11 +104,12 @@ public class TranscriptControllerTest {
     @Test
     public void testGetAllTranscripts_WithData() throws Exception {
         UUID projectId = UUID.randomUUID();
-        // Manually save a TranscriptEntity into H2
+
+        // Build segments and entity with null ID
         List<TranscriptSegment> segments = Collections.singletonList(
                 new TranscriptSegment("0", "Hello world", "0", "5", "spk1", "Speaker1")
         );
-        TranscriptEntity entity = new TranscriptEntity(UUID.randomUUID(), segments, projectId, System.currentTimeMillis());
+        TranscriptEntity entity = new TranscriptEntity(null, segments, projectId, System.currentTimeMillis());
         transcriptRepository.save(entity);
 
         mockMvc.perform(get("/projects/{projectId}/transcripts", projectId))
@@ -117,4 +118,5 @@ public class TranscriptControllerTest {
                 .andExpect(jsonPath("$[0].content[0].text").value("Hello world"))
                 .andExpect(jsonPath("$[0].content[0].speakerId").value("spk1"));
     }
+
 }
