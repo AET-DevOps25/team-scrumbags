@@ -42,7 +42,7 @@ public class TranscriptController {
      * <p>
      * Receives an audio file, processes it to generate a transcript, and sends the transcript to the core service.
      */
-    @PostMapping("projects/{projectId}/receive")
+    @PostMapping("projects/{projectId}/transcripts")
     public DeferredResult<ResponseEntity<String>> receiveMediaAndSendTranscript(
             @PathVariable("projectId") UUID projectId,
             @RequestParam("file") MultipartFile file,
