@@ -41,9 +41,14 @@ public class TranscriptControllerTest {
     @Test
     public void testReceiveMedia_MissingFile() throws Exception {
         UUID projectId = UUID.randomUUID();
-        // No file parameter -> should be bad request
-        mockMvc.perform(post("/projects/{projectId}/receive", projectId)
+
+        MvcResult mvc = mockMvc.perform(multipart("/projects/{projectId}/receive", projectId)
+                        // no "file" part at all
                         .param("speakerAmount", "1"))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        mockMvc.perform(asyncDispatch(mvc))
                 .andExpect(status().isBadRequest());
     }
 
@@ -53,9 +58,14 @@ public class TranscriptControllerTest {
         UUID projectId = UUID.randomUUID();
         MockMultipartFile file = new MockMultipartFile(
                 "file", "audio.wav", "audio/wav", "dummy".getBytes());
-        mockMvc.perform(multipart("/projects/{projectId}/receive", projectId)
+
+        MvcResult mvc = mockMvc.perform(multipart("/projects/{projectId}/receive", projectId)
                         .file(file)
                         .param("speakerAmount", "0"))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        mockMvc.perform(asyncDispatch(mvc))
                 .andExpect(status().isBadRequest());
     }
 
