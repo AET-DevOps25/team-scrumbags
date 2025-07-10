@@ -15,9 +15,9 @@ services:
         - db_data:/var/lib/mysql
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
-      interval: 10s
+      interval: 3s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   transcription-service:
     container_name: transcription-service
