@@ -1,19 +1,21 @@
 package com.trace.transcription.service;
 
+import com.trace.transcription.controller.SpeakerController;
 import com.trace.transcription.dto.TranscriptInput;
 import com.trace.transcription.model.SpeakerEntity;
 import com.trace.transcription.model.TranscriptEntity;
 import com.trace.transcription.dto.TranscriptSegment;
 import com.trace.transcription.repository.SpeakerRepository;
 import com.trace.transcription.repository.TranscriptRepository;
+import jakarta.servlet.http.HttpServletResponse;
+import org.apache.commons.io.FilenameUtils;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.Comparator;
@@ -22,6 +24,8 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import static com.trace.transcription.controller.TranscriptController.logger;
 
@@ -38,7 +42,7 @@ public class TranscriptService {
         this.mapper = mapper;
     }
 
-    public void saveFromJson(String json) throws Exception {
+    public void saveFromJson(String json, MultipartFile file) throws Exception {
         List<TranscriptInput> inputList = mapper.readValue(json, new TypeReference<>() {});
 
         TranscriptInput.Metadata meta = inputList.getFirst().metadata;
@@ -53,7 +57,9 @@ public class TranscriptService {
                 ))
                 .collect(Collectors.toList());
 
-        TranscriptEntity entity = new TranscriptEntity(null, segments, meta.projectId, meta.timestamp);
+        String extension = FilenameUtils.getExtension(file.getOriginalFilename());
+
+        TranscriptEntity entity = new TranscriptEntity(null, segments, meta.projectId, file.getBytes(), extension, meta.timestamp);
         transcriptRepository.save(entity);
     }
 
@@ -129,5 +135,51 @@ public class TranscriptService {
 
     public List<TranscriptEntity> getAllTranscripts(UUID projectId) {
         return transcriptRepository.findAllByProjectId(projectId);
+    }
+
+    public void streamAllAudios(UUID projectId, HttpServletResponse response) {
+        List<TranscriptEntity> transcripts = transcriptRepository.findAllByProjectId(projectId);
+        if (transcripts.isEmpty()) {
+            SpeakerController.logger.warn("No transcripts found for project {}", projectId);
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
+
+        // 2. Prepare response headers for a ZIP download:
+        response.setStatus(HttpServletResponse.SC_OK);
+        response.setContentType("application/zip");
+        response.setHeader(
+                HttpHeaders.CONTENT_DISPOSITION,
+                "attachment; filename=\"speaking-samples.zip\""
+        );
+
+        // 3. Stream the ZIP directly to the response output stream:
+        try (ZipOutputStream zos = new ZipOutputStream(response.getOutputStream())) {
+            byte[] buffer = new byte[8192];
+
+            for (TranscriptEntity m : transcripts) {
+                // Build a predictable, ordered filename:
+                String filename = m.getId() + "." + m.getAudioExtension();
+
+                // Add a new ZIP entry
+                zos.putNextEntry(new ZipEntry(filename));
+
+                // Write the byte[] LOB in chunks
+                try (ByteArrayInputStream in = new ByteArrayInputStream(m.getAudio())) {
+                    int len;
+                    while ((len = in.read(buffer)) != -1) {
+                        zos.write(buffer, 0, len);
+                    }
+                }
+
+                zos.closeEntry();
+            }
+
+            // Finish writing the ZIP (optional: zos.finish() is called by close())
+            zos.finish();
+        } catch (IOException e) {
+            SpeakerController.logger.error("Error creating ZIP file for project {}: {}", projectId, e.getMessage(), e);
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        }
     }
 }

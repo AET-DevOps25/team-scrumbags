@@ -27,15 +27,22 @@ public class TranscriptEntity {
     @Column(columnDefinition = "BINARY(16)")
     private UUID projectId;
 
+    @Lob
+    private byte[] audio;
+
+    private String audioExtension;
+
     @Temporal(TemporalType.TIMESTAMP)
     private Date timestamp;
 
     public TranscriptEntity() {}
 
-    public TranscriptEntity(UUID id, List<TranscriptSegment> content, UUID projectId, long timestamp) {
+    public TranscriptEntity(UUID id, List<TranscriptSegment> content, UUID projectId, byte[] bytes, String extension, long timestamp) {
         this.id = id;
         this.content = content;
         this.projectId = projectId;
+        this.audio = bytes;
+        this.audioExtension = extension;
         this.timestamp = new Date(timestamp);
     }
 
@@ -69,5 +76,21 @@ public class TranscriptEntity {
 
     public void setTimestamp(Date timestamp) {
         this.timestamp = timestamp;
+    }
+
+    public byte[] getAudio() {
+        return audio;
+    }
+
+    public void setAudio(byte[] audio) {
+        this.audio = audio;
+    }
+
+    public String getAudioExtension() {
+        return audioExtension;
+    }
+
+    public void setAudioExtension(String audioExtension) {
+        this.audioExtension = audioExtension;
     }
 }

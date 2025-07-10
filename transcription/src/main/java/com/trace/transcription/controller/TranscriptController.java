@@ -3,6 +3,7 @@ package com.trace.transcription.controller;
 import com.trace.transcription.service.TranscriptService;
 import com.trace.transcription.model.TranscriptEntity;
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -83,7 +84,7 @@ public class TranscriptController {
                 }
 
                 // Save transcript to database
-                transcriptService.saveFromJson(transcriptJson);
+                transcriptService.saveFromJson(transcriptJson, file);
 
                 logger.info("Transcript successfully created for project {}: {}", projectId, transcriptJson);
 
@@ -116,7 +117,7 @@ public class TranscriptController {
     }
 
     /**
-     * GET /{projectId}/transcripts
+     * GET projects/{projectId}/transcripts
      * <p>
      * Returns all transcripts for the given project.
      */
@@ -127,6 +128,16 @@ public class TranscriptController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.ok(transcripts);
+    }
+
+    /**
+     * GET projects/{projectId}/audios
+     * <p>
+     * Streams back a zip with all audios (transcript IDs with their sample extensions) for the given project.
+     */
+    @GetMapping("projects/{projectId}/audios")
+    public void streamAllSamples(@PathVariable("projectId") UUID projectId, HttpServletResponse response) {
+        transcriptService.streamAllAudios(projectId, response);
     }
 
 }

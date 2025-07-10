@@ -44,15 +44,15 @@ public class SpeakerController {
      * <p>
      * Request (multipart/form-data):
      *   - userIds        : List of String      (e.g. ["id1","id2",...])
-     *   - userNames      : List of String      (must match length of speakerIds)
-     *   - speakingSamples   : List of MultipartFile (must match length of speakerIds)
+     *   - userNames      : List of String      (must match length of userIds)
+     *   - speakingSamples   : List of MultipartFile (must match length of userIds)
      * <p>
      * All lists must be the same size. Each index corresponds to one Speaker record.
      */
     @PostMapping("projects/{projectId}/speakers")
     public ResponseEntity<String> saveSpeakers(
             @PathVariable("projectId") UUID projectId,
-            @RequestParam("speakerIds") List<String> userIds,
+            @RequestParam("userIds") List<String> userIds,
             @RequestParam("userNames") List<String> userNames,
             @RequestParam("speakingSamples") List<MultipartFile> speakingSamples) {
 
@@ -60,7 +60,7 @@ public class SpeakerController {
         int count = userIds.size();
         if (userNames.size() != count || speakingSamples.size() != count) {
             return ResponseEntity.badRequest()
-                    .body("Error: speakerIds, userNames, and speakingSamples must have the same number of elements.");
+                    .body("Error: userIds, userNames, and speakingSamples must have the same number of elements.");
         }
 
         String speakers = speakerService.saveSpeakers(projectId, userIds, userNames, speakingSamples);
@@ -74,7 +74,7 @@ public class SpeakerController {
 
     /**
      * DELETE /
-     * {projectId}/speakers/{speakerId}
+     * {projectId}/speakers/{userId}
      * <p>
      * Deletes the speaker with the given ID from the project.
      */

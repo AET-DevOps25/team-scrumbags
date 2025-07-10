@@ -58,9 +58,12 @@ public class SpeakerService {
 
                 //check if duration is more than 15 seconds
                 if (d.isZero() || d.toMillis() < 15000) {
-                    //todo return proper error response
-                    logger.warn("Speaker {} has zero duration, skipping", userId);
-                    continue; // Skip speakers with zero duration
+                    logger.warn("Speaker {} has zero or too short duration ({}), skipping", userId, d);
+                    boolean deleted = tmp.delete();
+                    if (!deleted) {
+                        logger.warn("Temporary file {} could not be deleted", tmp.getAbsolutePath());
+                    }
+                    return null;
                 }
 
                 boolean deleted = tmp.delete();
@@ -89,7 +92,7 @@ public class SpeakerService {
         sb.append("[");
         for (int i = 0; i < toSave.size(); i++) {
             SpeakerEntity speaker = toSave.get(i);
-            sb.append("{\"id\":\"").append(speaker.getUserId()).append("\",\"name\":\"").append(speaker.getUserName()).append("\"}");
+            sb.append("{\"userId\":\"").append(speaker.getUserId()).append("\",\"userName\":\"").append(speaker.getUserName()).append("\"}");
             if (i < toSave.size() - 1) {
                 sb.append(",");
             }
@@ -153,7 +156,7 @@ public class SpeakerService {
         response.setContentType("application/zip");
         response.setHeader(
                 HttpHeaders.CONTENT_DISPOSITION,
-                "attachment; filename=\"media-files.zip\""
+                "attachment; filename=\"speaking-samples.zip\""
         );
 
         // 3. Stream the ZIP directly to the response output stream:
