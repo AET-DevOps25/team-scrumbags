@@ -113,18 +113,19 @@ public class TranscriptControllerTest {
     public void testGetAllTranscripts_WithData() throws Exception {
         UUID projectId = UUID.randomUUID();
 
-        // Build segments and entity with null ID
-        List<TranscriptSegment> segments = Collections.singletonList(
-                new TranscriptSegment("0", "Hello world", "0", "5", "spk1", "Speaker1")
-        );
-        TranscriptEntity entity = new TranscriptEntity(UUID.randomUUID(), segments, projectId, System.currentTimeMillis());
-        try {
-            // Ensure the repository is empty before the test
-            transcriptRepository.save(entity);
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-        }
-        transcriptRepository.save(entity);
+        // Build one segment
+        List<TranscriptSegment> segments =
+                Collections.singletonList(
+                        new TranscriptSegment(
+                                "0", "Hello world", "0", "5", "spk1", "Speaker1"
+                        )
+                );
+
+        // Pass `null` as the id so Hibernate will generate it
+        TranscriptEntity entity = new TranscriptEntity(null, segments, projectId, System.currentTimeMillis());
+
+        // Persist and flush immediately so the INSERT occurs in this transaction
+        TranscriptEntity saved = transcriptRepository.saveAndFlush(entity);
 
         mockMvc.perform(get("/projects/{projectId}/transcripts", projectId))
                 .andExpect(status().isOk())
