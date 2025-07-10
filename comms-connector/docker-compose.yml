@@ -2,8 +2,8 @@ services:
   comms-db:
     image: mysql:latest
     environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_ROOT_PASSWORD=${COMM_MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${COMM_MYSQL_DATABASE}
     ports:
       - "4567:3306"
     volumes:
