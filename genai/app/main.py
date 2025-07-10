@@ -90,11 +90,19 @@ async def get_summary(
             select(Summary).where(
                 Summary.projectId == str(projectId),
                 Summary.startTime == startTime,
-                Summary.endTime == endTime,
-                Summary.userIds == (sorted([str(user) for user in userIds]) if userIds else [])
+                Summary.endTime == endTime
             )
         )
-        existing_summary = result.scalars().first()
+
+        summaries = result.scalars().all()
+
+        input_user_ids = sorted([str(uid) for uid in userIds])
+
+        existing_summary = next(
+            (s for s in summaries if s.userIds == input_user_ids),
+            None
+        )
+
         if existing_summary:
             print("Existing summary found, returning it...")
             summary = {
@@ -145,14 +153,26 @@ async def refresh_summary(
 
     async with async_session() as session:
         # Delete any existing summary for this time frame
-        await session.execute(
-            delete(Summary).where(
+        result = await session.execute(
+            select(Summary).where(
                 Summary.projectId == str(projectId),
                 Summary.startTime == startTime,
-                Summary.endTime == endTime,
-                Summary.userIds == (sorted([str(user) for user in userIds]) if userIds else [])
+                Summary.endTime == endTime
             )
         )
+        summaries = result.scalars().all()
+
+        input_user_ids = sorted([str(uid) for uid in userIds])
+
+        summary_to_delete = next(
+            (s for s in summaries if sorted(s.userIds) == input_user_ids),
+            None
+        )
+
+        # 4. Delete it
+        if summary_to_delete:
+            await session.delete(summary_to_delete)
+            await session.commit()
 
         # Generate and insert new summary
         summary_md = summarize_entries(str(projectId), startTime, endTime,
