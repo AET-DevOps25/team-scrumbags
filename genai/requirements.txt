@@ -13,3 +13,5 @@ sqlalchemy
 aiomysql
 asyncmy
 pytest
+pytest-asyncio
+pytest-cov
