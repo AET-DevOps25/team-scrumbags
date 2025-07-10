@@ -1,5 +1,6 @@
 package com.trace.transcription.dto;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import jakarta.persistence.Lob;
 
@@ -12,13 +13,23 @@ public class TranscriptSegment implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
+    @Column(name = "segment_index")
     private String segmentIndex;
 
     @Lob
+    @Column(name = "text")
     private String text;
+
+    @Column(name = "start_time")
     private String start;
+
+    @Column(name = "end_time")
     private String end;
+
+    @Column(name = "user_id")
     private String userId;
+
+    @Column(name = "user_name")
     private String userName;
 
     public TranscriptSegment() {}
