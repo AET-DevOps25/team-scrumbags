@@ -35,17 +35,17 @@ public class SpeakerService {
 
     public String saveSpeakers(
             UUID projectId,
-            List<String> speakerIds,
-            List<String> speakerNames,
+            List<String> userIds,
+            List<String> userNames,
             List<MultipartFile> speakingSamples) {
-        int count = speakerIds.size();
+        int count = userIds.size();
 
         List<SpeakerEntity> toSave = new ArrayList<>(count);
 
         try {
             for (int i = 0; i < count; i++) {
-                String speakerId   = speakerIds.get(i);
-                String speakerName = speakerNames.get(i);
+                String userId   = userIds.get(i);
+                String userName = userNames.get(i);
                 MultipartFile file = speakingSamples.get(i);
 
                 File tmp = File.createTempFile("durationcheck-", file.getOriginalFilename());
@@ -59,7 +59,7 @@ public class SpeakerService {
                 //check if duration is more than 15 seconds
                 if (d.isZero() || d.toMillis() < 15000) {
                     //todo return proper error response
-                    logger.warn("Speaker {} has zero duration, skipping", speakerId);
+                    logger.warn("Speaker {} has zero duration, skipping", userId);
                     continue; // Skip speakers with zero duration
                 }
 
@@ -72,7 +72,7 @@ public class SpeakerService {
                 String extension = FilenameUtils.getExtension(file.getOriginalFilename());
 
                 // create and set entity
-                SpeakerEntity speaker = new SpeakerEntity(speakerId, speakerName, projectId, file.getBytes(), extension);
+                SpeakerEntity speaker = new SpeakerEntity(userId, userName, projectId, file.getBytes(), extension);
 
                 toSave.add(speaker);
             }
@@ -89,7 +89,7 @@ public class SpeakerService {
         sb.append("[");
         for (int i = 0; i < toSave.size(); i++) {
             SpeakerEntity speaker = toSave.get(i);
-            sb.append("{\"id\":\"").append(speaker.getId()).append("\",\"name\":\"").append(speaker.getName()).append("\"}");
+            sb.append("{\"id\":\"").append(speaker.getUserId()).append("\",\"name\":\"").append(speaker.getUserName()).append("\"}");
             if (i < toSave.size() - 1) {
                 sb.append(",");
             }
@@ -98,35 +98,35 @@ public class SpeakerService {
         return sb.toString();
     }
 
-    public SpeakerEntity getSpeakerById(UUID projectId, String speakerId) {
-        return speakerRepository.findByProjectIdAndId(projectId, speakerId);
+    public SpeakerEntity getSpeakerById(UUID projectId, String userId) {
+        return speakerRepository.findByProjectIdAndUserId(projectId, userId);
     }
 
-    public boolean deleteSpeaker(UUID projectId, String speakerId) {
-        SpeakerEntity speaker = getSpeakerById(projectId, speakerId);
+    public boolean deleteSpeaker(UUID projectId, String userId) {
+        SpeakerEntity speaker = getSpeakerById(projectId, userId);
         if (speaker != null) {
             speakerRepository.delete(speaker);
-            logger.info("Deleted speaker with ID: {}", speakerId);
+            logger.info("Deleted speaker with ID: {}", userId);
             return true;
         } else {
-            logger.warn("Speaker with ID {} not found in project {}", speakerId, projectId);
+            logger.warn("Speaker with ID {} not found in project {}", userId, projectId);
             return false;
         }
     }
 
     public boolean updateSpeaker(
             UUID projectId,
-            String speakerId,
-            String speakerName,
+            String userId,
+            String userName,
             MultipartFile speakingSample) throws IOException {
-        SpeakerEntity speaker = getSpeakerById(projectId, speakerId);
+        SpeakerEntity speaker = getSpeakerById(projectId, userId);
         if (speaker == null) {
-            logger.warn("Speaker with ID {} not found in project {}", speakerId, projectId);
+            logger.warn("Speaker with ID {} not found in project {}", userId, projectId);
             return false;
         }
 
-        if (speakerName != null && !speakerName.isEmpty()) {
-            speaker.setName(speakerName);
+        if (userName != null && !userName.isEmpty()) {
+            speaker.setUserName(userName);
         }
         if (speakingSample != null && !speakingSample.isEmpty()) {
             String extension = FilenameUtils.getExtension(speakingSample.getOriginalFilename());
@@ -135,7 +135,7 @@ public class SpeakerService {
         }
 
         speakerRepository.save(speaker);
-        logger.info("Updated speaker with ID: {}", speakerId);
+        logger.info("Updated speaker with ID: {}", userId);
         return true;
     }
 
@@ -162,7 +162,7 @@ public class SpeakerService {
 
             for (SpeakerEntity m : speakers) {
                 // Build a predictable, ordered filename:
-                String filename = m.getId() + "." + m.getSampleExtension();
+                String filename = m.getUserId() + "." + m.getSampleExtension();
 
                 // Add a new ZIP entry
                 zos.putNextEntry(new ZipEntry(filename));

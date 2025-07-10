@@ -18,7 +18,7 @@ public class TranscriptInput {
         public String start;
         public String end;
         public String text;
-        public String speaker;
-        public String speaker_id;
+        public String userName;
+        public String userId;
     }
 }

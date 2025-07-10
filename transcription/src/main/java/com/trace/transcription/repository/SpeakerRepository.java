@@ -8,5 +8,5 @@ import java.util.UUID;
 
 public interface SpeakerRepository extends JpaRepository<SpeakerEntity, String> {
     List<SpeakerEntity> findAllByProjectId(UUID projectId);
-    SpeakerEntity findByProjectIdAndId(UUID projectId, String Id);
+    SpeakerEntity findByProjectIdAndUserId(UUID projectId, String userId);
 }

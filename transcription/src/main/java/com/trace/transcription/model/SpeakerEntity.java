@@ -9,9 +9,9 @@ import java.util.UUID;
 public class SpeakerEntity {
 
     @Id
-    private String id;
+    private String userId;
 
-    private String name;
+    private String userName;
 
     private UUID projectId;
 
@@ -22,28 +22,28 @@ public class SpeakerEntity {
 
     public SpeakerEntity() {}
 
-    public SpeakerEntity(String speakerId, String speakerName, UUID projectId, byte[] bytes, String extension) {
-        this.id = speakerId;
-        this.name = speakerName;
+    public SpeakerEntity(String userId, String userName, UUID projectId, byte[] bytes, String extension) {
+        this.userId = userId;
+        this.userName = userName;
         this.projectId = projectId;
         this.speakingSample = bytes;
         this.sampleExtension = extension;
     }
 
-    public String getId() {
-        return id;
+    public String getUserId() {
+        return userId;
     }
 
-    public void setId(String id) {
-        this.id = id;
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 
-    public String getName() {
-        return name;
+    public String getUserName() {
+        return userName;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setUserName(String userName) {
+        this.userName = userName;
     }
 
     public UUID getProjectId() {
@@ -69,5 +69,4 @@ public class SpeakerEntity {
     public void setSampleExtension(String sampleExtension) {
         this.sampleExtension = sampleExtension;
     }
-
 }

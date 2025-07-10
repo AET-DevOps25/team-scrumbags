@@ -18,18 +18,18 @@ public class TranscriptSegment implements Serializable {
     private String text;
     private String start;
     private String end;
-    private String speakerId;
-    private String speakerName;
+    private String userId;
+    private String userName;
 
     public TranscriptSegment() {}
 
-    public TranscriptSegment(String index, String text, String start, String end, String speakerId, String speakerName) {
+    public TranscriptSegment(String index, String text, String start, String end, String userId, String userName) {
         this.segmentIndex = index;
         this.text = text;
         this.start = start;
         this.end = end;
-        this.speakerId = speakerId;
-        this.speakerName = speakerName;
+        this.userId = userId;
+        this.userName = userName;
     }
 
     public String getSegmentIndex() {
@@ -64,19 +64,19 @@ public class TranscriptSegment implements Serializable {
         this.end = end;
     }
 
-    public String getSpeakerId() {
-        return speakerId;
+    public String getUserId() {
+        return userId;
     }
 
-    public void setSpeakerId(String speakerId) {
-        this.speakerId = speakerId;
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 
-    public String getSpeakerName() {
-        return speakerName;
+    public String getUserName() {
+        return userName;
     }
 
-    public void setSpeakerName(String speakerName) {
-        this.speakerName = speakerName;
+    public void setUserName(String userName) {
+        this.userName = userName;
     }
 }

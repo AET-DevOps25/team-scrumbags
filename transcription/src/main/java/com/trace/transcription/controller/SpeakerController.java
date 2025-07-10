@@ -43,8 +43,8 @@ public class SpeakerController {
      * POST /{projectId}/speakers
      * <p>
      * Request (multipart/form-data):
-     *   - speakerIds        : List of String      (e.g. ["id1","id2",...])
-     *   - speakerNames      : List of String      (must match length of speakerIds)
+     *   - userIds        : List of String      (e.g. ["id1","id2",...])
+     *   - userNames      : List of String      (must match length of speakerIds)
      *   - speakingSamples   : List of MultipartFile (must match length of speakerIds)
      * <p>
      * All lists must be the same size. Each index corresponds to one Speaker record.
@@ -52,18 +52,18 @@ public class SpeakerController {
     @PostMapping("projects/{projectId}/speakers")
     public ResponseEntity<String> saveSpeakers(
             @PathVariable("projectId") UUID projectId,
-            @RequestParam("speakerIds") List<String> speakerIds,
-            @RequestParam("speakerNames") List<String> speakerNames,
+            @RequestParam("speakerIds") List<String> userIds,
+            @RequestParam("userNames") List<String> userNames,
             @RequestParam("speakingSamples") List<MultipartFile> speakingSamples) {
 
         // list same size check
-        int count = speakerIds.size();
-        if (speakerNames.size() != count || speakingSamples.size() != count) {
+        int count = userIds.size();
+        if (userNames.size() != count || speakingSamples.size() != count) {
             return ResponseEntity.badRequest()
-                    .body("Error: speakerIds, speakerNames, and speakingSamples must have the same number of elements.");
+                    .body("Error: speakerIds, userNames, and speakingSamples must have the same number of elements.");
         }
 
-        String speakers = speakerService.saveSpeakers(projectId, speakerIds, speakerNames, speakingSamples);
+        String speakers = speakerService.saveSpeakers(projectId, userIds, userNames, speakingSamples);
         if (speakers != null) {
             return ResponseEntity.ok(speakers);
         } else {
@@ -78,40 +78,40 @@ public class SpeakerController {
      * <p>
      * Deletes the speaker with the given ID from the project.
      */
-    @DeleteMapping("projects/{projectId}/speakers/{speakerId}")
+    @DeleteMapping("projects/{projectId}/speakers/{userId}")
     public ResponseEntity<String> deleteSpeaker(
             @PathVariable("projectId") UUID projectId,
-            @PathVariable("speakerId") String speakerId) {
+            @PathVariable("userId") String userId) {
 
-        if (speakerService.deleteSpeaker(projectId, speakerId)) {
-            return ResponseEntity.ok("Speaker " + speakerId + " deleted successfully.");
+        if (speakerService.deleteSpeaker(projectId, userId)) {
+            return ResponseEntity.ok("Speaker " + userId + " deleted successfully.");
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Speaker with ID " + speakerId + " not found in project " + projectId + ".");
+                    .body("Speaker with ID " + userId + " not found in project " + projectId + ".");
         }
     }
 
     /**
-     * PUT /{projectId}/speakers/{speakerId}
+     * PUT /{projectId}/speakers/{userId}
      * <p>
      * Request (multipart/form-data):
-     *   - speakerName: String (optional)
+     *   - userName: String (optional)
      *   - speakingSample: MultipartFile (optional)
      * <p>
      * Updates the speaker's name and/or speaking sample.
      */
-    @PutMapping("projects/{projectId}/speakers/{speakerId}")
+    @PutMapping("projects/{projectId}/speakers/{userId}")
     public ResponseEntity<String> updateSpeaker(
             @PathVariable("projectId") UUID projectId,
-            @PathVariable("speakerId") String speakerId,
-            @RequestParam(value = "speakerName", required = false) String speakerName,
+            @PathVariable("userId") String userId,
+            @RequestParam(value = "userName", required = false) String userName,
             @RequestParam(value = "speakingSample", required = false) MultipartFile speakingSample) throws IOException {
 
-        if (speakerService.updateSpeaker(projectId, speakerId, speakerName, speakingSample)) {
-            return ResponseEntity.ok("Speaker " + speakerId + " updated successfully.");
+        if (speakerService.updateSpeaker(projectId, userId, userName, speakingSample)) {
+            return ResponseEntity.ok("Speaker " + userId + " updated successfully.");
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Speaker with ID " + speakerId + " not found in project " + projectId + ".");
+                    .body("Speaker with ID " + userId + " not found in project " + projectId + ".");
         }
     }
 

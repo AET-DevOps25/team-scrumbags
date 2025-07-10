@@ -35,7 +35,7 @@ public class TranscriptController {
     }
 
     /**
-     * POST projects/{projectId}/receive
+     * POST projects/{projectId}/transcripts
      * <p>
      * Request (multipart/form-data):
      *   - file: MultipartFile

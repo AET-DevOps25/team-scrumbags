@@ -209,8 +209,8 @@ def transcribe_local_whisperx(merged, offset, silence_gap, empty_speaker_ids, sp
                 "start": segment["start"],
                 "end": segment["end"],
                 "text": segment["text"],
-                "speaker": segment["speaker"],
-                "speaker_id": segment["speaker_id"]
+                "userName": segment["speaker"],
+                "userId": segment["speaker_id"]
             }
         })
 
@@ -395,8 +395,8 @@ def transcribe_cloud_assemblyai(merged, offset, empty_speaker_ids, speaker_ids, 
                 "start": segment["start"],
                 "end": segment["end"],
                 "text": segment["text"],
-                "speaker": segment["speaker"],
-                "speaker_id": segment["speaker_id"]
+                "userName": segment["speaker"],
+                "userId": segment["speaker_id"]
             }
         })
 

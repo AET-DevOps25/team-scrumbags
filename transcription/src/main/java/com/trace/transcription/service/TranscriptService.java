@@ -48,8 +48,8 @@ public class TranscriptService {
                         input.content.text,
                         input.content.start,
                         input.content.end,
-                        input.content.speaker,
-                        input.content.speaker_id
+                        input.content.userName,
+                        input.content.userId
                 ))
                 .collect(Collectors.toList());
 
@@ -76,7 +76,7 @@ public class TranscriptService {
                     byte[] audio = speaker.getSpeakingSample();
                     String ext = speaker.getSampleExtension();
                     if (audio != null && audio.length > 0) {
-                        Path spath = tempDir.resolve("sample-" + speaker.getName() + "_" + speaker.getId() + "." + ext);
+                        Path spath = tempDir.resolve("sample-" + speaker.getUserName() + "_" + speaker.getUserId() + "." + ext);
                         Files.write(spath, audio, StandardOpenOption.CREATE);
                     }
                 }
