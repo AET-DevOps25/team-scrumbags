@@ -77,7 +77,7 @@ def summarize_entries(projectId: str, start: int, end: int, userIds: list[str]):
 
         Below is a list of IDs that correspond to users you should primarily focus on when summarizing.
         Do not expose the IDs in the summary, but use them to focus on the relevant users:
-        
+
         {users}
 
         Given the following documents containing
