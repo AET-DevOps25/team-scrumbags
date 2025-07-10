@@ -108,7 +108,7 @@ def convert_and_merge(inputs, output, directory, use_file_separator=True, silenc
     # Total offset is sample_duration
     return sample_duration + silence_gap * (len(sample_wavs) - 1) + (int(silence_gap / 2)), silence_gap
 
-def transcribe_local_whisperx(merged, offset, silence_gap, empty_speaker_ids, speaker_ids, project_id, speaker_amount):
+def transcribe_local_whisperx(merged, offset, silence_gap, empty_speaker_ids, speaker_ids, project_id, speaker_amount, args):
     import whisperx
 
     device = "cpu"  # or "cpu"
@@ -225,7 +225,7 @@ def transcribe_local_whisperx(merged, offset, silence_gap, empty_speaker_ids, sp
     except Exception as e:
         print(f"Error saving result to JSON: {e}")
 
-def transcribe_cloud_assemblyai(merged, offset, empty_speaker_ids, speaker_ids, project_id, speaker_amount):
+def transcribe_cloud_assemblyai(merged, offset, empty_speaker_ids, speaker_ids, project_id, speaker_amount, args):
     # Upload file to AssemblyAI
     upload_url = "https://api.eu.assemblyai.com/v2/upload"
     headers = {"authorization": ASSEMBLY_KEY, "content-type": "application/octet-stream"}
@@ -445,6 +445,6 @@ if __name__ == "__main__":
         offset, silence_gap = convert_and_merge(inputs, merged, args.directory, use_file_separator=True, silence_gap=10)
 
     if USE_CLOUD:
-        transcribe_cloud_assemblyai(merged, offset, empty_speaker_ids, speaker_ids, project_id, args.speaker_amount)
+        transcribe_cloud_assemblyai(merged, offset, empty_speaker_ids, speaker_ids, project_id, args.speaker_amount, args)
     else:
-        transcribe_local_whisperx(merged, offset, silence_gap, empty_speaker_ids, speaker_ids, project_id, args.speaker_amount)
+        transcribe_local_whisperx(merged, offset, silence_gap, empty_speaker_ids, speaker_ids, project_id, args.speaker_amount, args)
