@@ -30,7 +30,7 @@ public class SpeakerController {
      * <p>
      * Returns a list of all speakers for the given project.
      */
-    @GetMapping("projects/{projectId}/all-speakers")
+    @GetMapping("projects/{projectId}/speakers")
     public ResponseEntity<List<SpeakerEntity>> getAllSpeakers(@PathVariable("projectId") UUID projectId) {
         List<SpeakerEntity> speakers = speakerService.getSpeakersByProjectId(projectId);
         if (speakers.isEmpty()) {
