@@ -124,8 +124,4 @@ public class SpeakerController {
     public void streamAllSamples(@PathVariable("projectId") UUID projectId, HttpServletResponse response) {
         speakerService.streamAllSamples(projectId, response);
     }
-
-
-
-
 }
