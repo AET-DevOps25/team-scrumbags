@@ -17,7 +17,7 @@ public class TranscriptEntity {
     @GeneratedValue                         // ← use the default generator
     @UuidGenerator
     @Column(columnDefinition = "BINARY(16)")
-    private UUID id;;
+    private UUID id;
 
     @ElementCollection
     @CollectionTable(name = "transcript_segments", joinColumns = @JoinColumn(name = "transcript_id"))
