@@ -27,7 +27,6 @@ import java.util.*;
 @SpringBootTest
 @AutoConfigureMockMvc
 @AutoConfigureTestDatabase(replace = Replace.ANY)
-@ActiveProfiles("test")
 public class TranscriptControllerTest {
 
     @Autowired

@@ -26,7 +26,6 @@ import java.util.zip.ZipInputStream;
 @SpringBootTest
 @AutoConfigureMockMvc
 @AutoConfigureTestDatabase(replace = Replace.ANY)
-@ActiveProfiles("test")
 public class SpeakerControllerTest {
 
     @Autowired
