@@ -24,7 +24,7 @@ import java.util.UUID;
 @RequestMapping("projects/{projectId}")
 public class SpeakerController {
 
-    private static final Logger logger = LoggerFactory.getLogger(SpeakerController.class);
+    public static final Logger logger = LoggerFactory.getLogger(SpeakerController.class);
 
     private final SpeakerService speakerService;
 
