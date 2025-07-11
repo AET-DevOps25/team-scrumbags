@@ -59,7 +59,7 @@ public class TranscriptController {
     ) throws IOException {
 
         // Validate inputs
-        if (projectId == null || file == null || file.isEmpty() || file.getOriginalFilename() == null || file.getOriginalFilename().isEmpty() || speakerAmount < 1) {
+        if (projectId == null || file == null || file.getOriginalFilename() == null || file.getOriginalFilename().isEmpty() || speakerAmount < 1) {
             logger.error("Invalid request: projectId or file is missing");
             return ResponseEntity.badRequest().build();
         }
@@ -133,16 +133,6 @@ public class TranscriptController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.ok(transcripts);
-    }
-
-    /**
-     * GET projects/{projectId}/audios
-     * <p>
-     * Streams back a zip with all audios (transcript IDs with their sample extensions) for the given project.
-     */
-    @GetMapping("projects/{projectId}/audios")
-    public void streamAllSamples(@PathVariable("projectId") UUID projectId, HttpServletResponse response) {
-        transcriptService.streamAllAudios(projectId, response);
     }
 
 }

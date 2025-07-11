@@ -50,8 +50,8 @@ public class SpeakerControllerTest {
 
         mockMvc.perform(get("/projects/{projectId}/speakers", projectId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value("id1"))
-                .andExpect(jsonPath("$[0].name").value("Alice"));
+                .andExpect(jsonPath("$[0].userId").value("id1"))
+                .andExpect(jsonPath("$[0].userName").value("Alice"));
     }
 
     // Test POST /projects/{projectId}/speakers with mismatched parameter lists
