@@ -43,8 +43,8 @@ public class TranscriptControllerTest {
     @MockitoBean
     private TranscriptRepository transcriptRepository;
 
-    @MockitoBean
-    private Executor executor;
+    @MockitoBean(name = "applicationTaskExecutor")
+    private org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor applicationTaskExecutor;
 
     // Missing file part should be treated as bad request
     @Test
@@ -85,17 +85,13 @@ public class TranscriptControllerTest {
                     return e;
                 });
 
-        MvcResult mvcResult = mockMvc.perform(multipart("/projects/{projectId}/transcripts", projectId)
+        mockMvc.perform(multipart("/projects/{projectId}/transcripts", projectId)
                         .file(file)
                         .param("speakerAmount", "2"))
-                .andExpect(request().asyncStarted())
-                .andReturn();
-
-        mockMvc.perform(asyncDispatch(mvcResult))
                 .andExpect(status().isAccepted())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.transcriptId").value(transcriptId.toString()))
-                .andExpect(jsonPath("$.isLoading").value(true));
+                .andExpect(jsonPath("$.loading").value(true));
     }
 
     // No transcripts => 204 No Content
@@ -128,6 +124,9 @@ public class TranscriptControllerTest {
                 .andExpect(jsonPath("$[0].projectId").value(projectId.toString()))
                 .andExpect(jsonPath("$[0].content", hasSize(1)))
                 .andExpect(jsonPath("$[0].content[0].text").value("Hello world"))
-                .andExpect(jsonPath("$[0].content[0].userName").value("spk1"));
+                .andExpect(jsonPath("$[0].content[0].userName").value("Speaker1"))
+                .andExpect(jsonPath("$[0].content[0].userId").value("spk1"))
+                .andExpect(jsonPath("$[0].content[0].start").value("0"))
+                .andExpect(jsonPath("$[0].content[0].end").value("5"));
     }
 }
