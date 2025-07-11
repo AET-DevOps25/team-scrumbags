@@ -374,7 +374,5 @@ sketch
 .history
 .ionide
 
-### Vue ###
-# gitignore template for Vue.js projects
-#
-# Recommended template: Node.gitignore
+# ignore letsencrypt files
+acme.json

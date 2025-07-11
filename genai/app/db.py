@@ -1,7 +1,7 @@
 import os
 
 from dotenv import load_dotenv
-from sqlalchemy import Column, String, Text, Integer, DateTime, UniqueConstraint, JSON, Computed
+from sqlalchemy import Column, String, Text, Integer, DateTime, UniqueConstraint, JSON, Computed, Boolean
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 
@@ -25,6 +25,7 @@ class Summary(Base):
     generatedAt = Column(DateTime)
     summary = Column(Text)
     userIds = Column(JSON, nullable=False, default=list)
+    loading = Column(Boolean, nullable=False)
 
     # MySQL will store the MD5 of the JSON text
     userIdsHash = Column(
@@ -38,15 +39,14 @@ class Summary(Base):
     )
 
 
-class QAPair(Base):
-    __tablename__ = "qa_pairs"
+class Message(Base):
+    __tablename__ = "messages"
     id = Column(Integer, primary_key=True, index=True)
     projectId = Column(String(length=36), index=True)
     userId = Column(String(length=36), index=True)
-    question = Column(Text)
-    answer = Column(Text)
-    questionTime = Column(DateTime)
-    answerTime = Column(DateTime)
+    content = Column(Text)
+    timestamp = Column(DateTime, index=True)
+    loading = Column(Boolean, nullable=False)
 
 
 async def init_db():

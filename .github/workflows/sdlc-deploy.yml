@@ -1,0 +1,48 @@
+name: SDLC deploy docker compose
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: sdlc-deploy
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Copy Docker Compose File From Repo to VM Host
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ vars.PUBLIC_IP }}
+          username: ${{ vars.VM_USER }}
+          key: ${{ secrets.VM_PRIVATE_KEY }}
+          source: "./sdlc-connector/docker-compose.prod.yml"
+          target: /home/${{ vars.VM_USER }}/sdlc-connector
+
+      - name: SSH to VM and Create .env.prod
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ vars.PUBLIC_IP }}
+          username: ${{ vars.VM_USER }}
+          key: ${{ secrets.VM_PRIVATE_KEY }}
+          script: |
+            rm sdlc-connector/.env.prod
+            touch sdlc-connector/.env.prod
+            echo "SDLC_IMAGE_TAG=${{ vars.SDLC_IMAGE_TAG }}" >> sdlc-connector/.env.prod
+            echo "DEBUG=${{ vars.DEBUG }}" >> sdlc-connector/.env.prod
+            echo "SDLC_DB_USER=${{ secrets.SDLC_DB_USER }}" >> sdlc-connector/.env.prod
+            echo "SDLC_DB_PASSWORD=${{ secrets.SDLC_DB_PASSWORD }}" >> sdlc-connector/.env.prod
+            echo "SDLC_TOKEN_SECRET=${{ secrets.SDLC_TOKEN_SECRET }}" >> sdlc-connector/.env.prod
+
+      - name: SSH to VM and Execute Docker-Compose Up
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ vars.PUBLIC_IP }}
+          username: ${{ vars.VM_USER }}
+          key: ${{ secrets.VM_PRIVATE_KEY }}
+          script: |
+            echo "Logging into Docker registry..."
+            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            echo "Starting Docker Compose..."
+            docker compose -f sdlc-connector/docker-compose.prod.yml --env-file=sdlc-connector/.env.prod up --pull=always -d

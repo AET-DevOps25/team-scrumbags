@@ -6,6 +6,8 @@ on:
       - '.github/workflows/client-package.yml'
     branches:
       - main
+  release:
+    types: [released]
 
 jobs:
   build:
@@ -42,6 +44,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
+            type=ref,event=tag
             type=semver,pattern={{version}}
             type=sha,format=short
 

@@ -1,0 +1,16 @@
+meta {
+  name: Get platform users
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/projects/:projectId/comms/:platform/users
+  body: none
+  auth: inherit
+}
+
+params:path {
+  projectId: 52db9da6-0c9e-4528-babb-c85eb6e7f27d
+  platform: DISCORD
+}

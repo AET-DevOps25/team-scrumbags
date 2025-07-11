@@ -1,0 +1,60 @@
+<mat-sidenav-container class="h-screen">
+  <!-- Sidebar -->
+  <mat-sidenav
+    mode="side"
+    [opened]="sidebarOpened()"
+    class="flex flex-col transition-all duration-300 !outline !outline-(--mat-sys-outline-variant) !w-70 !shadow-(--mat-sys-level2) !sidebar-shadow-offset"
+  >
+    <mat-toolbar color="primary" class="flex justify-between items-center px-2">
+      <button mat-icon-button (click)="openAddProjectDialog()" class="mr-1">
+        <mat-icon>add</mat-icon>
+      </button>
+
+      <span
+        tabindex="0" 
+        (keydown.enter)="navigateToProjectOverview()"
+        class="font-semibold flex-1 text-center cursor-pointer hover:underline"
+        (click)="navigateToProjectOverview()"
+        >Projects</span
+      >
+
+      <button
+        mat-icon-button
+        (click)="toggleSidebar()"
+        aria-label="Collapse sidebar"
+      >
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+    </mat-toolbar>
+
+    <mat-nav-list>
+      @for (project of state.allProjects().values(); track project.id) {
+      <mat-list-item
+        (click)="navigateToProject(project.id)"
+        [activated]="service.selectedProjectId() === project.id"
+        class="cursor-pointer"
+      >
+        <span matListItemTitle>{{ project.name }}</span>
+      </mat-list-item>
+      }
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <!-- Main content area -->
+  <mat-sidenav-content class="relative">
+    <!-- Toggle button when sidebar is collapsed -->
+    @if (!sidebarOpened()) {
+    <button
+      mat-icon-button
+      class="!fixed top-3 left-1 z-50 !shadow-(--mat-sys-level2) !bg-(--mat-sys-surface-container-low)/50"
+      (click)="toggleSidebar()"
+      aria-label="Open sidebar"
+    >
+      <mat-icon>chevron_right</mat-icon>
+    </button>
+    }
+    <div class="container py-4 mx-auto {{sidebarOpened() ? 'px-8' : 'px-0'}}">
+      <router-outlet></router-outlet>
+    </div>
+  </mat-sidenav-content>
+</mat-sidenav-container>

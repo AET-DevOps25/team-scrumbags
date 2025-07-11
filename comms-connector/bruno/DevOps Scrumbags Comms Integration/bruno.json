@@ -1,0 +1,15 @@
+{
+  "version": "1",
+  "name": "DevOps Scrumbags Comms Integration",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ],
+  "size": 0.0008697509765625,
+  "filesCount": 6,
+  "presets": {
+    "requestType": "http",
+    "requestUrl": ""
+  }
+}

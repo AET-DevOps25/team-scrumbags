@@ -68,8 +68,6 @@ def summarize_entries(projectId: str, start: int, end: int, userIds: list[str]):
     if not contents:
         return "No entries found for the given parameters."
 
-    print(contents)
-
     prompt = PromptTemplate(
         template="""You are a summarizer of source control information (pull requests, commits, branches, etc.),
         transcripts of meetings with assigned speakers, and messages between team members over

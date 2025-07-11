@@ -1,0 +1,20 @@
+auth {
+  mode: oauth2
+}
+
+auth:oauth2 {
+  grant_type: password
+  access_token_url: http://localhost:8081/realms/trace/protocol/openid-connect/token
+  refresh_token_url: 
+  username: testuser
+  password: password
+  client_id: trace-api
+  client_secret: 
+  scope: 
+  credentials_placement: body
+  credentials_id: credentials
+  token_placement: header
+  token_header_prefix: Bearer
+  auto_fetch_token: true
+  auto_refresh_token: false
+}
