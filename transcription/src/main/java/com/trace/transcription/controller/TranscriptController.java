@@ -30,7 +30,7 @@ import static org.apache.commons.io.FilenameUtils.getExtension;
 @RequestMapping("projects/{projectId}")
 public class TranscriptController {
 
-    public static final Logger logger = LoggerFactory.getLogger(TranscriptController.class);
+    public static Logger logger = LoggerFactory.getLogger(TranscriptController.class);
 
     private final ThreadPoolTaskExecutor executor;
     private final String genaiServiceUrl;
