@@ -10,7 +10,7 @@ from pydantic import UUID4
 from sqlalchemy import select
 
 from app import weaviate_client as wc
-from app.db import async_session, Summary, QAPair
+from app.db import async_session, Summary, Message
 from app.db import init_db
 from app.langchain_provider import summarize_entries, answer_question
 from app.models import ContentEntry

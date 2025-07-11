@@ -38,15 +38,21 @@ class Summary(Base):
     )
 
 
-class QAPair(Base):
-    __tablename__ = "qa_pairs"
+class Message(Base):
+    __tablename__ = "messages"
+    # id = Column(Integer, primary_key=True, index=True)
+    # projectId = Column(String(length=36), index=True)
+    # userId = Column(String(length=36), index=True)
+    # question = Column(Text)
+    # answer = Column(Text)
+    # questionTime = Column(DateTime)
+    # answerTime = Column(DateTime)
+
     id = Column(Integer, primary_key=True, index=True)
     projectId = Column(String(length=36), index=True)
     userId = Column(String(length=36), index=True)
-    question = Column(Text)
-    answer = Column(Text)
-    questionTime = Column(DateTime)
-    answerTime = Column(DateTime)
+    content = Column(Text)
+    timestamp = Column(DateTime, index=True)
 
 
 async def init_db():
