@@ -1,0 +1,40 @@
+<div mat-dialog-title class="h-auto !w-full !pb-0">
+  <div class="flex flex-row justify-between">
+    <h2 class="text-xl font-semibold">Version Control Setting Guide</h2>
+    <button mat-icon-button (click)="onCancel()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+</div>
+
+<div mat-dialog-content>
+  <mat-stepper #stepper labelPosition="bottom">
+    <mat-step completed="false">
+      <p class="text-base">
+        Welcome to the Version Control Setup Guide. Click next to continue.
+      </p>
+    </mat-step>
+    <mat-step completed="false">
+      <p class="text-base">
+        This guide will help you configure the version control settings for your
+        project. Please follow the steps carefully to ensure proper setup.
+      </p>
+    </mat-step>
+  </mat-stepper>
+  <div class="flex flex-row justify-between">
+    <button
+      mat-icon-button
+      (click)="stepper.previous()"
+      [disabled]="stepper.selectedIndex === 0"
+    >
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <button
+      mat-icon-button
+      (click)="stepper.next()"
+      [disabled]="stepper.selectedIndex === stepper.steps.length - 1"
+    >
+      <mat-icon>arrow_forward</mat-icon>
+    </button>
+  </div>
+</div>
