@@ -14,24 +14,38 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * REST controller for managing speaker profiles and audio samples within a transcription project.
+ * <p>
+ * Exposes endpoints to list, add, update, delete speakers and to stream all speaker samples as a ZIP archive.
+ * </p>
+ */
 @RestController
+@RequestMapping("projects/{projectId}")
 public class SpeakerController {
 
-    public static final Logger logger = LoggerFactory.getLogger(SpeakerController.class);
+    private static final Logger logger = LoggerFactory.getLogger(SpeakerController.class);
 
     private final SpeakerService speakerService;
 
+    /**
+     * Constructs a new SpeakerController with the provided service.
+     *
+     * @param speakerService service handling speaker persistence and operations
+     */
     public SpeakerController(SpeakerService speakerService) {
         this.speakerService = speakerService;
     }
 
     /**
-     * GET /{projectId}/all-speakers
-     * <p>
-     * Returns a list of all speakers for the given project.
+     * Retrieves all speakers for the specified project.
+     *
+     * @param projectId UUID of the project
+     * @return 200 OK with a list of {@link SpeakerEntity}, or 204 No Content if none are found
      */
-    @GetMapping("projects/{projectId}/speakers")
-    public ResponseEntity<List<SpeakerEntity>> getAllSpeakers(@PathVariable("projectId") UUID projectId) {
+    @GetMapping("/speakers")
+    public ResponseEntity<List<SpeakerEntity>> getAllSpeakers(
+            @PathVariable("projectId") UUID projectId) {
         List<SpeakerEntity> speakers = speakerService.getSpeakersByProjectId(projectId);
         if (speakers.isEmpty()) {
             return ResponseEntity.noContent().build();
@@ -40,88 +54,111 @@ public class SpeakerController {
     }
 
     /**
-     * POST /{projectId}/speakers
+     * Adds multiple speakers to the project.
      * <p>
-     * Request (multipart/form-data):
-     *   - userIds        : List of String      (e.g. ["id1","id2",...])
-     *   - userNames      : List of String      (must match length of userIds)
-     *   - speakingSamples   : List of MultipartFile (must match length of userIds)
-     * <p>
-     * All lists must be the same size. Each index corresponds to one Speaker record.
+     * Expects parallel lists of user IDs, user names, and audio samples. All lists must be the same length.
+     * </p>
+     *
+     * @param projectId       UUID of the project
+     * @param userIds         list of unique speaker identifiers
+     * @param userNames       list of display names matching the order of {@code userIds}
+     * @param speakingSamples list of audio files corresponding to each speaker ID
+     * @return 200 OK with a summary string if successful,
+     *         400 Bad Request if list sizes mismatch,
+     *         or 500 Internal Server Error on processing failure
      */
-    @PostMapping("projects/{projectId}/speakers")
+    @PostMapping("/speakers")
     public ResponseEntity<String> saveSpeakers(
             @PathVariable("projectId") UUID projectId,
             @RequestParam("userIds") List<String> userIds,
             @RequestParam("userNames") List<String> userNames,
             @RequestParam("speakingSamples") List<MultipartFile> speakingSamples) {
 
-        // list same size check
         int count = userIds.size();
         if (userNames.size() != count || speakingSamples.size() != count) {
-            return ResponseEntity.badRequest()
-                    .body("Error: userIds, userNames, and speakingSamples must have the same number of elements.");
+            String error = "Error: userIds, userNames, and speakingSamples must have the same number of elements.";
+            logger.warn("Validation failed when saving speakers for project {}: {}", projectId, error);
+            return ResponseEntity.badRequest().body(error);
         }
 
-        String speakers = speakerService.saveSpeakers(projectId, userIds, userNames, speakingSamples);
-        if (speakers != null) {
-            return ResponseEntity.ok(speakers);
+        String result = speakerService.saveSpeakers(projectId, userIds, userNames, speakingSamples);
+        if (result != null) {
+            return ResponseEntity.ok(result);
         } else {
+            logger.error("Failed to save speakers for project {}", projectId);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error saving speakers. Please check the logs for details.");
+                    .body("Error saving speakers. Please check logs for details.");
         }
     }
 
     /**
-     * DELETE /
-     * {projectId}/speakers/{userId}
-     * <p>
-     * Deletes the speaker with the given ID from the project.
+     * Deletes a specific speaker from the project.
+     *
+     * @param projectId UUID of the project
+     * @param userId    identifier of the speaker to delete
+     * @return 200 OK if deleted,
+     *         or 404 Not Found if the speaker does not exist
      */
-    @DeleteMapping("projects/{projectId}/speakers/{userId}")
+    @DeleteMapping("/speakers/{userId}")
     public ResponseEntity<String> deleteSpeaker(
             @PathVariable("projectId") UUID projectId,
             @PathVariable("userId") String userId) {
 
-        if (speakerService.deleteSpeaker(projectId, userId)) {
+        boolean deleted = speakerService.deleteSpeaker(projectId, userId);
+        if (deleted) {
             return ResponseEntity.ok("Speaker " + userId + " deleted successfully.");
         } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Speaker with ID " + userId + " not found in project " + projectId + ".");
+            String msg = "Speaker with ID " + userId + " not found in project " + projectId + ".";
+            logger.warn(msg);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(msg);
         }
     }
 
     /**
-     * PUT /{projectId}/speakers/{userId}
+     * Updates an existing speaker's name and/or audio sample.
      * <p>
-     * Request (multipart/form-data):
-     *   - userName: String (optional)
-     *   - speakingSample: MultipartFile (optional)
-     * <p>
-     * Updates the speaker's name and/or speaking sample.
+     * Either or both parameters {@code userName} and {@code speakingSample} may be provided.
+     * </p>
+     *
+     * @param projectId      UUID of the project
+     * @param userId         identifier of the speaker to update
+     * @param userName       (optional) new display name
+     * @param speakingSample (optional) new audio file
+     * @return 200 OK if update succeeds,
+     *         or 404 Not Found if the speaker does not exist
+     * @throws IOException if sample file processing fails
      */
-    @PutMapping("projects/{projectId}/speakers/{userId}")
+    @PutMapping("/speakers/{userId}")
     public ResponseEntity<String> updateSpeaker(
             @PathVariable("projectId") UUID projectId,
             @PathVariable("userId") String userId,
             @RequestParam(value = "userName", required = false) String userName,
-            @RequestParam(value = "speakingSample", required = false) MultipartFile speakingSample) throws IOException {
+            @RequestParam(value = "speakingSample", required = false) MultipartFile speakingSample)
+            throws IOException {
 
-        if (speakerService.updateSpeaker(projectId, userId, userName, speakingSample)) {
+        boolean updated = speakerService.updateSpeaker(projectId, userId, userName, speakingSample);
+        if (updated) {
             return ResponseEntity.ok("Speaker " + userId + " updated successfully.");
         } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Speaker with ID " + userId + " not found in project " + projectId + ".");
+            String msg = "Speaker with ID " + userId + " not found in project " + projectId + ".";
+            logger.warn(msg);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(msg);
         }
     }
 
     /**
-     * GET /{projectId}/samples
+     * Streams a ZIP archive of all speaker audio samples for the given project.
      * <p>
-     * Streams back a zip with all samples (speaker IDs with their sample extensions) for the given project.
+     * Writes the ZIP directly to the response output stream.
+     * </p>
+     *
+     * @param projectId UUID of the project
+     * @param response  servlet response to write the ZIP data
      */
-    @GetMapping("projects/{projectId}/samples")
-    public void streamAllSamples(@PathVariable("projectId") UUID projectId, HttpServletResponse response) {
+    @GetMapping("/samples")
+    public void streamAllSamples(
+            @PathVariable("projectId") UUID projectId,
+            HttpServletResponse response) {
         speakerService.streamAllSamples(projectId, response);
     }
 }
