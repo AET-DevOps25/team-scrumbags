@@ -5,14 +5,14 @@ meta {
 }
 
 post {
-  url: {{baseUrl}}/projects/:projectId/comms/:platform/users?platformUserId=e8f47133-3700-4266-9b70-3dfd1bedf498&userId
+  url: {{baseUrl}}/projects/:projectId/comms/:platform/users?platformUserId&userId=e8f47133-3700-4266-9b70-3dfd1bedf498
   body: none
   auth: inherit
 }
 
 params:query {
-  platformUserId: e8f47133-3700-4266-9b70-3dfd1bedf498
-  userId: 
+  platformUserId: 
+  userId: e8f47133-3700-4266-9b70-3dfd1bedf498
 }
 
 params:path {
