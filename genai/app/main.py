@@ -147,24 +147,6 @@ async def get_summary(
             placeholder.userIds
         )
 
-
-        # summary_md = summarize_entries(str(projectId), startTime, endTime,
-        #                                [str(user) for user in userIds] if userIds else [])
-        #
-        # if not summary_md or "output_text" not in summary_md:
-        #     return {"summary": "No content found for the given parameters."}
-        #
-        # new_summary = Summary(
-        #     projectId=str(projectId),
-        #     startTime=startTime,
-        #     endTime=endTime,
-        #     userIds=sorted([str(user) for user in userIds]) if userIds else [],
-        #     generatedAt=datetime.now(UTC),
-        #     summary=summary_md["output_text"]  # Assuming the summary is in this field
-        # )
-        # session.add(new_summary)
-        # await session.commit()
-
     return {
         "id": placeholder.id,
         "projectId": placeholder.projectId,
@@ -215,20 +197,40 @@ async def refresh_summary(
             await session.commit()
 
         # Generate and insert new summary
-        summary_md = summarize_entries(str(projectId), startTime, endTime,
-                                       [str(user) for user in userIds] if userIds else [])
-        new_summary = Summary(
+        placeholder = Summary(
             projectId=str(projectId),
             startTime=startTime,
             endTime=endTime,
-            userIds=sorted([str(user) for user in userIds]) if userIds else [],
+            userIds=input_user_ids,
+            loading=True,
             generatedAt=datetime.now(UTC),
-            summary=str(summary_md)
+            summary=""
         )
-        session.add(new_summary)
+        session.add(placeholder)
         await session.commit()
+        await session.refresh(placeholder)
 
-    return {"summary": summary_md}
+        loop = asyncio.get_running_loop()
+        loop.run_in_executor(
+            executor,
+            _blocking_summary_job,
+            placeholder.id,
+            placeholder.projectId,
+            placeholder.startTime,
+            placeholder.endTime,
+            placeholder.userIds
+        )
+
+    return {
+        "id": placeholder.id,
+        "projectId": placeholder.projectId,
+        "startTime": placeholder.startTime,
+        "endTime": placeholder.endTime,
+        "userIds": placeholder.userIds,
+        "generatedAt": placeholder.generatedAt,
+        "loading": placeholder.loading,
+        "summary": ""
+    }
 
 
 @app.get("/project/{projectId}/summary", summary="Get all summaries for a project")
