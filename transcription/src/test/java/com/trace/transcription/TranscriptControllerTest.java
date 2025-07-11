@@ -51,7 +51,7 @@ public class TranscriptControllerTest {
                 new byte[0]
         );
 
-        MvcResult mvc = mockMvc.perform(multipart("/projects/{projectId}/receive", projectId)
+        MvcResult mvc = mockMvc.perform(multipart("/projects/{projectId}/transcripts", projectId)
                         .file(emptyFile)
                         .param("speakerAmount", "1"))
                 .andExpect(request().asyncStarted())
@@ -68,7 +68,7 @@ public class TranscriptControllerTest {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "audio.wav", "audio/wav", "dummy".getBytes());
 
-        MvcResult mvc = mockMvc.perform(multipart("/projects/{projectId}/receive", projectId)
+        MvcResult mvc = mockMvc.perform(multipart("/projects/{projectId}/transcripts", projectId)
                         .file(file)
                         .param("speakerAmount", "0"))
                 .andExpect(request().asyncStarted())
@@ -89,7 +89,7 @@ public class TranscriptControllerTest {
 
         MockMultipartFile file = new MockMultipartFile(
                 "file", "audio.wav", "audio/wav", "dummy".getBytes());
-        MvcResult mvcResult = mockMvc.perform(multipart("/projects/{projectId}/receive", projectId)
+        MvcResult mvcResult = mockMvc.perform(multipart("/projects/{projectId}/transcripts", projectId)
                         .file(file)
                         .param("speakerAmount", "2"))
                 .andExpect(request().asyncStarted())

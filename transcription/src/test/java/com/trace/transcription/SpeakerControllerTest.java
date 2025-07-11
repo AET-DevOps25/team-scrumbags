@@ -37,7 +37,7 @@ public class SpeakerControllerTest {
     @Test
     public void testGetAllSpeakers_NoContent() throws Exception {
         UUID projectId = UUID.randomUUID();
-        mockMvc.perform(get("/projects/{projectId}/all-speakers", projectId))
+        mockMvc.perform(get("/projects/{projectId}/speakers", projectId))
                 .andExpect(status().isNoContent());
     }
 
@@ -48,7 +48,7 @@ public class SpeakerControllerTest {
         // Insert a speaker into H2
         speakerRepository.save(new SpeakerEntity("id1", "Alice", projectId, "abc".getBytes(), "wav"));
 
-        mockMvc.perform(get("/projects/{projectId}/all-speakers", projectId))
+        mockMvc.perform(get("/projects/{projectId}/speakers", projectId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value("id1"))
                 .andExpect(jsonPath("$[0].name").value("Alice"));
