@@ -50,6 +50,7 @@ class QAPair(Base):
     answerTime = Column(DateTime)
     loading = Column(Boolean, nullable=False)
 
+
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

@@ -1,4 +1,5 @@
 import asyncio
+from concurrent.futures import ProcessPoolExecutor
 from contextlib import asynccontextmanager
 from datetime import datetime, UTC
 from typing import List
@@ -8,7 +9,6 @@ from fastapi import FastAPI, Query, Body, HTTPException, Path, BackgroundTasks
 from fastapi import status
 from pydantic import UUID4
 from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio.session import AsyncSession
 
 from app import weaviate_client as wc
 from app.db import async_session, Summary, QAPair
@@ -16,7 +16,6 @@ from app.db import init_db
 from app.langchain_provider import summarize_entries, answer_question
 from app.models import ContentEntry
 from app.queue_consumer import consume
-from concurrent.futures import ProcessPoolExecutor
 
 RABBIT_URL = "amqp://guest:guest@rabbitmq/"
 QUEUE_NAME = "content_queue"
@@ -158,7 +157,7 @@ async def get_summary(
 
 
 @app.put("/project/{projectId}/summary", summary="Regenerate and overwrite summary for given time frame",
-          status_code=status.HTTP_201_CREATED)
+         status_code=status.HTTP_201_CREATED)
 async def refresh_summary(
         projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)"),
         startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp (>=1)"),
@@ -265,7 +264,6 @@ async def query_project(
             detail="Question cannot be empty."
         )
     async with async_session() as session:
-
         placeholder = QAPair(
             userId=str(userId),
             projectId=str(projectId),
@@ -328,7 +326,6 @@ def _blocking_summary_job(summary_id: int,
                           start_time: int,
                           end_time: int,
                           user_ids: list[str]):
-
     async def _do_update():
         summary_md = summarize_entries(project_id, start_time, end_time, user_ids)
 
@@ -347,24 +344,24 @@ def _blocking_summary_job(summary_id: int,
 
     asyncio.run(_do_update())
 
+
 def _blocking_qa_job(qa_id: int,
-                        project_id: str,
-                        question: str):
+                     project_id: str,
+                     question: str):
+    async def _do_update():
+        answer_md = answer_question(project_id, question)
 
-        async def _do_update():
-            answer_md = answer_question(project_id, question)
-
-            async with async_session() as session:
-                stmt = (
-                    update(QAPair)
-                    .where(QAPair.id == qa_id)
-                    .values(
-                        answer=answer_md["result"],
-                        loading=False,
-                        answerTime=datetime.now(UTC)
-                    )
+        async with async_session() as session:
+            stmt = (
+                update(QAPair)
+                .where(QAPair.id == qa_id)
+                .values(
+                    answer=answer_md["result"],
+                    loading=False,
+                    answerTime=datetime.now(UTC)
                 )
-                await session.execute(stmt)
-                await session.commit()
+            )
+            await session.execute(stmt)
+            await session.commit()
 
-        asyncio.run(_do_update())
+    asyncio.run(_do_update())
