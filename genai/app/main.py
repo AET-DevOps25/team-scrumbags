@@ -33,10 +33,8 @@ async def lifespan(app: FastAPI):
     wc.init_collection()
     task = asyncio.create_task(consume())
     global rabbit_connection, rabbit_channel
-    # Establish one robust connection and channel for the lifetime
     rabbit_connection = await connect_robust(RABBIT_URL)
     rabbit_channel = await rabbit_connection.channel()
-    # Optionally configure publisher confirms
     await rabbit_channel.set_qos(prefetch_count=100)
     yield
     task.cancel()
@@ -118,7 +116,7 @@ async def get_summary(
                 "generatedAt": existing_summary.generatedAt.isoformat(),
                 "output_text": existing_summary.summary,
             }
-            return {"summary": summary}
+            return summary
 
         print("No existing summary found, generating new one...")
         # Generate and store new summary
@@ -191,12 +189,10 @@ async def refresh_summary(
             None
         )
 
-        # 4. Delete it
         if summary_to_delete:
             await session.delete(summary_to_delete)
             await session.commit()
 
-        # Generate and insert new summary
         placeholder = Summary(
             projectId=str(projectId),
             startTime=startTime,
@@ -263,27 +259,45 @@ async def query_project(
         userId: UUID4 = Query(..., description="User UUID (must be UUID4)"),
         question: str = Query(..., description="Question to ask about the project content")
 ):
-    q_time = datetime.now(UTC)
-
-    # Call the existing QA chain to get an answer
-    answer = answer_question(str(projectId), question)
-
-    a_time = datetime.now(UTC)
-
-    # Save the Q&A pair to the database
-    new_qapair = QAPair(
-        projectId=str(projectId),
-        userId=str(userId),
-        question=question,
-        answer=answer["result"],
-        questionTime=q_time,
-        answerTime=a_time
-    )
+    if not question or len(question.strip()) == 0:
+        raise HTTPException(
+            status_code=422,
+            detail="Question cannot be empty."
+        )
     async with async_session() as session:
-        session.add(new_qapair)
-        await session.commit()
 
-    return {"answer": answer}
+        placeholder = QAPair(
+            userId=str(userId),
+            projectId=str(projectId),
+            question=question,
+            questionTime=datetime.now(UTC),
+            answerTime=datetime.now(UTC),
+            answer="",
+            loading=True
+        )
+
+        session.add(placeholder)
+        await session.commit()
+        await session.refresh(placeholder)
+
+    loop = asyncio.get_running_loop()
+    loop.run_in_executor(
+        executor,
+        _blocking_qa_job,
+        placeholder.id,
+        placeholder.projectId,
+        placeholder.question
+    )
+
+    return {
+        "userId": placeholder.userId,
+        "projectId": placeholder.projectId,
+        "question": placeholder.question,
+        "answer": placeholder.answer,
+        "questionTime": placeholder.questionTime.isoformat(),
+        "answerTime": placeholder.answerTime.isoformat(),
+        "loading": placeholder.loading
+    }
 
 
 @app.get("/project/{projectId}/messages", summary="Get Q&A history for a user")
@@ -302,7 +316,8 @@ async def get_chat_history(
             "question": entry.question,
             "answer": entry.answer,
             "questionTime": entry.questionTime.isoformat(),
-            "answerTime": entry.answerTime.isoformat()
+            "answerTime": entry.answerTime.isoformat(),
+            "loading": entry.loading,
         }
         for entry in history
     ]
@@ -313,15 +328,10 @@ def _blocking_summary_job(summary_id: int,
                           start_time: int,
                           end_time: int,
                           user_ids: list[str]):
-    """
-    Runs in a separate process. We re-use your async update function
-    by calling it inside asyncio.run().
-    """
+
     async def _do_update():
-        # 1) Generate the LLM summary (sync in this process)
         summary_md = summarize_entries(project_id, start_time, end_time, user_ids)
 
-        # 2) Update the DB row via your async_session
         async with async_session() as session:
             stmt = (
                 update(Summary)
@@ -335,5 +345,26 @@ def _blocking_summary_job(summary_id: int,
             await session.execute(stmt)
             await session.commit()
 
-    # Run the async update in this worker process
     asyncio.run(_do_update())
+
+def _blocking_qa_job(qa_id: int,
+                        project_id: str,
+                        question: str):
+
+        async def _do_update():
+            answer_md = answer_question(project_id, question)
+
+            async with async_session() as session:
+                stmt = (
+                    update(QAPair)
+                    .where(QAPair.id == qa_id)
+                    .values(
+                        answer=answer_md["result"],
+                        loading=False,
+                        answerTime=datetime.now(UTC)
+                    )
+                )
+                await session.execute(stmt)
+                await session.commit()
+
+        asyncio.run(_do_update())
