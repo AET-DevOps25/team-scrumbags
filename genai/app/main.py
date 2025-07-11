@@ -4,10 +4,11 @@ from datetime import datetime, UTC
 from typing import List
 
 from aio_pika import connect_robust, Message, RobustChannel, RobustConnection
-from fastapi import FastAPI, Query, Body, HTTPException, Path
+from fastapi import FastAPI, Query, Body, HTTPException, Path, BackgroundTasks
 from fastapi import status
 from pydantic import UUID4
-from sqlalchemy import select
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio.session import AsyncSession
 
 from app import weaviate_client as wc
 from app.db import async_session, Summary, QAPair
@@ -15,12 +16,15 @@ from app.db import init_db
 from app.langchain_provider import summarize_entries, answer_question
 from app.models import ContentEntry
 from app.queue_consumer import consume
+from concurrent.futures import ProcessPoolExecutor
 
 RABBIT_URL = "amqp://guest:guest@rabbitmq/"
 QUEUE_NAME = "content_queue"
 
 rabbit_connection: RobustConnection | None = None
 rabbit_channel: RobustChannel | None = None
+
+executor = ProcessPoolExecutor()
 
 
 @asynccontextmanager
@@ -74,6 +78,7 @@ async def post_content(
 
 @app.post("/project/{projectId}/summary", summary="Get a summary of content entries")
 async def get_summary(
+        background_tasks: BackgroundTasks,
         projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)"),
         startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp (>=-1)"),
         endTime: int = Query(-1, ge=-1, description="End   UNIX timestamp (>=-1)"),
@@ -117,24 +122,59 @@ async def get_summary(
 
         print("No existing summary found, generating new one...")
         # Generate and store new summary
-        summary_md = summarize_entries(str(projectId), startTime, endTime,
-                                       [str(user) for user in userIds] if userIds else [])
 
-        if not summary_md or "output_text" not in summary_md:
-            return {"summary": "No content found for the given parameters."}
-
-        new_summary = Summary(
+        placeholder = Summary(
             projectId=str(projectId),
             startTime=startTime,
             endTime=endTime,
-            userIds=sorted([str(user) for user in userIds]) if userIds else [],
+            userIds=input_user_ids,
+            loading=True,
             generatedAt=datetime.now(UTC),
-            summary=summary_md["output_text"]  # Assuming the summary is in this field
+            summary=""
         )
-        session.add(new_summary)
+        session.add(placeholder)
         await session.commit()
+        await session.refresh(placeholder)
 
-    return {"summary": summary_md}
+        loop = asyncio.get_running_loop()
+        loop.run_in_executor(
+            executor,
+            _blocking_summary_job,
+            placeholder.id,
+            placeholder.projectId,
+            placeholder.startTime,
+            placeholder.endTime,
+            placeholder.userIds
+        )
+
+
+        # summary_md = summarize_entries(str(projectId), startTime, endTime,
+        #                                [str(user) for user in userIds] if userIds else [])
+        #
+        # if not summary_md or "output_text" not in summary_md:
+        #     return {"summary": "No content found for the given parameters."}
+        #
+        # new_summary = Summary(
+        #     projectId=str(projectId),
+        #     startTime=startTime,
+        #     endTime=endTime,
+        #     userIds=sorted([str(user) for user in userIds]) if userIds else [],
+        #     generatedAt=datetime.now(UTC),
+        #     summary=summary_md["output_text"]  # Assuming the summary is in this field
+        # )
+        # session.add(new_summary)
+        # await session.commit()
+
+    return {
+        "id": placeholder.id,
+        "projectId": placeholder.projectId,
+        "startTime": placeholder.startTime,
+        "endTime": placeholder.endTime,
+        "userIds": placeholder.userIds,
+        "generatedAt": placeholder.generatedAt,
+        "loading": placeholder.loading,
+        "summary": ""
+    }
 
 
 @app.put("/project/{projectId}/summary", summary="Regenerate and overwrite summary for given time frame",
@@ -208,6 +248,7 @@ async def get_summaries(
             "endTime": s.endTime,
             "userIds": s.userIds,
             "generatedAt": s.generatedAt.isoformat(),
+            "loading": s.loading,
             "summary": s.summary,
         }
         for s in summaries
@@ -263,3 +304,34 @@ async def get_chat_history(
         }
         for entry in history
     ]
+
+
+def _blocking_summary_job(summary_id: int,
+                          project_id: str,
+                          start_time: int,
+                          end_time: int,
+                          user_ids: list[str]):
+    """
+    Runs in a separate process. We re-use your async update function
+    by calling it inside asyncio.run().
+    """
+    async def _do_update():
+        # 1) Generate the LLM summary (sync in this process)
+        summary_md = summarize_entries(project_id, start_time, end_time, user_ids)
+
+        # 2) Update the DB row via your async_session
+        async with async_session() as session:
+            stmt = (
+                update(Summary)
+                .where(Summary.id == summary_id)
+                .values(
+                    summary=(summary_md or {}).get("output_text", "Error generating summary"),
+                    generatedAt=datetime.now(UTC),
+                    loading=False
+                )
+            )
+            await session.execute(stmt)
+            await session.commit()
+
+    # Run the async update in this worker process
+    asyncio.run(_do_update())
