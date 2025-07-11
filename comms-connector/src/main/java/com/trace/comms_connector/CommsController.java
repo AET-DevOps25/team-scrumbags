@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.NoArgsConstructor;
 
 @RestController
@@ -22,6 +23,10 @@ public class CommsController {
      * @param platform
      * @return list of user entities
      */
+    @Operation(
+        summary = "Get the users for a given platform connection",
+        description = "Returns a list of platform user IDs / usernames for a given project ID and given platform."
+    )
     @GetMapping("/{platform}/users")
     public ResponseEntity<?> getPlatformUsers(@PathVariable UUID projectId, @PathVariable Platform platform) {
         var userList = commsService.getUsersByProjectId(projectId, platform);
@@ -37,6 +42,12 @@ public class CommsController {
      * @param serverId
      * @return list of newly added connections
      */
+    @Operation(
+        summary = "Add a communication integration and the users in the platform",
+        description = "Adds the given communication platform to the table of connections for this project ID. " + 
+            "For Discord, the server ID corresponds to the Discord server ID, also known as the guild ID. " + 
+            "All of the users in the platform are also saved into the users table, except for the Trace bot, e.g. in Discord."
+    )
     @PostMapping("/{platform}")
     public ResponseEntity<?> addCommsIntegration(
         @PathVariable UUID projectId,
@@ -64,6 +75,11 @@ public class CommsController {
      * @param platformUserId
      * @return new or updated user entity
      */
+    @Operation(
+        summary = "Add a platform user",
+        description = "Saves the specified user in the database. For an existing combination of project ID, platform " +
+            " and platform user ID, this endpoint can be used to assign a Trace UUID by overwriting the existing entry."
+    )
     @PostMapping("/{platform}/users")
     public ResponseEntity<?> addPlatformUser(
         @PathVariable UUID projectId,
@@ -87,6 +103,10 @@ public class CommsController {
      * @param platform
      * @return
      */
+    @Operation(
+        summary = "Delete comms integrations for platform",
+        description = "Deletes the communications integrations for the given project ID and the given platform specifically."
+    )
     @DeleteMapping("/{platform}")
     public ResponseEntity<?> deletePlatformCommIntegrations(@PathVariable UUID projectId, @PathVariable Platform platform) {
         commsService.deleteCommsIntegration(projectId, platform);
@@ -100,6 +120,10 @@ public class CommsController {
      * @param projectId
      * @return
      */
+    @Operation(
+        summary = "Delete comms integrations",
+        description = "Deletes all communications integrations for the given project ID."
+    )
     @DeleteMapping("")
     public ResponseEntity<?> deleteAllCommIntegrations(@PathVariable UUID projectId) {
         commsService.deleteCommsIntegration(projectId, null);
@@ -116,6 +140,13 @@ public class CommsController {
      * @param lastMessageId
      * @return String in the format of a JSON array of objects with the format of the gen AI microservice
      */
+    @Operation(
+        summary = "Get Discord messages from channel",
+        description = "Only for testing: Returns a list of discord messages from the specified channel ID (the ID of a text channel " +
+            " that was added to the connections database using add integration endpoint prior to this). The messages are formatted" +
+            " according to the JSON format specified by the gen AI microservice. Last message ID can be specified to only get the" +
+            " messages after a specific message with the given ID."
+    )
     @GetMapping("/{platform}/messages")
     public ResponseEntity<?> getAllMessagesFromChannel(
         @PathVariable UUID projectId,

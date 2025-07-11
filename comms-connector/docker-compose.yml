@@ -19,7 +19,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "6666:8080"
+      - "9876:8080"
     depends_on:
       - comms-db
     env_file:
