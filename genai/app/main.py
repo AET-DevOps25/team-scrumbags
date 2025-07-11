@@ -354,12 +354,8 @@ def _blocking_qa_job(qa_id: int,
     async def _do_update():
         answer_md = answer_question(project_id, question)
 
-        print(answer_md)
-
         if not answer_md or "result" not in answer_md:
             answer_md = {"result": "Error generating answer. No content found."}
-
-        print(answer_md)
 
         async with async_session() as session:
             stmt = (
