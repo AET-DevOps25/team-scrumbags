@@ -1,13 +1,15 @@
 import asyncio
+from concurrent.futures import ProcessPoolExecutor
 from contextlib import asynccontextmanager
 from datetime import datetime, UTC
 from typing import List
 
-from aio_pika import connect_robust, Message, RobustChannel, RobustConnection
-from fastapi import FastAPI, Query, Body, HTTPException
+import aio_pika
+from aio_pika import connect_robust, RobustChannel, RobustConnection
+from fastapi import FastAPI, Query, Body, HTTPException, Path
 from fastapi import status
 from pydantic import UUID4
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app import weaviate_client as wc
 from app.db import async_session, Summary, Message
@@ -22,6 +24,8 @@ QUEUE_NAME = "content_queue"
 rabbit_connection: RobustConnection | None = None
 rabbit_channel: RobustChannel | None = None
 
+executor = ProcessPoolExecutor()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -29,10 +33,8 @@ async def lifespan(app: FastAPI):
     wc.init_collection()
     task = asyncio.create_task(consume())
     global rabbit_connection, rabbit_channel
-    # Establish one robust connection and channel for the lifetime
     rabbit_connection = await connect_robust(RABBIT_URL)
     rabbit_channel = await rabbit_connection.channel()
-    # Optionally configure publisher confirms
     await rabbit_channel.set_qos(prefetch_count=100)
     yield
     task.cancel()
@@ -60,7 +62,7 @@ async def post_content(
                 detail="Each entry must have a projectId and timestamp."
             )
         raw = entry.model_dump_json()
-        message = Message(body=raw.encode(), delivery_mode=2)  # persistent
+        message = aio_pika.Message(body=raw.encode(), delivery_mode=2)  # persistent
         await rabbit_channel.default_exchange.publish(
             message,
             routing_key=QUEUE_NAME
@@ -72,9 +74,9 @@ async def post_content(
     return {"status": f"Published {len(entries)} message(s) to queue."}
 
 
-@app.get("/summary/", summary="Get a summary of content entries")
+@app.post("/project/{projectId}/summary", summary="Get a summary of content entries")
 async def get_summary(
-        projectId: UUID4 = Query(..., description="Project UUID (must be UUID4)"),
+        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)"),
         startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp (>=-1)"),
         endTime: int = Query(-1, ge=-1, description="End   UNIX timestamp (>=-1)"),
         userIds: List[UUID4] = Query([], description="Optional list of user UUIDs to make the LLM focus on")
@@ -88,8 +90,8 @@ async def get_summary(
     async with async_session() as session:
         result = await session.execute(
             select(Summary).where(
-                Summary.projectId == str(projectId),
-                Summary.startTime == startTime,
+                Summary.projectId == str(projectId) and
+                Summary.startTime == startTime and
                 Summary.endTime == endTime
             )
         )
@@ -113,34 +115,51 @@ async def get_summary(
                 "generatedAt": existing_summary.generatedAt.isoformat(),
                 "output_text": existing_summary.summary,
             }
-            return {"summary": summary}
+            return summary
 
         print("No existing summary found, generating new one...")
         # Generate and store new summary
-        summary_md = summarize_entries(str(projectId), startTime, endTime,
-                                       [str(user) for user in userIds] if userIds else [])
 
-        if not summary_md or "output_text" not in summary_md:
-            return {"summary": "No content found for the given parameters."}
-
-        new_summary = Summary(
+        placeholder = Summary(
             projectId=str(projectId),
             startTime=startTime,
             endTime=endTime,
-            userIds=sorted([str(user) for user in userIds]) if userIds else [],
+            userIds=input_user_ids,
+            loading=True,
             generatedAt=datetime.now(UTC),
-            summary=summary_md["output_text"]  # Assuming the summary is in this field
+            summary=""
         )
-        session.add(new_summary)
+        session.add(placeholder)
         await session.commit()
+        await session.refresh(placeholder)
 
-    return {"summary": summary_md}
+        loop = asyncio.get_running_loop()
+        loop.run_in_executor(
+            executor,
+            _blocking_summary_job,
+            placeholder.id,
+            placeholder.projectId,
+            placeholder.startTime,
+            placeholder.endTime,
+            placeholder.userIds
+        )
+
+    return {
+        "id": placeholder.id,
+        "projectId": placeholder.projectId,
+        "startTime": placeholder.startTime,
+        "endTime": placeholder.endTime,
+        "userIds": placeholder.userIds,
+        "generatedAt": placeholder.generatedAt,
+        "loading": placeholder.loading,
+        "summary": ""
+    }
 
 
-@app.post("/summary/refresh/", summary="Regenerate and overwrite summary for given time frame",
-          status_code=status.HTTP_201_CREATED)
+@app.put("/project/{projectId}/summary", summary="Regenerate and overwrite summary for given time frame",
+         status_code=status.HTTP_201_CREATED)
 async def refresh_summary(
-        projectId: UUID4 = Query(..., description="Project UUID (must be UUID4)"),
+        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)"),
         startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp (>=1)"),
         endTime: int = Query(-1, ge=-1, description="End UNIX timestamp (>=1"),
         userIds: List[UUID4] = Query([], description="Optional list of user UUIDs to make the LLM focus on")
@@ -155,8 +174,8 @@ async def refresh_summary(
         # Delete any existing summary for this time frame
         result = await session.execute(
             select(Summary).where(
-                Summary.projectId == str(projectId),
-                Summary.startTime == startTime,
+                Summary.projectId == str(projectId) and
+                Summary.startTime == startTime and
                 Summary.endTime == endTime
             )
         )
@@ -169,31 +188,49 @@ async def refresh_summary(
             None
         )
 
-        # 4. Delete it
         if summary_to_delete:
             await session.delete(summary_to_delete)
             await session.commit()
 
-        # Generate and insert new summary
-        summary_md = summarize_entries(str(projectId), startTime, endTime,
-                                       [str(user) for user in userIds] if userIds else [])
-        new_summary = Summary(
+        placeholder = Summary(
             projectId=str(projectId),
             startTime=startTime,
             endTime=endTime,
-            userIds=sorted([str(user) for user in userIds]) if userIds else [],
+            userIds=input_user_ids,
+            loading=True,
             generatedAt=datetime.now(UTC),
-            summary=str(summary_md)
+            summary=""
         )
-        session.add(new_summary)
+        session.add(placeholder)
         await session.commit()
+        await session.refresh(placeholder)
 
-    return {"summary": summary_md}
+        loop = asyncio.get_running_loop()
+        loop.run_in_executor(
+            executor,
+            _blocking_summary_job,
+            placeholder.id,
+            placeholder.projectId,
+            placeholder.startTime,
+            placeholder.endTime,
+            placeholder.userIds
+        )
+
+    return {
+        "id": placeholder.id,
+        "projectId": placeholder.projectId,
+        "startTime": placeholder.startTime,
+        "endTime": placeholder.endTime,
+        "userIds": placeholder.userIds,
+        "generatedAt": placeholder.generatedAt,
+        "loading": placeholder.loading,
+        "summary": ""
+    }
 
 
-@app.get("/summaries/", summary="Get all summaries for a project")
+@app.get("/project/{projectId}/summary", summary="Get all summaries for a project")
 async def get_summaries(
-        projectId: UUID4 = Query(..., description="Project UUID (must be UUID4)")
+        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)")
 ):
     async with async_session() as session:
         result = await session.execute(
@@ -208,60 +245,133 @@ async def get_summaries(
             "endTime": s.endTime,
             "userIds": s.userIds,
             "generatedAt": s.generatedAt.isoformat(),
+            "loading": s.loading,
             "summary": s.summary,
         }
         for s in summaries
     ]
 
 
-@app.post("/query/", summary="Query the project for answers")
+@app.post("/project/{projectId}/messages", summary="Query the project for answers")
 async def query_project(
+        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)"),
         userId: UUID4 = Query(..., description="User UUID (must be UUID4)"),
-        projectId: UUID4 = Query(..., description="Project UUID (must be UUID4)"),
         question: str = Query(..., description="Question to ask about the project content")
 ):
-    q_time = datetime.now(UTC)
-
-    # Call the existing QA chain to get an answer
-    answer = answer_question(str(projectId), question)
-
-    a_time = datetime.now(UTC)
-
-    # Save the Q&A pair to the database
-    new_qapair = QAPair(
-        projectId=str(projectId),
-        userId=str(userId),
-        question=question,
-        answer=answer["result"],
-        questionTime=q_time,
-        answerTime=a_time
-    )
+    if not question or len(question.strip()) == 0:
+        raise HTTPException(
+            status_code=422,
+            detail="Question cannot be empty."
+        )
     async with async_session() as session:
-        session.add(new_qapair)
+        question_obj = Message(
+            userId=str(userId),
+            projectId=str(projectId),
+            content=question.strip(),
+            timestamp=datetime.now(UTC),
+            loading=False
+        )
+
+        answer_placeholder = Message(
+            userId=str(userId),
+            projectId=str(projectId),
+            timestamp=datetime.now(UTC),
+            content="",
+            loading=True
+        )
+
+        session.add(question_obj)
+        session.add(answer_placeholder)
         await session.commit()
+        await session.refresh(answer_placeholder)
 
-    return {"answer": answer}
+        loop = asyncio.get_running_loop()
+        loop.run_in_executor(
+            executor,
+            _blocking_qa_job,
+            answer_placeholder.id,
+            answer_placeholder.projectId,
+            question.strip()
+        )
+
+    return {
+        "userId": answer_placeholder.userId,
+        "projectId": answer_placeholder.projectId,
+        "timestamp": answer_placeholder.timestamp.isoformat(),
+        "content": answer_placeholder.content,
+        "loading": answer_placeholder.loading
+    }
 
 
-@app.get("/chat_history/", summary="Get Q&A history for a user (optionally filtered by project)")
+@app.get("/project/{projectId}/messages", summary="Get Q&A history for a user")
 async def get_chat_history(
-        userId: UUID4 = Query(..., description="User UUID (must be UUID4)"),
-        projectId: UUID4 | None = Query(None, description="Optional Project UUID")
+        projectId: UUID4 = Path(..., description="Optional Project UUID"),
+        userId: UUID4 = Query(..., description="User UUID (must be UUID4)")
 ):
     async with async_session() as session:
-        query = select(QAPair).where(QAPair.userId == str(userId))
-        if projectId is not None:
-            query = query.where(QAPair.projectId == str(projectId))
+        query = select(Message).where(Message.projectId == str(projectId) and Message.userId == str(userId))
         result = await session.execute(query)
         history = result.scalars().all()
     return [
         {
             "userId": entry.userId,
             "projectId": entry.projectId,
-            "question": entry.question,
-            "answer": entry.answer,
-            "questionTime": entry.questionTime.isoformat(),
-            "answerTime": entry.answerTime.isoformat()
+            "timestamp": entry.timestamp.isoformat(),
+            "content": entry.content,
+            "loading": entry.loading
         }
         for entry in history
     ]
+
+
+def _blocking_summary_job(summary_id: int,
+                          project_id: str,
+                          start_time: int,
+                          end_time: int,
+                          user_ids: list[str]):
+    async def _do_update():
+        summary_md = summarize_entries(project_id, start_time, end_time, user_ids)
+
+        async with async_session() as session:
+            stmt = (
+                update(Summary)
+                .where(Summary.id == summary_id)
+                .values(
+                    summary=(summary_md or {}).get("output_text", "Error generating summary"),
+                    generatedAt=datetime.now(UTC),
+                    loading=False
+                )
+            )
+            await session.execute(stmt)
+            await session.commit()
+
+    asyncio.run(_do_update())
+
+
+def _blocking_qa_job(qa_id: int,
+                     project_id: str,
+                     question: str):
+    async def _do_update():
+        answer_md = answer_question(project_id, question)
+
+        print(answer_md)
+
+        if not answer_md or "result" not in answer_md:
+            answer_md = {"result": "Error generating answer. No content found."}
+
+        print(answer_md)
+
+        async with async_session() as session:
+            stmt = (
+                update(Message)
+                .where(Message.id == qa_id)
+                .values(
+                    content=answer_md["result"],
+                    loading=False,
+                    timestamp=datetime.now(UTC)
+                )
+            )
+            await session.execute(stmt)
+            await session.commit()
+
+    asyncio.run(_do_update())
