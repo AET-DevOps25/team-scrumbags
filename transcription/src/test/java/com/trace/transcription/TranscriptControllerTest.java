@@ -1,11 +1,13 @@
 package com.trace.transcription;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trace.transcription.model.TranscriptEntity;
 import com.trace.transcription.dto.TranscriptSegment;
 import com.trace.transcription.repository.TranscriptRepository;
@@ -16,6 +18,7 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -23,6 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.*;
+import java.util.concurrent.Executor;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -32,11 +36,17 @@ public class TranscriptControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @MockitoBean
     private TranscriptService transcriptService;
 
     @Autowired
     private TranscriptRepository transcriptRepository;
+
+    @MockitoBean
+    private Executor executor;
 
     // Test POST /projects/{projectId}/receive with missing file parameter
     @Test
@@ -51,13 +61,9 @@ public class TranscriptControllerTest {
                 new byte[0]
         );
 
-        MvcResult mvc = mockMvc.perform(multipart("/projects/{projectId}/transcripts", projectId)
+        mockMvc.perform(multipart("/projects/{projectId}/transcripts", projectId)
                         .file(emptyFile)
                         .param("speakerAmount", "1"))
-                .andExpect(request().asyncStarted())
-                .andReturn();
-
-        mockMvc.perform(asyncDispatch(mvc))
                 .andExpect(status().isBadRequest());
     }
 
@@ -66,39 +72,43 @@ public class TranscriptControllerTest {
     public void testReceiveMedia_InvalidSpeakerAmount() throws Exception {
         UUID projectId = UUID.randomUUID();
         MockMultipartFile file = new MockMultipartFile(
-                "file", "audio.wav", "audio/wav", "dummy".getBytes());
+                "file", "audio.wav", MediaType.APPLICATION_OCTET_STREAM_VALUE, "dummy".getBytes());
 
-        MvcResult mvc = mockMvc.perform(multipart("/projects/{projectId}/transcripts", projectId)
+        // Invalid speakerAmount should return 400 Bad Request immediately
+        mockMvc.perform(multipart("/projects/{projectId}/transcripts", projectId)
                         .file(file)
                         .param("speakerAmount", "0"))
-                .andExpect(request().asyncStarted())
-                .andReturn();
-
-        mockMvc.perform(asyncDispatch(mvc))
                 .andExpect(status().isBadRequest());
     }
 
-    // Test POST /projects/{projectId}/receive success path (mocking TranscriptService)
+    // Test POST /projects/{projectId}/transcripts with valid parameters
     @Test
     public void testReceiveMedia_Success() throws Exception {
         UUID projectId = UUID.randomUUID();
-        // Mock the transcriptService.transcriptAsync to return a sample JSON
-        String fakeJson = "[{\"metadata\":{\"projectId\":\"" + projectId + "\",\"timestamp\":123456},\"content\":[]}]";
-        when(transcriptService.transcriptAsync(eq(projectId), any(), eq(2), anyLong()))
-                .thenReturn(fakeJson);
-
         MockMultipartFile file = new MockMultipartFile(
-                "file", "audio.wav", "audio/wav", "dummy".getBytes());
+                "file", "audio.wav", MediaType.APPLICATION_OCTET_STREAM_VALUE, "dummy".getBytes());
+
+        // Mock createLoadingEntity to return a TranscriptEntity with known ID
+        UUID transcriptId = UUID.randomUUID();
+        when(transcriptService.createLoadingEntity(eq(projectId), any(), anyString(), anyLong()))
+                .thenAnswer(invocation -> {
+                    // return a minimal entity with ID for test
+                    com.trace.transcription.model.TranscriptEntity e = new com.trace.transcription.model.TranscriptEntity();
+                    e.setId(transcriptId);
+                    return e;
+                });
+
         MvcResult mvcResult = mockMvc.perform(multipart("/projects/{projectId}/transcripts", projectId)
                         .file(file)
                         .param("speakerAmount", "2"))
                 .andExpect(request().asyncStarted())
                 .andReturn();
 
-        // Dispatch the async result
         mockMvc.perform(asyncDispatch(mvcResult))
-                .andExpect(status().isOk())
-                .andExpect(content().string(containsString(fakeJson)));
+                .andExpect(status().isAccepted())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.transcriptId").value(transcriptId.toString()))
+                .andExpect(jsonPath("$.isLoading").value(true));
     }
 
     // Test GET /projects/{projectId}/transcripts when no transcripts exist
@@ -115,24 +125,23 @@ public class TranscriptControllerTest {
         UUID projectId = UUID.randomUUID();
 
         // Build one segment
-        List<TranscriptSegment> segments =
-                Collections.singletonList(
-                        new TranscriptSegment(
-                                "0", "Hello world", "0", "5", "spk1", "Speaker1"
-                        )
-                );
+        List<TranscriptSegment> segments = Collections.singletonList(
+                new TranscriptSegment("0", "Hello world", "0", "5", "spk1", "Speaker1")
+        );
 
-        // Pass `null` as the id so Hibernate will generate it
+        // Create entity with known data
         TranscriptEntity entity = new TranscriptEntity(null, segments, projectId, null, "wav", System.currentTimeMillis(), false);
 
-        // Persist and flush immediately so the INSERT occurs in this transaction
-        TranscriptEntity saved = transcriptRepository.saveAndFlush(entity);
+        when(transcriptService.getAllTranscripts(eq(projectId)))
+                .thenReturn(Collections.singletonList(entity));
 
         mockMvc.perform(get("/projects/{projectId}/transcripts", projectId))
                 .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$[0].projectId").value(projectId.toString()))
+                .andExpect(jsonPath("$[0].content", hasSize(1)))
                 .andExpect(jsonPath("$[0].content[0].text").value("Hello world"))
-                .andExpect(jsonPath("$[0].content[0].speakerId").value("spk1"));
+                .andExpect(jsonPath("$[0].content[0].userName").value("spk1"));
     }
 
 }
