@@ -4,7 +4,7 @@ from datetime import datetime, UTC
 from typing import List
 
 from aio_pika import connect_robust, Message, RobustChannel, RobustConnection
-from fastapi import FastAPI, Query, Body, HTTPException
+from fastapi import FastAPI, Query, Body, HTTPException, Path
 from fastapi import status
 from pydantic import UUID4
 from sqlalchemy import select
@@ -72,9 +72,9 @@ async def post_content(
     return {"status": f"Published {len(entries)} message(s) to queue."}
 
 
-@app.get("/summary/", summary="Get a summary of content entries")
+@app.post("/project/{projectId}/summary", summary="Get a summary of content entries")
 async def get_summary(
-        projectId: UUID4 = Query(..., description="Project UUID (must be UUID4)"),
+        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)"),
         startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp (>=-1)"),
         endTime: int = Query(-1, ge=-1, description="End   UNIX timestamp (>=-1)"),
         userIds: List[UUID4] = Query([], description="Optional list of user UUIDs to make the LLM focus on")
@@ -137,10 +137,10 @@ async def get_summary(
     return {"summary": summary_md}
 
 
-@app.post("/summary/refresh/", summary="Regenerate and overwrite summary for given time frame",
+@app.put("/project/{projectId}/summary", summary="Regenerate and overwrite summary for given time frame",
           status_code=status.HTTP_201_CREATED)
 async def refresh_summary(
-        projectId: UUID4 = Query(..., description="Project UUID (must be UUID4)"),
+        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)"),
         startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp (>=1)"),
         endTime: int = Query(-1, ge=-1, description="End UNIX timestamp (>=1"),
         userIds: List[UUID4] = Query([], description="Optional list of user UUIDs to make the LLM focus on")
@@ -191,9 +191,9 @@ async def refresh_summary(
     return {"summary": summary_md}
 
 
-@app.get("/summaries/", summary="Get all summaries for a project")
+@app.get("/project/{projectId}/summary", summary="Get all summaries for a project")
 async def get_summaries(
-        projectId: UUID4 = Query(..., description="Project UUID (must be UUID4)")
+        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)")
 ):
     async with async_session() as session:
         result = await session.execute(
@@ -214,10 +214,10 @@ async def get_summaries(
     ]
 
 
-@app.post("/query/", summary="Query the project for answers")
+@app.post("/project/{projectId}/messages", summary="Query the project for answers")
 async def query_project(
+        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)"),
         userId: UUID4 = Query(..., description="User UUID (must be UUID4)"),
-        projectId: UUID4 = Query(..., description="Project UUID (must be UUID4)"),
         question: str = Query(..., description="Question to ask about the project content")
 ):
     q_time = datetime.now(UTC)
@@ -243,15 +243,13 @@ async def query_project(
     return {"answer": answer}
 
 
-@app.get("/chat_history/", summary="Get Q&A history for a user (optionally filtered by project)")
+@app.get("/project/{projectId}/messages", summary="Get Q&A history for a user")
 async def get_chat_history(
-        userId: UUID4 = Query(..., description="User UUID (must be UUID4)"),
-        projectId: UUID4 | None = Query(None, description="Optional Project UUID")
+        projectId: UUID4 = Path(..., description="Optional Project UUID"),
+        userId: UUID4 = Query(..., description="User UUID (must be UUID4)")
 ):
     async with async_session() as session:
-        query = select(QAPair).where(QAPair.userId == str(userId))
-        if projectId is not None:
-            query = query.where(QAPair.projectId == str(projectId))
+        query = select(QAPair).where(QAPair.userId == str(userId) and QAPair.projectId == str(projectId))
         result = await session.execute(query)
         history = result.scalars().all()
     return [
