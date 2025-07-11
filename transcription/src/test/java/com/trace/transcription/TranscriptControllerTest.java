@@ -123,7 +123,7 @@ public class TranscriptControllerTest {
                 );
 
         // Pass `null` as the id so Hibernate will generate it
-        TranscriptEntity entity = new TranscriptEntity(null, segments, projectId, System.currentTimeMillis());
+        TranscriptEntity entity = new TranscriptEntity(null, segments, projectId, null, "wav", System.currentTimeMillis(), false);
 
         // Persist and flush immediately so the INSERT occurs in this transaction
         TranscriptEntity saved = transcriptRepository.saveAndFlush(entity);
