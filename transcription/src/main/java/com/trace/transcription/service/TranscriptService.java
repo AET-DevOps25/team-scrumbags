@@ -8,6 +8,7 @@ import com.trace.transcription.dto.TranscriptSegment;
 import com.trace.transcription.repository.SpeakerRepository;
 import com.trace.transcription.repository.TranscriptRepository;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.transaction.Transactional;
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
@@ -42,6 +43,23 @@ public class TranscriptService {
         this.mapper = mapper;
     }
 
+    /**
+     * Creates and persists a loading entity with isLoading=true.
+     */
+    public TranscriptEntity createLoadingEntity(UUID projectId, byte[] audio, String extension, long timestamp) {
+        TranscriptEntity entity = new TranscriptEntity(
+                null,
+                null,
+                projectId,
+                audio,
+                extension,
+                timestamp,
+                true
+        );
+        return transcriptRepository.save(entity);
+    }
+
+
     public void saveFromJson(String json, MultipartFile file) throws Exception {
         List<TranscriptInput> inputList = mapper.readValue(json, new TypeReference<>() {});
 
@@ -59,7 +77,37 @@ public class TranscriptService {
 
         String extension = FilenameUtils.getExtension(file.getOriginalFilename());
 
-        TranscriptEntity entity = new TranscriptEntity(null, segments, meta.projectId, file.getBytes(), extension, meta.timestamp);
+        TranscriptEntity entity = new TranscriptEntity(null, segments, meta.projectId, file.getBytes(), extension, meta.timestamp, false);
+        transcriptRepository.save(entity);
+    }
+
+    /**
+     * Updates an existing entity by reading JSON, saving segments, and marking isLoading=false.
+     */
+    @Transactional
+    public void updateEntityWithTranscript(UUID transcriptId, String json) throws Exception {
+        // Parse JSON into segments and metadata
+        List<TranscriptInput> inputList = mapper.readValue(json, new TypeReference<>() {});
+        // Map to TranscriptSegment list
+        List<TranscriptSegment> segments = inputList.stream()
+                .map(input -> new TranscriptSegment(
+                        input.content.index,
+                        input.content.text,
+                        input.content.start,
+                        input.content.end,
+                        input.content.userName,
+                        input.content.userId
+                ))
+                .collect(Collectors.toList());
+
+        // Fetch entity
+        TranscriptEntity entity = transcriptRepository.findById(transcriptId)
+                .orElseThrow(() -> new IllegalArgumentException("Transcript not found"));
+
+        // Update fields
+        entity.setContent(segments);
+        entity.setIsLoading(false);
+
         transcriptRepository.save(entity);
     }
 

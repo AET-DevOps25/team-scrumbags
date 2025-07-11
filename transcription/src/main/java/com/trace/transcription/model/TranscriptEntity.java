@@ -1,5 +1,6 @@
 package com.trace.transcription.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.trace.transcription.dto.TranscriptSegment;
 import org.hibernate.annotations.GenericGenerator;
 import jakarta.persistence.*;
@@ -28,6 +29,7 @@ public class TranscriptEntity {
     private UUID projectId;
 
     @Lob
+    @JsonIgnore
     private byte[] audio;
 
     private String audioExtension;
@@ -35,15 +37,18 @@ public class TranscriptEntity {
     @Temporal(TemporalType.TIMESTAMP)
     private Date timestamp;
 
+    private boolean isLoading;
+
     public TranscriptEntity() {}
 
-    public TranscriptEntity(UUID id, List<TranscriptSegment> content, UUID projectId, byte[] bytes, String extension, long timestamp) {
+    public TranscriptEntity(UUID id, List<TranscriptSegment> content, UUID projectId, byte[] bytes, String extension, long timestamp, boolean isLoading) {
         this.id = id;
         this.content = content;
         this.projectId = projectId;
         this.audio = bytes;
         this.audioExtension = extension;
         this.timestamp = new Date(timestamp);
+        this.isLoading = isLoading;
     }
 
     public UUID getId() {
@@ -92,5 +97,13 @@ public class TranscriptEntity {
 
     public void setAudioExtension(String audioExtension) {
         this.audioExtension = audioExtension;
+    }
+
+    public boolean isLoading() {
+        return isLoading;
+    }
+
+    public void setIsLoading(boolean isLoading) {
+        this.isLoading = isLoading;
     }
 }

@@ -1,5 +1,6 @@
 package com.trace.transcription.controller;
 
+import com.trace.transcription.dto.LoadingResponse;
 import com.trace.transcription.service.TranscriptService;
 import com.trace.transcription.model.TranscriptEntity;
 
@@ -14,7 +15,10 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.request.async.DeferredResult;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.*;
+
+import static org.apache.commons.io.FilenameUtils.getExtension;
 
 
 @RestController
@@ -44,26 +48,17 @@ public class TranscriptController {
      * Receives an audio file, processes it to generate a transcript, and sends the transcript to the core service.
      */
     @PostMapping("projects/{projectId}/transcripts")
-    public DeferredResult<ResponseEntity<String>> receiveMediaAndSendTranscript(
+    public ResponseEntity<LoadingResponse> receiveMediaAndSendTranscript(
             @PathVariable("projectId") UUID projectId,
             @RequestParam("file") MultipartFile file,
             @RequestParam("speakerAmount") int speakerAmount,
             @RequestParam(value = "timestamp", required = false) Long timestamp
-    ) {
-
-        DeferredResult<ResponseEntity<String>> deferredResult = new DeferredResult<>(300_000L);
+    ) throws IOException {
 
         // Validate inputs
-        if (projectId == null || file == null || file.isEmpty()) {
+        if (projectId == null || file == null || file.isEmpty() || file.getOriginalFilename() == null || file.getOriginalFilename().isEmpty() || speakerAmount < 1) {
             logger.error("Invalid request: projectId or file is missing");
-            deferredResult.setErrorResult(ResponseEntity.badRequest().body("Project ID and file are required."));
-            return deferredResult;
-        }
-
-        if (speakerAmount < 1) {
-            logger.error("Invalid request: speakerAmount must be at least 1");
-            deferredResult.setErrorResult(ResponseEntity.badRequest().body("Speaker amount must be at least 1."));
-            return deferredResult;
+            return ResponseEntity.badRequest().build();
         }
 
         if (timestamp == null) {
@@ -71,6 +66,11 @@ public class TranscriptController {
         }
 
         Long finalTimestamp = timestamp;
+
+        // Persist loading entity
+        TranscriptEntity transcript = transcriptService.createLoadingEntity(projectId, file.getBytes(), getExtension(file.getOriginalFilename()), timestamp);
+        UUID transcriptId = transcript.getId();
+
         executor.execute(() -> {
             try {
 
@@ -78,13 +78,11 @@ public class TranscriptController {
 
                 if (transcriptJson == null || transcriptJson.isEmpty()) {
                     logger.error("Transcript generation failed for project {}. See logs for details.", projectId);
-                    deferredResult.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                            .body("Transcript generation failed. See logs for details."));
                     return;
                 }
 
                 // Save transcript to database
-                transcriptService.saveFromJson(transcriptJson, file);
+                transcriptService.updateEntityWithTranscript(transcriptId, transcriptJson);
 
                 logger.info("Transcript successfully created for project {}: {}", projectId, transcriptJson);
 
@@ -105,15 +103,14 @@ public class TranscriptController {
                     deferredResult.setResult(ResponseEntity.ok("Transcript successfully created and sent."));
                 }*/
                 //todo remove this when genai service is ready
-                deferredResult.setResult(ResponseEntity.ok(transcriptJson));
             } catch (Exception ex) {
                 logger.error("Error processing audio for project {}: {}", projectId, ex.getMessage());
-                deferredResult.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body("Processing error: " + ex.getMessage()));
             }
         });
 
-        return deferredResult;
+        // Return 202 Accepted with loading response
+        LoadingResponse response = new LoadingResponse(transcriptId, true);
+        return ResponseEntity.accepted().body(response);
     }
 
     /**

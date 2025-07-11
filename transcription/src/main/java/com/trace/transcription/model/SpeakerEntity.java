@@ -1,5 +1,6 @@
 package com.trace.transcription.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.util.UUID;
@@ -16,6 +17,7 @@ public class SpeakerEntity {
     private UUID projectId;
 
     @Lob
+    @JsonIgnore
     private byte[] speakingSample;
 
     private String sampleExtension;
