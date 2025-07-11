@@ -4,8 +4,6 @@ on:
     paths:
       - "client/**"
       - ".github/workflows/client-build.yml"
-    branches:
-      - main
   workflow_call:
 
 jobs:

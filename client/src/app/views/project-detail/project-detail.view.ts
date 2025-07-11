@@ -7,6 +7,7 @@ import { CommonModule } from '@angular/common';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { ProjectService } from '../../services/project.service';
+import { MeetingNotesView } from '../meeting-notes/meeting-notes.view';
 
 @Component({
   selector: 'app-project-detail',
@@ -15,6 +16,7 @@ import { ProjectService } from '../../services/project.service';
     MatProgressSpinnerModule,
     MatButtonModule,
     MatIconModule,
+    MeetingNotesView,
   ],
   templateUrl: './project-detail.view.html',
   styleUrl: './project-detail.view.scss',
@@ -25,7 +27,7 @@ export class ProjectDetailView {
   private service = inject(ProjectService);
   private router = inject(Router);
 
-  project = computed<Project | null>(() => this.service.selectedProject());
+  project = computed<Project | undefined>(() => this.service.selectedProject());
 
   navigateToSettings(): void {
     this.router.navigate([

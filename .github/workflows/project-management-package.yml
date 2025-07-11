@@ -3,11 +3,11 @@ on:
   push:
     branches:
       - main
-      - release/*
     paths:
       - 'project-management/**'
       - '.github/workflows/project-management-package.yml'
-  workflow_dispatch:
+  release:
+    types: [released]
 
 jobs:
   build:
@@ -41,8 +41,10 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
+            type=ref,event=tag
             type=semver,pattern={{version}}
             type=sha,format=short
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
