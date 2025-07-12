@@ -24,10 +24,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Bring up Weaviate service
+        run: docker compose -f docker-compose.workflow.yml up -d
+
+      - name: Map weaviate hostname
+        run: echo "127.0.0.1 weaviate" | sudo tee -a /etc/hosts
+
+      - name: Wait for Weaviate to be ready
+        run: |
+          for i in {1..30}; do
+            if curl -sf http://weaviate:6969/v1/.well-known/ready; then
+              echo "Weaviate is ready" && break
+            else
+              echo "Waiting for Weaviate... attempt $i";
+              sleep $i;
+            fi
+          done
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Install dependencies
         run: |
@@ -36,20 +53,11 @@ jobs:
 
       - name: Lint with flake8
         id: flake8
-        continue-on-error: true
         run: |
           pip install flake8
           flake8 app --count --max-complexity=15 --max-line-length=127 --statistics
 
-      #- name: Run tests
+      - name: Run tests
         #env:
           #RABBITMQ_URL: amqp://guest:guest@localhost:5672/
-        #run: |
-          #python -m pip install pytest pytest-asyncio pytest-cov
-          #pytest
-
-      - name: Check if 'Lint with flake8' step failed
-        if: steps.flake8.outcome != 'success'
-        run: |
-          echo "flake8 fails"
-          exit 1
+        run: PYTHONPATH=. pytest
