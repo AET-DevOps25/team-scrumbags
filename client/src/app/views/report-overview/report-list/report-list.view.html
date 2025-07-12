@@ -1,15 +1,16 @@
-<div class="flex flex-col">
+<div class="h-full flex flex-col">
   @if (isLoading()) {
-  <div class="flex items-center justify-center h-full">
+  <div class=" flex-1 flex items-center justify-center">
     <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
   </div>
   } @else if (reports().length === 0) {
   <span>No reports available.</span>
   } @else {
-  <mat-action-list>
+  <mat-action-list class="flex-1 min-h-0">
     @for (report of reports(); track report.id) {
     <button
       mat-list-item
+      class="!rounded-full"
       [disabled]="report.generating"
       (click)="onReportSelected(report.id)"
     >

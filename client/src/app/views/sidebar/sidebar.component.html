@@ -1,17 +1,18 @@
 <mat-sidenav-container class="h-screen">
   <!-- Sidebar -->
+  @if(sidebarOpened()) {
   <mat-sidenav
     mode="side"
-    [opened]="sidebarOpened()"
-    class="flex flex-col transition-all duration-300 !outline !outline-(--mat-sys-outline-variant) !w-70 !shadow-(--mat-sys-level2) !sidebar-shadow-offset"
+    [opened]="true"
+    class="flex flex-col !w-1/5 transition-all duration-300 !outline !outline-(--mat-sys-outline-variant) !shadow-(--mat-sys-level2) !sidebar-shadow-offset"
   >
-    <mat-toolbar color="primary" class="flex justify-between items-center px-2">
+    <mat-toolbar color="primary" class="flex justify-between items-center">
       <button mat-icon-button (click)="openAddProjectDialog()" class="mr-1">
         <mat-icon>add</mat-icon>
       </button>
 
       <span
-        tabindex="0" 
+        tabindex="0"
         (keydown.enter)="navigateToProjectOverview()"
         class="font-semibold flex-1 text-center cursor-pointer hover:underline"
         (click)="navigateToProjectOverview()"
@@ -27,7 +28,7 @@
       </button>
     </mat-toolbar>
 
-    <mat-nav-list>
+    <mat-nav-list class="flex-1">
       @for (project of state.allProjects().values(); track project.id) {
       <mat-list-item
         (click)="navigateToProject(project.id)"
@@ -39,21 +40,27 @@
       }
     </mat-nav-list>
   </mat-sidenav>
+  } @else {
+  <mat-sidenav
+    mode="side"
+    [opened]="true"
+    class="!w-[3rem] transition-all duration-300 !outline !outline-(--mat-sys-outline-variant) !shadow-(--mat-sys-level2) !sidebar-shadow-offset"
+  >
+    <mat-toolbar class="flex justify-center !p-0">
+      <button
+        mat-icon-button
+        (click)="toggleSidebar()"
+        aria-label="Collapse sidebar"
+      >
+        <mat-icon>chevron_right</mat-icon>
+      </button>
+    </mat-toolbar>
+  </mat-sidenav>
+  }
 
   <!-- Main content area -->
   <mat-sidenav-content class="relative">
-    <!-- Toggle button when sidebar is collapsed -->
-    @if (!sidebarOpened()) {
-    <button
-      mat-icon-button
-      class="!fixed top-3 left-1 z-50 !shadow-(--mat-sys-level2) !bg-(--mat-sys-surface-container-low)/50"
-      (click)="toggleSidebar()"
-      aria-label="Open sidebar"
-    >
-      <mat-icon>chevron_right</mat-icon>
-    </button>
-    }
-    <div class="container py-4 mx-auto {{sidebarOpened() ? 'px-8' : 'px-0'}}">
+    <div class="p-4 mx-auto h-full">
       <router-outlet></router-outlet>
     </div>
   </mat-sidenav-content>

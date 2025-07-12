@@ -1,6 +1,5 @@
 import {
   Component,
-  computed,
   effect,
   inject,
   input,
@@ -10,6 +9,7 @@ import { ProjectService } from '../../../services/project.service';
 import { ReportService } from '../../../services/report.service';
 import { finalize } from 'rxjs';
 import { DatePipe } from '@angular/common';
+import { Report } from '../../../models/report.model';
 
 @Component({
   selector: 'app-report-content',
@@ -23,25 +23,17 @@ export class ReportContentView {
   private projectService = inject(ProjectService);
   private reportService = inject(ReportService);
 
-  reportId = input<string>();
-
-  report = computed(() => {
-    const project = this.projectService.selectedProject();
-    const reportId = this.reportId();
-    if (!project || !reportId) {
-      return null;
-    }
-
-    return project?.reports.find((report) => report.id === reportId) ?? null;
-  });
+  report = input.required<Report>();
 
   isLoading = signal(false);
+  private lastReportId: string | undefined = undefined
 
   constructor() {
     effect(() => {
       const projectId = this.projectService.selectedProjectId();
-      const reportId = this.reportId();
-      if (projectId && reportId) {
+      const reportId = this.report().id;
+      if (projectId && reportId && reportId !== this.lastReportId) {
+        this.lastReportId = reportId;
         this.loadContent(projectId, reportId);
       }
     });

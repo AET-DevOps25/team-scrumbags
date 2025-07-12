@@ -1,6 +1,8 @@
 import { User } from './user.model';
 import { MeetingNote } from './meeting-note.model';
 import { Report } from './report.model';
+import { Message } from './message.model';
+
 
 export interface Project {
   id: string;
@@ -9,5 +11,6 @@ export interface Project {
 
   users: User[];
   meetingNotes: MeetingNote[];
-  reports: Report[];
+  reports: Map<string, Report>;
+  messages: Map<string, Message>;
 }

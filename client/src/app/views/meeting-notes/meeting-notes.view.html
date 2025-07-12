@@ -1,4 +1,28 @@
-<app-notes-list [notesMetadata]="prelookMetadata()"></app-notes-list>
-@if (prelookCount() !== undefined) {
-<button mat-button class="w-full" (click)="viewAllNotes()">View all</button>
-}
+<div class="flex flex-col h-full">
+  <mat-toolbar class="flex-shrink-0 flex justify-between items-center !p-0">
+    <span>Meeting Notes</span>
+    <button
+      mat-icon-button
+      (click)="openUploadDialog()"
+      aria-label="Upload notes"
+    >
+      <mat-icon>add</mat-icon>
+    </button>
+  </mat-toolbar>
+  <mat-action-list class="flex-1 min-h-0 overflow-y-auto">
+    @for (note of prelookMetadata(); let i = $index; track note.id) {
+    <mat-list-item (click)="openFile(note)" class="!rounded-full">
+      <span matListItemTitle> {{ note.name }} </span>
+    </mat-list-item>
+    }
+  </mat-action-list>
+  @if (displayMoreButton()) {
+  <button
+    mat-button
+    class="w-full flex-shrink-0"
+    (click)="prelookCount() ? viewAllNotes() : viewLess()"
+  >
+    {{prelookCount() ? "View all" : "View less"}}
+  </button>
+  }
+</div>
