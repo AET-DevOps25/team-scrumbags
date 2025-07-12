@@ -20,20 +20,12 @@ jobs:
       run:
         working-directory: ./genai
 
-    # Spin up a local Weaviate service for testing
-    services:
-      weaviate:
-        image: semitechnologies/weaviate:latest
-        ports:
-          - 6969:8080
-        env:
-          QUERY_DEFAULTS_LIMIT: "25"
-          AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
-          PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Bring up Weaviate service
+        run: docker compose -f docker-compose.workflow.yml up -d
 
       - name: Map weaviate hostname
         run: echo "127.0.0.1 weaviate" | sudo tee -a /etc/hosts
@@ -42,12 +34,12 @@ jobs:
         run: |
           for i in {1..30}; do
             if curl -sf http://weaviate:8080/v1/.well-known/ready; then
-              echo "Weaviate ready" && break
+              echo "Weaviate is ready" && break
             else
-              echo "Waiting for Weaviate, attempt $i";
+              echo "Waiting for Weaviate... attempt $i";
               sleep $i;
             fi
-          done  
+          done
 
       - name: Set up Python
         uses: actions/setup-python@v5
