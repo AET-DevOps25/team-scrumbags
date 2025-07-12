@@ -1,0 +1,90 @@
+name: Deploy docker compose to VM
+on:
+  workflow_dispatch:
+    inputs:
+      image-tag:
+        description: 'Fallback Image tag to deploy'
+        required: false
+        default: 'main'
+      client-image-tag:
+        description: 'Client image tag to deploy'
+        required: false
+      project-image-tag:
+        description: 'Project Management image tag to deploy'
+        required: false
+      sdlc-image-tag:
+        description: 'SDLC image tag to deploy'
+        required: false
+      meeting-notes-image-tag:
+        description: 'Meeting Notes image tag to deploy'
+        required: false
+      
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: prod-vm
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Copy Docker Compose File From Repo to VM Host
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ vars.PUBLIC_IP }}
+          username: ${{ vars.VM_USER }}
+          key: ${{ secrets.VM_PRIVATE_KEY }}
+          source: "./docker-compose.prod.yml"
+          target: /home/${{ vars.VM_USER }}
+
+      - name: Copy Keycloak Config From Repo to VM Host
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ vars.PUBLIC_IP }}
+          username: ${{ vars.VM_USER }}
+          key: ${{ secrets.VM_PRIVATE_KEY }}
+          source: "./project-management/keycloak/trace-realm.json"
+          target: /home/${{ vars.VM_USER }}/keycloak
+
+      - name: SSH to VM and Create .env.prod
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ vars.PUBLIC_IP }}
+          username: ${{ vars.VM_USER }}
+          key: ${{ secrets.VM_PRIVATE_KEY }}
+          script: |
+            mv docker-compose.prod.yml docker-compose.yml
+            rm .env
+            touch .env
+            echo "DOMAIN=${{ vars.PUBLIC_IP }}.nip.io" >> .env
+            echo "DEBUG=${{ vars.DEBUG || false }}" >> .env
+
+            echo "KEYCLOAK_ADMIN_USERNAME=${{ secrets.KEYCLOAK_ADMIN_USERNAME }}" >> .env
+            echo "KEYCLOAK_ADMIN_PASSWORD=${{ secrets.KEYCLOAK_ADMIN_PASSWORD}}" >> .env
+
+            echo "CLIENT_IMAGE_TAG=${{ inputs.client-image-tag || inputs.image-tag }}" >> .env
+
+            echo "PROJECT_IMAGE_TAG=${{ inputs.project-image-tag || inputs.image-tag }}" >> .env
+            echo "PROJECT_DB_USER=${{ secrets.PROJECT_DB_USER }}" >> .env
+            echo "PROJECT_DB_PASSWORD=${{ secrets.PROJECT_DB_PASSWORD }}" >> .env
+
+            echo "SDLC_IMAGE_TAG=${{ inputs.sdlc-image-tag || inputs.image-tag}}" >> .env
+            echo "SDLC_DB_USER=${{ secrets.SDLC_DB_USER }}" >> .env
+            echo "SDLC_DB_PASSWORD=${{ secrets.SDLC_DB_PASSWORD }}" >> .env
+            echo "SDLC_TOKEN_SECRET=${{ secrets.SDLC_TOKEN_SECRET }}" >> .env
+
+            echo "MEETING_NOTES_IMAGE_TAG=${{ inputs.meeting-notes-image-tag || inputs.image-tag}}" >> .env
+
+
+      - name: SSH to VM and Execute Docker-Compose Up
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ vars.PUBLIC_IP }}
+          username: ${{ vars.VM_USER }}
+          key: ${{ secrets.VM_PRIVATE_KEY }}
+          script: |
+            echo "Logging into Docker registry..."
+            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            echo "Starting Docker Compose..."
+            docker compose -f docker-compose.yml --env-file=.env up --pull=always -d

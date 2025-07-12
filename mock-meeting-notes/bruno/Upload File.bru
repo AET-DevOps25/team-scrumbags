@@ -1,0 +1,19 @@
+meta {
+  name: Upload File
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{api_url}}/projects/:projectId/meeting-notes
+  body: multipartForm
+  auth: inherit
+}
+
+params:path {
+  projectId: 5b02142b-df2e-44cc-8d5f-4968ed4d75d2
+}
+
+body:multipart-form {
+  file: @file(/Users/dpjandow/Downloads/UI mockup.pdf)
+}

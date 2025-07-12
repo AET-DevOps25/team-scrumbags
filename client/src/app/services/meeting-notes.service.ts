@@ -14,7 +14,6 @@ export class MeetingNotesService {
   public loadMeetingNotes(projectId: string): Observable<MeetingNote[]> {
     return this.api.getMeetingNotesMetadata(projectId).pipe(
       tap((meetingNotes) => {
-        console.log('Meeting notes loaded:', meetingNotes);
         this.projectState.setMeetingNotes(projectId, meetingNotes);
       })
     );
@@ -26,7 +25,6 @@ export class MeetingNotesService {
   ): Observable<MeetingNote> {
     return this.api.uploadMeetingNoteFile(projectId, file).pipe(
       tap((meetingNote) => {
-        console.log('Meeting note uploaded:', meetingNote);
         this.projectState.addMeetingNote(projectId, meetingNote);
       })
     );

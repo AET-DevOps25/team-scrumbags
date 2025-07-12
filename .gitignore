@@ -290,7 +290,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
+*.env
 !.env.template
 .venv
 env/
@@ -373,6 +373,11 @@ sketch
 # Ignore all local history of files
 .history
 .ionide
+
+### Vue ###
+# gitignore template for Vue.js projects
+#
+# Recommended template: Node.gitignore
 
 # ignore letsencrypt files
 acme.json
