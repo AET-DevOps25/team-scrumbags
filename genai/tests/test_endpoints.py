@@ -16,7 +16,7 @@ from app.langchain_provider import summarize_entries, answer_question
 
 # -------- Setup Fixtures --------
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(autouse=True)
 def setup_environment(monkeypatch):
     """
     - mock environment for testing:
