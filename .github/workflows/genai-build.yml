@@ -26,11 +26,6 @@ jobs:
         image: semitechnologies/weaviate:latest
         ports:
           - 6969:8080
-        options: >-
-          --health-cmd="curl -f http://localhost:8080/v1/.well-known/ready || exit 1"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
         env:
           QUERY_DEFAULTS_LIMIT: "25"
           AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
@@ -42,6 +37,17 @@ jobs:
 
       - name: Map weaviate hostname
         run: echo "127.0.0.1 weaviate" | sudo tee -a /etc/hosts
+
+      - name: Wait for Weaviate to be ready
+        run: |
+          for i in {1..30}; do
+            if curl -sf http://weaviate:8080/v1/.well-known/ready; then
+              echo "Weaviate ready" && break
+            else
+              echo "Waiting for Weaviate, attempt $i";
+              sleep $i;
+            fi
+          done  
 
       - name: Set up Python
         uses: actions/setup-python@v5
