@@ -33,7 +33,7 @@ jobs:
       - name: Wait for Weaviate to be ready
         run: |
           for i in {1..30}; do
-            if curl -sf http://weaviate:8080/v1/.well-known/ready; then
+            if curl -sf http://weaviate:6969/v1/.well-known/ready; then
               echo "Weaviate is ready" && break
             else
               echo "Waiting for Weaviate... attempt $i";
