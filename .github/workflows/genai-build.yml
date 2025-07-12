@@ -20,9 +20,28 @@ jobs:
       run:
         working-directory: ./genai
 
+    # Spin up a local Weaviate service for testing
+    services:
+      weaviate:
+        image: semitechnologies/weaviate:latest
+        ports:
+          - 6969:8080
+        options: >-
+          --health-cmd="curl -f http://localhost:8080/v1/.well-known/ready || exit 1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+        env:
+          QUERY_DEFAULTS_LIMIT: "25"
+          AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+          PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Map weaviate hostname
+        run: echo "127.0.0.1 weaviate" | sudo tee -a /etc/hosts
 
       - name: Set up Python
         uses: actions/setup-python@v5
