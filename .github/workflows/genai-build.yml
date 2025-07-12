@@ -43,4 +43,4 @@ jobs:
       - name: Run tests
         #env:
           #RABBITMQ_URL: amqp://guest:guest@localhost:5672/
-        run: pytest
+        run: PYTHONPATH=. pytest
