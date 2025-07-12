@@ -7,6 +7,7 @@ import com.trace.transcription.model.TranscriptEntity;
 import com.trace.transcription.dto.TranscriptSegment;
 import com.trace.transcription.repository.SpeakerRepository;
 import com.trace.transcription.repository.TranscriptRepository;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import org.apache.commons.io.FilenameUtils;
@@ -61,7 +62,8 @@ public class TranscriptService {
 
 
     public void saveFromJson(String json, MultipartFile file) throws Exception {
-        List<TranscriptInput> inputList = mapper.readValue(json, new TypeReference<>() {});
+        List<TranscriptInput> inputList = mapper.readValue(json, new TypeReference<>() {
+        });
 
         TranscriptInput.Metadata meta = inputList.getFirst().metadata;
         List<TranscriptSegment> segments = inputList.stream()
@@ -87,7 +89,8 @@ public class TranscriptService {
     @Transactional
     public void updateEntityWithTranscript(UUID transcriptId, String json) throws Exception {
         // Parse JSON into segments and metadata
-        List<TranscriptInput> inputList = mapper.readValue(json, new TypeReference<>() {});
+        List<TranscriptInput> inputList = mapper.readValue(json, new TypeReference<>() {
+        });
         // Map to TranscriptSegment list
         List<TranscriptSegment> segments = inputList.stream()
                 .map(input -> new TranscriptSegment(
@@ -183,6 +186,11 @@ public class TranscriptService {
 
     public List<TranscriptEntity> getAllTranscripts(UUID projectId) {
         return transcriptRepository.findAllByProjectId(projectId);
+    }
+
+    public TranscriptEntity getTranscriptById(UUID projectId, UUID transcriptId) {
+        return transcriptRepository.findById(transcriptId)
+                .orElse(null);
     }
 
     public void streamAllAudios(UUID projectId, HttpServletResponse response) {

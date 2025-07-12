@@ -135,6 +135,45 @@ public class TranscriptController {
         return ResponseEntity.ok(transcripts);
     }
 
+    /**
+     * GET projects/{projectId}/transcripts/{transcriptId}/audio
+     * <p>
+     * Returns the transcript entity for the given project and transcript ID.
+     */
+    @GetMapping("projects/{projectId}/transcripts/{transcriptId}")
+    public ResponseEntity<?> getTranscriptById(@PathVariable("projectId") UUID projectId, @PathVariable("transcriptId") UUID transcriptId) {
+        TranscriptEntity transcript = transcriptService.getTranscriptById(projectId, transcriptId);
+        if (transcript == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok(transcript);
+    }
+
+    /**
+     * GET projects/{projectId}/transcripts/{transcriptId}/audio
+     * <p>
+     * Returns the audio file of a transcript
+     */
+    @GetMapping("projects/{projectId}/transcripts/{transcriptId}/audio")
+    public ResponseEntity<?> getAudioFile(@PathVariable("projectId") UUID projectId, @PathVariable("transcriptId") UUID transcriptId) {
+        TranscriptEntity transcript = transcriptService.getTranscriptById(projectId, transcriptId);
+        if (transcript == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String fileName = transcript.getId() + "." + transcript.getAudioExtension();
+        String mimeType = "audio/" + transcript.getAudioExtension();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(mimeType));
+        headers.setContentDisposition(ContentDisposition.inline().filename(fileName).build());
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(transcript.getAudio());
+    }
+
      /**
      * GET projects/{projectId}/audios
      * <p>

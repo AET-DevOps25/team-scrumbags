@@ -7,10 +7,11 @@ import { ProjectService } from '../../services/project.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { catchError, finalize, tap } from 'rxjs';
 import { MatInputModule } from '@angular/material/input';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-meeting-notes-upload',
-  imports: [CommonModule, MatDialogModule, MatInputModule, MatButtonModule],
+  imports: [CommonModule, MatDialogModule, FormsModule, MatInputModule, MatButtonModule],
   templateUrl: './meeting-notes-upload.component.html',
   styleUrl: './meeting-notes-upload.component.scss',
 })
@@ -21,6 +22,7 @@ export class NotesUploadDialog {
   private snackBar = inject(MatSnackBar);
 
   isSubmitting = signal(false);
+  speakerAmount = signal(1);
   selectedFile = signal<File | null>(null);
 
   onFileSelected(event: Event) {
@@ -39,18 +41,31 @@ export class NotesUploadDialog {
   onSubmit() {
     const projectId = this.projectService.selectedProjectId();
     const file = this.selectedFile();
+    const speakerAmount = this.speakerAmount();
     if (!projectId) {
       console.error('No project selected for uploading meeting notes');
       return;
     }
     if (!file) {
-      console.error('No file selected for uploading meeting notes');
+      this.snackBar.open(
+        'No file selected for uploading meeting notes',
+        'Close',
+        {
+          duration: 3000,
+        }
+      );
+      return;
+    }
+    if (speakerAmount < 1) {
+      this.snackBar.open('Speaker amount must be at least 1', 'Close', {
+        duration: 3000,
+      });
       return;
     }
 
     this.isSubmitting.set(true);
     this.meetingNoteService
-      .uploadMeetingNoteFile(projectId, file)
+      .uploadMeetingNoteFile(projectId, speakerAmount, file)
       .pipe(
         tap(() => this.dialogRef.close()),
         catchError((error) => {
