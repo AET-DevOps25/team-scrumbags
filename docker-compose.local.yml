@@ -10,7 +10,7 @@ services:
       - SDLC_URL=http://localhost:8081
       - MEETING_NOTES_URL=http://localhost:3030
       - COMMUNICATION_URL=http://localhost/api/communication
-      - GEN_AI_URL=http://localhost/api/gen-ai
+      - GEN_AI_URL=http://localhost:3031
       - KEYCLOAK_URL=http://localhost:7999
       - KEYCLOAK_REALM=${KEYCLOAK_REALM:-trace}
       - KEYCLOAK_CLIENT=${KEYCLOAK_CLIENT:-trace-api}
@@ -46,10 +46,12 @@ services:
       - DEBUG=true
       - TOKEN_SECRET=${SDLC_TOKEN_SECRET:-meinsecret}
       - MODE=${SDLC_MODE:-persist}
-      - GENAI_URL=http://localhost/api/gen-ai
+      - GENAI_URL=http://localhost:3031
       - DB_URL=jdbc:postgresql://localhost:5432/sdlc-db
       - DB_USER=${POSTGRES_DB_USER:-user}
       - DB_PASSWORD=${POSTGRES_DB_PASSWORD:-test}
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM:-trace}
+      - KEYCLOAK_AUTH_URL=http://localhost:7999
       - SERVER_PORT=8081
     restart: unless-stopped
 

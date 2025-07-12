@@ -10,19 +10,19 @@ import java.util.UUID;
 @Table(name = "user_mapping")
 @IdClass(UserMapping.UserMappingId.class)
 public class UserMapping {
-    // primary key over projectId, platform, and platformUserId to have multiple platform user associated to more than one project user
+    // primary key over projectId, platform, and userId to allow one platform userId per project
     public static class UserMappingId implements Serializable {
         private UUID projectId;
         private SupportedSystem platform;
-        private String platformUserId;
+        private UUID userId;
 
         public UserMappingId() {
         }
 
-        public UserMappingId(UUID projectId, SupportedSystem platform, String platformUserId) {
+        public UserMappingId(UUID projectId, SupportedSystem platform, UUID userId) {
             this.projectId = projectId;
             this.platform = platform;
-            this.platformUserId = platformUserId;
+            this.userId = userId;
         }
     }
 
@@ -33,10 +33,10 @@ public class UserMapping {
     @Enumerated(EnumType.STRING)
     private SupportedSystem platform;
 
-    @Column(nullable = false)
+    @Id
     private UUID userId;
 
-    @Id
+    @Column(nullable = false)
     private String platformUserId;
 
     public UserMapping() {

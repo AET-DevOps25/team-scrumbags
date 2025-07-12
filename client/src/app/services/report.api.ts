@@ -1,9 +1,10 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { environment } from '../environment';
 import { Report } from '../models/report.model';
+import { handleError } from './api-utils';
 
 @Injectable({
   providedIn: 'root',
@@ -14,7 +15,7 @@ export class ReportApi {
   getReportsMetadata(projectId: string): Observable<Report[]> {
     return this.http
       .get<Report[]>(`${environment.genAiUrl}/projects/${projectId}/reports`)
-      .pipe(catchError(this.handleError('Error fetching reports metadata')));
+      .pipe(catchError(handleError('Error fetching reports metadata')));
   }
 
   generateReport(
@@ -24,7 +25,11 @@ export class ReportApi {
     userIds?: string[]
   ): Observable<Report> {
     const url = `${environment.genAiUrl}/projects/${projectId}/reports`;
-    const body: Partial<{ periodStart: string; periodEnd: string; userIds: string[] }> = {};
+    const body: Partial<{
+      periodStart: string;
+      periodEnd: string;
+      userIds: string[];
+    }> = {};
     if (periodStart) {
       body.periodStart = periodStart.toISOString();
     }
@@ -37,7 +42,7 @@ export class ReportApi {
 
     return this.http
       .post<Report>(url, body)
-      .pipe(catchError(this.handleError('Error generating report')));
+      .pipe(catchError(handleError('Error generating report')));
   }
 
   getReportContent(projectId: string, reportId: string): Observable<Report> {
@@ -45,23 +50,6 @@ export class ReportApi {
       .get<Report>(
         `${environment.genAiUrl}/projects/${projectId}/reports/${reportId}/content`
       )
-      .pipe(catchError(this.handleError('Error fetching report content')));
-  }
-
-  private handleError(operation: string) {
-    return (error: HttpErrorResponse): Observable<never> => {
-      console.error(`${operation}:`, error);
-
-      let errorMessage = 'An unknown error occurred';
-      if (error.error instanceof ErrorEvent) {
-        // Client-side error
-        errorMessage = `Client error: ${error.error.message}`;
-      } else {
-        // Server-side error
-        errorMessage = `Server error: ${error.status} ${error.statusText}`;
-      }
-
-      return throwError(() => new Error(errorMessage));
-    };
+      .pipe(catchError(handleError('Error fetching report content')));
   }
 }

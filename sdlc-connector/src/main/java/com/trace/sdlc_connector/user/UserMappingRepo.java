@@ -9,4 +9,5 @@ import java.util.UUID;
 public interface UserMappingRepo extends JpaRepository<UserMapping, UserMapping.UserMappingId> {
     List<UserMapping> findAllByProjectId(UUID projectId);
     List<UserMapping> findAllByProjectIdAndPlatform(UUID projectId, SupportedSystem platform);
+    List<UserMapping> findAllByProjectIdAndPlatformAndPlatformUserId(UUID projectId, SupportedSystem platform, String platformUserId);
 }
