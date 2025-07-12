@@ -15,3 +15,4 @@ asyncmy
 pytest
 pytest-asyncio
 pytest-cov
+aiosqlite
