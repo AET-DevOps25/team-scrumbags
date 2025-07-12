@@ -135,4 +135,13 @@ public class TranscriptController {
         return ResponseEntity.ok(transcripts);
     }
 
+     /**
+     * GET projects/{projectId}/audios
+     * <p>
+     * Streams back a zip with all audios (transcript IDs with their sample extensions) for the given project.
+     */
+    @GetMapping("projects/{projectId}/audios")
+    public void streamAllSamples(@PathVariable("projectId") UUID projectId, HttpServletResponse response) {
+        transcriptService.streamAllAudios(projectId, response);
+    }
 }

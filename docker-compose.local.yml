@@ -8,9 +8,9 @@ services:
     environment:
       - PROJECT_MANAGEMENT_URL=http://localhost:8080
       - SDLC_URL=http://localhost:8081
-      - MEETING_NOTES_URL=http://localhost:3030
-      - COMMUNICATION_URL=http://localhost/api/communication
-      - GEN_AI_URL=http://localhost:3031
+      - COMMUNICATION_URL=http://localhost:8082
+      - MEETING_NOTES_URL=http://localhost:8083
+      - GEN_AI_URL=http://localhost:4242
       - KEYCLOAK_URL=http://localhost:7999
       - KEYCLOAK_REALM=${KEYCLOAK_REALM:-trace}
       - KEYCLOAK_CLIENT=${KEYCLOAK_CLIENT:-trace-api}
@@ -45,8 +45,8 @@ services:
     environment:
       - DEBUG=true
       - TOKEN_SECRET=${SDLC_TOKEN_SECRET:-meinsecret}
-      - MODE=${SDLC_MODE:-persist}
-      - GENAI_URL=http://localhost:3031
+      - MODE=${SDLC_MODE:-forward}
+      - GENAI_URL=http://localhost:4242
       - DB_URL=jdbc:postgresql://localhost:5432/sdlc-db
       - DB_USER=${POSTGRES_DB_USER:-user}
       - DB_PASSWORD=${POSTGRES_DB_PASSWORD:-test}
@@ -54,7 +54,7 @@ services:
       - KEYCLOAK_AUTH_URL=http://localhost:7999
       - SERVER_PORT=8081
     restart: unless-stopped
-
+  
   postgres-db:
     image: postgres:latest
     environment:
@@ -66,25 +66,160 @@ services:
       - postgres_db_data:/var/lib/postgresql/data
       - ./init-postgres.sql:/docker-entrypoint-initdb.d/init-db.sql
 
-  mock-meeting-notes:
+  communication:
     build:
-        context: ./mock-meeting-notes
-        dockerfile: Dockerfile
+      context: ./comms-connector
+      dockerfile: Dockerfile
     network_mode: host
+    depends_on:
+      mysql-db: 
+        condition: service_healthy
     environment:
-      - SERVER_PORT=3030
-      - DEBUG=${DEBUG}
+      - DEBUG=true
+      - COMM_DB_URL=jdbc:mysql://localhost:3306/comms-db
+      - COMM_DB_USER=root
+      - COMM_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:-test}
+      - COMM_DISCORD_SECRET=${COMM_DISCORD_SECRET:-meinsecret}
+      - COMM_DISCORD_BOT_ID=${COMM_DISCORD_BOT_ID:-1377229494263222302}
+      - COMM_DISCORD_API_VERSION=${COMM_DISCORD_API_VERSION:-v10}
+      - COMM_DISCORD_BASE_URL=${COMM_DISCORD_BASE_URL:-https://discord.com/api}
+      - TRACE_GENAI_BASE_URL=http://localhost:4242
+      - TRACE_PROJECT_MANAGEMENT_BASE_URL=http://localhost:8080
+      - SERVER_PORT=8082
     restart: unless-stopped
 
-  mock-genai:
+  transcription:
     build:
-        context: ./mock-genai
-        dockerfile: Dockerfile
+      context: ./transcription
+      dockerfile: Dockerfile
+      args:
+        USE_WHISPERX: ${USE_WHISPERX:-false}
     network_mode: host
+    depends_on:
+      mysql-db: 
+        condition: service_healthy
     environment:
-      - SERVER_PORT=3031
-      - DEBUG=${DEBUG}
+      - DEBUG=true
+      - SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/transcription-db
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD:-test}
+      - HF_TOKEN=${HF_TOKEN}
+      - USE_CLOUD=${USE_CLOUD:-true}
+      - ASSEMBLYAI_API_KEY=${ASSEMBLYAI_API_KEY}
+      - TRANSCRIPTION_TIMEOUT=${TRANSCRIPTION_TIMEOUT:-300000}
+      - GENAI_URL=http://localhost:4242
+      - SERVER_PORT=8083
     restart: unless-stopped
+
+  genai:
+    build:
+      context: ./genai
+      dockerfile: Dockerfile
+    network_mode: host
+    depends_on:
+      mysql-db: 
+        condition: service_healthy
+    environment:
+      - DEBUG=true
+      - OLLAMA_CLOUD_URL=https://gpu.aet.cit.tum.de/ollama
+      - OLLAMA_LOCAL_URL=http://localhost:11434
+      - NOMIC_API_KEY=${NOMIC_API_KEY}
+      - OPEN_WEBUI_BEARER=${OPEN_WEBUI_BEARER}
+      - WEAVIATE_URL=${WEAVIATE_URL:-http://localhost:6969}
+      - RABBITMQ_URL=${RABBITMQ_URL:-amqp://guest:guest@localhost/}
+      - MYSQL_URL=mysql+asyncmy://root:${MYSQL_ROOT_PASSWORD:-test}@localhost:3306/genai-db
+      - SERVER_PORT=4242
+    restart: unless-stopped
+
+  ollama:
+    container_name: ollama
+    image: ollama/ollama:latest
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -e
+
+        echo "▶️  Starting Ollama server…"
+        # Launch server in background
+        ollama serve &
+        SERVER_PID=$!
+
+        echo "⏳  Waiting for server to be healthy…"
+        # simple health‑check loop: try 'ollama list' until it returns success
+        until ollama list > /dev/null 2>&1; do
+          sleep 1
+        done
+
+        echo "✅  Server is up! Pulling llama3.3…"
+        # Now that the daemon is running, pull the model
+        ollama pull llama3.2
+
+        echo "🚀  Model pulled. Waiting on server (PID $SERVER_PID)…"
+        # Drop into the Ollama server process so Docker keeps the container alive
+        wait $SERVER_PID
+    ports:
+      - "11434:11434"
+    profiles: [local-ollama]
+    volumes:
+      - ollama:/root/.ollama
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "ollama list | grep -q llama3.2" ]
+      interval: 15s
+      timeout: 10s
+      retries: 30
+  
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq-lib:/var/lib/rabbitmq/
+      - rabbitmq-log:/var/log/rabbitmq
+
+  weaviate:
+    command:
+      - --host
+      - 0.0.0.0
+      - --port
+      - '6969'
+      - --scheme
+      - http
+    image: cr.weaviate.io/semitechnologies/weaviate:1.31.2
+    ports:
+      - "6969:6969"
+      - "50051:50051"
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    restart: on-failure:0
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+      ENABLE_API_BASED_MODULES: 'true'
+      CLUSTER_HOSTNAME: 'node1'
+
+  mysql-db:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-test}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql/
+      - ./init-mysql.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      interval: 3s
+      retries: 10
+      timeout: 5s
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.2.5
@@ -105,3 +240,10 @@ services:
 
 volumes:
   postgres_db_data:
+  mysql_data:
+  weaviate_data:
+  rabbitmq-lib:
+    driver: local
+  rabbitmq-log:
+    driver: local
+  ollama:

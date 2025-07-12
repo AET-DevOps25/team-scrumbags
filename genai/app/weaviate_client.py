@@ -8,6 +8,7 @@ import weaviate
 import weaviate.classes.config as wc
 # from langchain.embeddings import HuggingFaceEmbeddings
 from dotenv import load_dotenv
+from urllib.parse import urlparse
 from langchain_nomic import NomicEmbeddings
 from weaviate.collections.classes.filters import Filter
 from weaviate.util import generate_uuid5
@@ -23,10 +24,16 @@ embeddings = NomicEmbeddings(
 )
 # hf_embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
+# Parse WEAVIATE_URL from environment
+WEAVIATE_URL = os.getenv("WEAVIATE_URL", "http://localhost:6969")
+parsed_url = urlparse(WEAVIATE_URL)
+weaviate_host = parsed_url.hostname or "localhost"
+weaviate_port = parsed_url.port or 6969
+
 # Init v4 client
 client = weaviate.connect_to_local(
-    host="weaviate",  # Use a string to specify the host
-    port=6969,
+    host=weaviate_host,
+    port=weaviate_port,
     grpc_port=50051,
 )
 COLLECTION_NAME = "ProjectContent"

@@ -15,20 +15,21 @@ export class MeetingNotesApi {
   getMeetingNotesMetadata(projectId: string): Observable<MeetingNote[]> {
     return this.http
       .get<MeetingNote[]>(
-        `${environment.meetingNotesUrl}/projects/${projectId}/meeting-notes`
+        `${environment.meetingNotesUrl}/projects/${projectId}/transcripts`
       )
       .pipe(catchError(handleError('Error fetching project list')));
   }
 
   uploadMeetingNoteFile(
     projectId: string,
+    speakerAmount: number,
     file: File
   ): Observable<MeetingNote> {
     const formData = new FormData();
     formData.append('file', file);
     return this.http
       .post<MeetingNote>(
-        `${environment.meetingNotesUrl}/projects/${projectId}/meeting-notes`,
+        `${environment.meetingNotesUrl}/projects/${projectId}/transcripts?speakerAmount=${speakerAmount}`,
         formData
       )
       .pipe(catchError(handleError('Error uploading meeting note')));
