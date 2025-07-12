@@ -21,9 +21,10 @@ export class MeetingNotesService {
 
   public uploadMeetingNoteFile(
     projectId: string,
+    speakerAmount: number,
     file: File
   ): Observable<MeetingNote> {
-    return this.api.uploadMeetingNoteFile(projectId, 1, file).pipe(
+    return this.api.uploadMeetingNoteFile(projectId, speakerAmount, file).pipe(
       tap((meetingNote) => {
         this.projectState.addMeetingNote(projectId, meetingNote);
       })
