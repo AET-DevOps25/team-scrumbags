@@ -1,12 +1,5 @@
 name: Transcription Docker Build and Push
 on:
-  pull_request:
-    branches:
-      - main
-      - release/*
-    paths:
-      - "transcription/**"
-      - ".github/workflows/transcription-package.yml"
   push:
     branches:
       - main

@@ -14,7 +14,7 @@ export class ReportApi {
 
   getReportsMetadata(projectId: string): Observable<Report[]> {
     return this.http
-      .get<Report[]>(`${environment.genAiUrl}/projects/${projectId}/reports`)
+      .get<Report[]>(`${environment.genAiUrl}/projects/${projectId}/summary`)
       .pipe(catchError(handleError('Error fetching reports metadata')));
   }
 
@@ -24,24 +24,20 @@ export class ReportApi {
     periodEnd: Date | null,
     userIds?: string[]
   ): Observable<Report> {
-    const url = `${environment.genAiUrl}/projects/${projectId}/reports`;
-    const body: Partial<{
-      periodStart: string;
-      periodEnd: string;
-      userIds: string[];
-    }> = {};
+    const url = `${environment.genAiUrl}/projects/${projectId}/summary`;
+    const params = new URLSearchParams();
     if (periodStart) {
-      body.periodStart = periodStart.toISOString();
+      params.append('startTime', periodStart.toISOString());
     }
     if (periodEnd) {
-      body.periodEnd = periodEnd.toISOString();
+      params.append('endTime', periodEnd.toISOString());
     }
     if (userIds && userIds.length > 0) {
-      body.userIds = userIds;
+      userIds.forEach((id) => params.append('userIds', id));
     }
 
     return this.http
-      .post<Report>(url, body)
+      .get<Report>(`${url}?${params.toString()}`)
       .pipe(catchError(handleError('Error generating report')));
   }
 

@@ -12,9 +12,11 @@ import { handleError } from './api-utils';
 export class ChatApi {
   private http = inject(HttpClient);
 
-  getChatMessages(projectId: string): Observable<Message[]> {
+  getChatMessages(projectId: string, userId: string): Observable<Message[]> {
     return this.http
-      .get<Message[]>(`${environment.genAiUrl}/projects/${projectId}/chat`)
+      .get<Message[]>(
+        `${environment.genAiUrl}/projects/${projectId}/messages?userId=${userId}`
+      )
       .pipe(
         map((msg) => {
           for (const m of msg) {
@@ -26,11 +28,16 @@ export class ChatApi {
       );
   }
 
-  sendMessage(projectId: string, message: string): Observable<Message[]> {
+  sendMessage(
+    projectId: string,
+    userId: string,
+    message: string
+  ): Observable<Message[]> {
     return this.http
-      .post<Message[]>(`${environment.genAiUrl}/projects/${projectId}/chat`, {
-        message: message,
-      })
+      .post<Message[]>(
+        `${environment.genAiUrl}/projects/${projectId}/messages?userId=${userId}`,
+        message
+      )
       .pipe(
         map((msg) => {
           for (const m of msg) {

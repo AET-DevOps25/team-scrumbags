@@ -31,7 +31,7 @@ public class MessageForward extends MessageProcessor {
     public void processMessage(UUID projectId, Message message){
         try {
             String response = this.restClient.post()
-                    .uri(genAiUrl + "/projects/" + projectId)
+                    .uri(genAiUrl + "/content")
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(message)
                     .retrieve()
