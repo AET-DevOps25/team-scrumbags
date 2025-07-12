@@ -25,7 +25,7 @@ export class ReportApi {
     userIds?: string[]
   ): Observable<Report> {
     const url = `${environment.genAiUrl}/projects/${projectId}/summary`;
-    let params = new URLSearchParams();
+    const params = new URLSearchParams();
     if (periodStart) {
       params.append('startTime', periodStart.toISOString());
     }
