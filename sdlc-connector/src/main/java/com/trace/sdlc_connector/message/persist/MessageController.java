@@ -1,5 +1,6 @@
 package com.trace.sdlc_connector.message.persist;
 
+import com.trace.sdlc_connector.message.Message;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,7 +21,10 @@ class MessageController {
     public ResponseEntity<?> retrieveAllData(
             @PathVariable UUID projectId) {
         var entities = messageRepo.findAllByProjectId(projectId);
+        var messages = entities.stream()
+                .map(Message::new)
+                .toList();
 
-        return ResponseEntity.ok(entities);
+        return ResponseEntity.ok(messages);
     }
 }

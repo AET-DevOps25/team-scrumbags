@@ -29,21 +29,16 @@ public class MessageEntity {
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> content = new HashMap<>();
 
-    public MessageEntity() {
+    protected MessageEntity() {
     }
 
-    public MessageEntity(Message message) {
-        this.id = message.getMetadata().getEventId();
-        this.type = message.getMetadata().getType();
-        this.userId = message.getMetadata().getUserId();
-        this.timestamp = new Date(message.getMetadata().getTimestamp());
-        this.projectId = message.getMetadata().getProjectId();
-        this.content = message.getContent();
-    }
-
-    public Message toMessage() {
-        Metadata metadata = new Metadata(this.id, this.type, this.userId, this.timestamp.getTime(), this.projectId);
-        return new Message(metadata, this.content);
+    public MessageEntity(UUID id, String type, UUID userId, Date timestamp, UUID projectId, Map<String, Object> content) {
+        this.id = id;
+        this.type = type;
+        this.userId = userId;
+        this.timestamp = timestamp;
+        this.projectId = projectId;
+        this.content = content;
     }
 
     public void setId(UUID id) {

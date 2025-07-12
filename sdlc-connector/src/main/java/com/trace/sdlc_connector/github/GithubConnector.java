@@ -141,18 +141,22 @@ public class GithubConnector {
         }
 
         try {
-            Mac mac = Mac.getInstance("HmacSHA256");
-            SecretKeySpec secretKeySpec = new SecretKeySpec(
-                    webhookSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-            mac.init(secretKeySpec);
-            byte[] digest = mac.doFinal(payload.getBytes(StandardCharsets.UTF_8));
-
-            String computedSignature = toHexString(digest);
+            String computedSignature = calculateSignature(webhookSecret, payload);
             return ("sha256=" + computedSignature).equalsIgnoreCase(signature);
         } catch (Exception e) {
             logger.error("Error validating webhook signature", e);
             return false;
         }
+    }
+
+    public static String calculateSignature(String secret, String payload) throws Exception {
+        Mac mac = Mac.getInstance("HmacSHA256");
+        SecretKeySpec secretKeySpec = new SecretKeySpec(
+                secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+        mac.init(secretKeySpec);
+        byte[] digest = mac.doFinal(payload.getBytes(StandardCharsets.UTF_8));
+
+        return toHexString(digest);
     }
 
     /**

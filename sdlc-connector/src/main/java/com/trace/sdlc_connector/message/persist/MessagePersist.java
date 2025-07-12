@@ -21,8 +21,6 @@ public class MessagePersist extends MessageProcessor {
     }
 
     public void processMessage(UUID projectId, Message message) {
-
-        messageRepo.save(new MessageEntity(message));
-
+        messageRepo.save(message.toMessageEntity());
     }
 }
