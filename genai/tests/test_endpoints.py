@@ -13,10 +13,9 @@ import app.db as db
 from app.db import Summary, Message, Base
 from app.langchain_provider import summarize_entries, answer_question
 
-
 # -------- Setup Fixtures --------
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(scope="function", autouse=True)
 def setup_environment(monkeypatch):
     """
     - mock environment for testing:
@@ -76,9 +75,8 @@ def setup_environment(monkeypatch):
     monkeypatch.setattr(summarize_entries, "__call__", lambda *args, **kwargs: {"output_text": "MOCK SUMMARY"})
     monkeypatch.setattr(answer_question, "__call__", lambda *args, **kwargs: {"result": "MOCK ANSWER"})
 
-
 @pytest.fixture(scope="session")
-async def init_test_db():
+def init_test_db():
     """
     Create an in-memory SQLite database and initialize tables.
     Override the app's DB engine and session to use this test database.
@@ -86,13 +84,17 @@ async def init_test_db():
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
     db.async_session = async_sessionmaker(engine, expire_on_commit=False)
     db.engine = engine
-    # Create tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    yield
-    # Dispose engine after tests
-    await engine.dispose()
 
+    loop = asyncio.get_event_loop()
+    async def init_tables():
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    loop.run_until_complete(init_tables())
+
+    yield
+
+    # Dispose engine after tests
+    loop.run_until_complete(engine.dispose())
 
 @pytest.fixture
 def client(init_test_db):
@@ -101,7 +103,6 @@ def client(init_test_db):
     """
     with TestClient(main.app) as c:
         yield c
-
 
 @pytest.fixture
 async def async_client(init_test_db):
@@ -146,7 +147,6 @@ def test_post_content_missing_fields(client):
     }
     response = client.post("/content", json=[entry])
     assert response.status_code == 422
-
 
 import uuid
 
@@ -223,7 +223,6 @@ def test_summary_time_validation(client):
 
 
 test_user_id = uuid.uuid4()
-
 
 def test_post_message_and_get_history(client):
     """
