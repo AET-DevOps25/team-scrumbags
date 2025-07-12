@@ -8,6 +8,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { ProjectService } from '../../services/project.service';
 import { MeetingNotesView } from '../meeting-notes/meeting-notes.view';
+import { ReportOverviewView } from '../report-overview/report-overview.view';
 
 @Component({
   selector: 'app-project-detail',
@@ -17,6 +18,7 @@ import { MeetingNotesView } from '../meeting-notes/meeting-notes.view';
     MatButtonModule,
     MatIconModule,
     MeetingNotesView,
+    ReportOverviewView,
   ],
   templateUrl: './project-detail.view.html',
   styleUrl: './project-detail.view.scss',

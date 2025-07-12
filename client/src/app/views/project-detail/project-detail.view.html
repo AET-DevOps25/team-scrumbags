@@ -5,4 +5,14 @@
     Settings
   </button>
 </div>
-<app-meeting-notes [prelookCount]="3"></app-meeting-notes>
+<div class="flex flex-row flex-wrap gap-4">
+  <div class="flex flex-1 flex-col gap-4 max-w-1/2">
+    <app-meeting-notes [prelookCount]="3"></app-meeting-notes>
+    <app-report-overview></app-report-overview>
+  </div>
+  <span
+    class="flex-1 max-w-1/2 h-150 bg-(--mat-sys-secondary) text-(--mat-sys-on-secondary) flex items-center justify-center"
+  >
+    Chat placeholder
+  </span>
+</div>

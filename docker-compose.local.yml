@@ -74,6 +74,16 @@ services:
       - DEBUG=${DEBUG}
     restart: unless-stopped
 
+  mock-genai:
+    build:
+        context: ./mock-genai
+        dockerfile: Dockerfile
+    network_mode: host
+    environment:
+      - SERVER_PORT=3031
+      - DEBUG=${DEBUG}
+    restart: unless-stopped
+
   keycloak:
     image: quay.io/keycloak/keycloak:26.2.5
     command:
