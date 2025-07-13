@@ -1,285 +1,515 @@
-import os
 import asyncio
+import json
 import pytest
 import uuid
-from datetime import datetime, timezone
-from fastapi.testclient import TestClient
-from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from sqlalchemy import select, Column, String, Text, Integer, DateTime, UniqueConstraint, JSON, Boolean, MetaData
-from sqlalchemy.orm import declarative_base
+from datetime import datetime, UTC
 from unittest.mock import AsyncMock, MagicMock, patch
+from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlalchemy.pool import StaticPool
 
-# Import the FastAPI app and modules
-import app.main as main
-import app.db as db
-from app.db import Message
-from app.langchain_provider import summarize_entries, answer_question
+from app.main import app
+from app.db import Base, Summary, Message, async_session
+from app.models import ContentEntry, Metadata
 
-TestBase = declarative_base(metadata=MetaData())
+# Test database setup
+TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 
-# Create a test-specific Summary model without the computed column
-class TestSummary(TestBase):
-    __tablename__ = "summaries"
-    id = Column(Integer, primary_key=True, index=True)
-    projectId = Column(String(length=36), index=True)
-    startTime = Column(Integer, index=True)
-    endTime = Column(Integer, index=True)
-    generatedAt = Column(DateTime)
-    summary = Column(Text)
-    userIds = Column(JSON, nullable=False, default=list)
-    loading = Column(Boolean, nullable=False)
-
-    __table_args__ = (
-        UniqueConstraint("projectId", "startTime", "endTime", name="uq_project_timeframe_test"),
+@pytest.fixture
+async def test_db():
+    # Create test engine and session
+    engine = create_async_engine(
+        TEST_DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
     )
 
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
-# Test Message model using the same TestBase
-class TestMessage(TestBase):
-    __tablename__ = "messages"
-    id = Column(Integer, primary_key=True, index=True)
-    projectId = Column(String(length=36), index=True)
-    userId = Column(String(length=36), index=True)
-    content = Column(Text)
-    timestamp = Column(DateTime, index=True)
-    loading = Column(Boolean, nullable=False)
+    test_session = async_sessionmaker(engine, expire_on_commit=False)
 
+    # Override the dependency
+    app.dependency_overrides[async_session] = lambda: test_session()
 
-@pytest.fixture(scope="function", autouse=True)
-def setup_environment(monkeypatch):
-    """Set up test environment variables and mocks."""
-    # Use SQLite for testing
-    monkeypatch.setenv("DATABASE_URL", "sqlite+aiosqlite:///test.db")
-    monkeypatch.setenv("MYSQL_URL", "sqlite+aiosqlite:///test.db")
-
-    # Mock external services
-    mock_weaviate_client = MagicMock()
-    mock_weaviate_client.connect.return_value = None
-    mock_weaviate_client.close.return_value = None
-    mock_weaviate_client.collections.list_all.return_value = ["ProjectContent"]
-    mock_weaviate_client.collections.create.return_value = None
-
-    monkeypatch.setattr("app.weaviate_client.client", mock_weaviate_client)
-    monkeypatch.setattr("app.main.wc.client", mock_weaviate_client)
-    monkeypatch.setattr("app.main.wc.init_collection", MagicMock())
-
-    # Mock RabbitMQ
-    mock_connection = AsyncMock()
-    mock_channel = AsyncMock()
-    mock_channel.set_qos = AsyncMock()
-    mock_channel.default_exchange = AsyncMock()
-    mock_channel.default_exchange.publish = AsyncMock()
-
-    monkeypatch.setattr("app.main.rabbit_connection", mock_connection)
-    monkeypatch.setattr("app.main.rabbit_channel", mock_channel)
-    monkeypatch.setattr("aio_pika.connect_robust", AsyncMock(return_value=mock_connection))
-
-    # Mock queue consumer
-    monkeypatch.setattr("app.main.consume", AsyncMock())
-
-    # Mock langchain functions
-    monkeypatch.setattr("app.langchain_provider.summarize_entries",
-                        lambda *args: {"output_text": "Test summary"})
-    monkeypatch.setattr("app.langchain_provider.answer_question",
-                        lambda *args: {"result": "Test answer"})
-
-
-@pytest.fixture(scope="session")
-def init_test_db():
-    """Initialize test database with SQLite."""
-    # Create async engine for SQLite
-    engine = create_async_engine("sqlite+aiosqlite:///test.db", echo=False)
-
-    async def create_tables():
-        async with engine.begin() as conn:
-            await conn.run_sync(TestBase.metadata.create_all)
-
-    # Run the coroutine
-    asyncio.run(create_tables())
-
-    yield
+    yield test_session
 
     # Cleanup
-    async def drop_tables():
-        async with engine.begin() as conn:
-            await conn.run_sync(TestBase.metadata.drop_all)
-
-    asyncio.run(drop_tables())
+    app.dependency_overrides.clear()
+    await engine.dispose()
 
 
 @pytest.fixture
-def client(init_test_db):
-    """Provide a TestClient for the FastAPI app with mocked database."""
-    # Patch the database session to use SQLite
-    test_engine = create_async_engine("sqlite+aiosqlite:///test.db", echo=False)
-    test_session = async_sessionmaker(test_engine, expire_on_commit=False)
-
-    with patch.object(db, 'async_session', test_session):
-        with TestClient(main.app) as c:
-            yield c
+def client():
+    return TestClient(app)
 
 
 @pytest.fixture
-async def async_client(init_test_db):
-    """Provide an AsyncClient for the FastAPI app."""
-    test_engine = create_async_engine("sqlite+aiosqlite:///test.db", echo=False)
-    test_session = async_sessionmaker(test_engine, expire_on_commit=False)
-
-    with patch.object(db, 'async_session', test_session):
-        async with AsyncClient(app=main.app, base_url="http://test") as ac:
-            yield ac
+def sample_project_id():
+    return str(uuid.uuid4())
 
 
-def test_post_content_success(client):
-    """
-    A valid content entry should be accepted.
-    """
-    valid_entry = {
-        "metadata": {
-            "type": "commit",
-            "user": str(uuid.uuid4()),
-            "timestamp": 1609459200,
-            "projectId": str(uuid.uuid4())
-        },
-        "content": {"message": "Initial commit"}
-    }
-    response = client.post("/content", json=[valid_entry])
-    assert response.status_code == 200
-    data = response.json()
-    assert "Published 1 message(s) to queue" in data["status"]
+@pytest.fixture
+def sample_user_id():
+    return str(uuid.uuid4())
 
 
-def test_post_content_missing_fields(client):
-    """
-    Content missing required fields should be rejected.
-    """
-    invalid_entry = {
-        "metadata": {
-            "type": "commit"
-            # missing user, timestamp, projectId
-        },
-        "content": {"message": "Test"}
-    }
-    response = client.post("/content", json=[invalid_entry])
-    assert response.status_code == 422
-
-
-test_project_id = uuid.uuid4()
-test_start = 1000
-test_end = 2000
-
-
-def test_get_summaries_empty(client):
-    """
-    Initially, no summaries exist for the project; GET should return an empty list.
-    """
-    response = client.get(f"/projects/{test_project_id}/summary")
-    assert response.status_code == 200
-    data = response.json()
-    assert data == []
-
-
-def test_post_summary_create(client):
-    """
-    Creating a summary (POST) should return a placeholder with loading=True.
-    """
-    response = client.post(f"/projects/{test_project_id}/summary?startTime={test_start}&endTime={test_end}")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["projectId"] == str(test_project_id)
-    assert data["startTime"] == test_start
-    assert data["endTime"] == test_end
-    assert data["loading"] is True
-    assert data["summary"] == ""
-
-
-def test_get_summary_list(client):
-    """
-    After creating a summary, it should appear in the GET list.
-    """
-    # Create a summary first
-    client.post(f"/projects/{test_project_id}/summary?startTime={test_start}&endTime={test_end}")
-
-    # Now list all summaries
-    response = client.get(f"/projects/{test_project_id}/summary")
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data) >= 1
-    assert any(s["startTime"] == test_start and s["endTime"] == test_end for s in data)
-
-
-def test_put_summary_refresh(client):
-    """
-    PUT should overwrite an existing summary.
-    """
-    # Create initial summary
-    client.post(f"/projects/{test_project_id}/summary?startTime={test_start}&endTime={test_end}")
-
-    # Refresh it
-    response = client.put(f"/projects/{test_project_id}/summary?startTime={test_start}&endTime={test_end}")
-    assert response.status_code == 201
-    data = response.json()
-    assert data["loading"] is True
-
-
-def test_summary_time_validation(client):
-    """
-    startTime > endTime should result in a validation error.
-    """
-    response = client.post(f"/projects/{test_project_id}/summary?startTime=5000&endTime=1000")
-    assert response.status_code == 422
-
-
-test_user_id = uuid.uuid4()
-
-
-def test_post_message_and_get_history(client):
-    """
-    Posting a question should create a question entry and an answer placeholder.
-    Then GET should return both entries.
-    """
-    question_text = "What is the current sprint goal?"
-    response = client.post(
-        f"/projects/{test_project_id}/messages?userId={test_user_id}",
-        json=question_text
+@pytest.fixture
+def sample_content_entry(sample_project_id, sample_user_id):
+    return ContentEntry(
+        metadata=Metadata(
+            type="commit",
+            user=sample_user_id,
+            timestamp=int(datetime.now(UTC).timestamp()),
+            projectId=sample_project_id
+        ),
+        content={"message": "Test commit", "author": "test_user"}
     )
-    assert response.status_code == 200
-    data = response.json()
-    # The response is the answer placeholder (loading)
-    assert data["userId"] == str(test_user_id)
-    assert data["projectId"] == str(test_project_id)
-    assert data["content"] == ""
-    assert data["loading"] is True
-
-    # Now retrieve history
-    history_resp = client.get(f"/projects/{test_project_id}/messages?userId={test_user_id}")
-    assert history_resp.status_code == 200
-    history = history_resp.json()
-    # Should have 2 entries: question (loading False) and answer placeholder (loading True)
-    assert len(history) == 2
-    question_entry, answer_entry = history
-    assert question_entry["content"] == question_text
-    assert question_entry["loading"] is False
-    assert answer_entry["content"] == ""
-    assert answer_entry["loading"] is True
 
 
-def test_post_message_question_validation(client):
-    """
-    An empty question parameter should yield a 422 error.
-    """
-    response = client.post(f"/projects/{test_project_id}/messages?userId={test_user_id}", json="")
-    assert response.status_code == 422
+class TestPostContent:
+    @patch('app.main.rabbit_channel')
+    def test_post_content_success(self, mock_channel, client, sample_content_entry):
+        mock_channel.default_exchange.publish = AsyncMock()
+
+        response = client.post(
+            "/content",
+            json=[sample_content_entry.model_dump()]
+        )
+
+        assert response.status_code == 200
+        assert "Published 1 message(s) to queue" in response.json()["status"]
+
+    @patch('app.main.rabbit_channel')
+    def test_post_content_multiple_entries(self, mock_channel, client, sample_project_id, sample_user_id):
+        mock_channel.default_exchange.publish = AsyncMock()
+
+        entries = []
+        for i in range(3):
+            entry = ContentEntry(
+                metadata=Metadata(
+                    type="commit",
+                    user=sample_user_id,
+                    timestamp=int(datetime.now(UTC).timestamp()) + i,
+                    projectId=sample_project_id
+                ),
+                content={"message": f"Test commit {i}"}
+            )
+            entries.append(entry.model_dump())
+
+        response = client.post("/content", json=entries)
+
+        assert response.status_code == 200
+        assert "Published 3 message(s) to queue" in response.json()["status"]
+
+    def test_post_content_missing_project_id(self, client, sample_user_id):
+        entry = {
+            "metadata": {
+                "type": "commit",
+                "user": sample_user_id,
+                "timestamp": int(datetime.now(UTC).timestamp()),
+                # Missing projectId
+            },
+            "content": {"message": "Test commit"}
+        }
+
+        response = client.post("/content", json=[entry])
+        assert response.status_code == 422
+
+    def test_post_content_missing_timestamp(self, client, sample_project_id, sample_user_id):
+        entry = {
+            "metadata": {
+                "type": "commit",
+                "user": sample_user_id,
+                "projectId": sample_project_id,
+                # Missing timestamp
+            },
+            "content": {"message": "Test commit"}
+        }
+
+        response = client.post("/content", json=[entry])
+        assert response.status_code == 422
+
+    @patch('app.main.rabbit_channel', None)
+    def test_post_content_rabbitmq_not_initialized(self, client, sample_content_entry):
+        response = client.post(
+            "/content",
+            json=[sample_content_entry.model_dump()]
+        )
+
+        assert response.status_code == 500
+        assert "RabbitMQ not initialized" in response.json()["detail"]
 
 
-def test_get_chat_history_no_messages(client):
-    """
-    GET chat history for a user/project with no messages should return an empty list.
-    """
-    other_project = uuid.uuid4()
-    response = client.get(f"/projects/{other_project}/messages?userId={test_user_id}")
-    assert response.status_code == 200
-    data = response.json()
-    assert isinstance(data, list) and len(data) == 0
+class TestGetSummary:
+    @pytest.mark.asyncio
+    async def test_get_summary_existing(self, test_db, client, sample_project_id, sample_user_id):
+        # Create existing summary
+        async with test_db() as session:
+            summary = Summary(
+                projectId=sample_project_id,
+                startTime=1000,
+                endTime=2000,
+                userIds=[sample_user_id],
+                generatedAt=datetime.now(UTC),
+                summary="Existing summary",
+                loading=False
+            )
+            session.add(summary)
+            await session.commit()
+
+        response = client.post(
+            f"/projects/{sample_project_id}/summary",
+            params={
+                "startTime": 1000,
+                "endTime": 2000,
+                "userIds": [sample_user_id]
+            }
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["output_text"] == "Existing summary"
+        assert data["projectId"] == sample_project_id
+
+    @patch('app.main._blocking_summary_job')
+    @patch('app.langchain_provider.summarize_entries')
+    def test_get_summary_new(self, mock_summarize, mock_job, client, sample_project_id, sample_user_id):
+        response = client.post(
+            f"/projects/{sample_project_id}/summary",
+            params={
+                "startTime": 1000,
+                "endTime": 2000,
+                "userIds": [sample_user_id]
+            }
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["loading"] is True
+        assert data["projectId"] == sample_project_id
+        assert data["startTime"] == 1000
+        assert data["endTime"] == 2000
+
+    def test_get_summary_invalid_time_range(self, client, sample_project_id):
+        response = client.post(
+            f"/projects/{sample_project_id}/summary",
+            params={
+                "startTime": 2000,
+                "endTime": 1000
+            }
+        )
+
+        assert response.status_code == 422
+        assert "startTime must be ≤ endTime" in response.json()["detail"]
+
+    def test_get_summary_invalid_project_id(self, client):
+        response = client.post(
+            "/projects/invalid-uuid/summary",
+            params={
+                "startTime": 1000,
+                "endTime": 2000
+            }
+        )
+
+        assert response.status_code == 422
+
+    def test_get_summary_default_params(self, client, sample_project_id):
+        response = client.post(f"/projects/{sample_project_id}/summary")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["startTime"] == -1
+        assert data["endTime"] == -1
+
+
+class TestRefreshSummary:
+    @pytest.mark.asyncio
+    async def test_refresh_summary_success(self, test_db, client, sample_project_id, sample_user_id):
+        # Create existing summary to be deleted
+        async with test_db() as session:
+            summary = Summary(
+                projectId=sample_project_id,
+                startTime=1000,
+                endTime=2000,
+                userIds=[sample_user_id],
+                generatedAt=datetime.now(UTC),
+                summary="Old summary",
+                loading=False
+            )
+            session.add(summary)
+            await session.commit()
+
+        response = client.put(
+            f"/projects/{sample_project_id}/summary",
+            params={
+                "startTime": 1000,
+                "endTime": 2000,
+                "userIds": [sample_user_id]
+            }
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["loading"] is True
+        assert data["projectId"] == sample_project_id
+
+    def test_refresh_summary_invalid_time_range(self, client, sample_project_id):
+        response = client.put(
+            f"/projects/{sample_project_id}/summary",
+            params={
+                "startTime": 2000,
+                "endTime": 1000
+            }
+        )
+
+        assert response.status_code == 422
+
+
+class TestGetSummaries:
+    @pytest.mark.asyncio
+    async def test_get_summaries_success(self, test_db, client, sample_project_id, sample_user_id):
+        # Create test summaries
+        async with test_db() as session:
+            summary1 = Summary(
+                projectId=sample_project_id,
+                startTime=1000,
+                endTime=2000,
+                userIds=[sample_user_id],
+                generatedAt=datetime.now(UTC),
+                summary="Summary 1",
+                loading=False
+            )
+            summary2 = Summary(
+                projectId=sample_project_id,
+                startTime=3000,
+                endTime=4000,
+                userIds=[sample_user_id],
+                generatedAt=datetime.now(UTC),
+                summary="Summary 2",
+                loading=False
+            )
+            session.add_all([summary1, summary2])
+            await session.commit()
+
+        response = client.get(f"/projects/{sample_project_id}/summary")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 2
+        assert all(s["projectId"] == sample_project_id for s in data)
+
+    def test_get_summaries_empty(self, client, sample_project_id):
+        response = client.get(f"/projects/{sample_project_id}/summary")
+
+        assert response.status_code == 200
+        assert response.json() == []
+
+    def test_get_summaries_invalid_project_id(self, client):
+        response = client.get("/projects/invalid-uuid/summary")
+
+        assert response.status_code == 422
+
+
+class TestQueryProject:
+    @patch('app.main._blocking_qa_job')
+    def test_query_project_success(self, mock_job, client, sample_project_id, sample_user_id):
+        question = "What happened in the project?"
+
+        response = client.post(
+            f"/projects/{sample_project_id}/messages",
+            params={"userId": sample_user_id},
+            json=question
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["loading"] is True
+        assert data["projectId"] == sample_project_id
+        assert data["userId"] == sample_user_id
+
+    def test_query_project_empty_question(self, client, sample_project_id, sample_user_id):
+        response = client.post(
+            f"/projects/{sample_project_id}/messages",
+            params={"userId": sample_user_id},
+            json=""
+        )
+
+        assert response.status_code == 422
+        assert "Question cannot be empty" in response.json()["detail"]
+
+    def test_query_project_whitespace_question(self, client, sample_project_id, sample_user_id):
+        response = client.post(
+            f"/projects/{sample_project_id}/messages",
+            params={"userId": sample_user_id},
+            json="   "
+        )
+
+        assert response.status_code == 422
+        assert "Question cannot be empty" in response.json()["detail"]
+
+    def test_query_project_invalid_project_id(self, client, sample_user_id):
+        response = client.post(
+            "/projects/invalid-uuid/messages",
+            params={"userId": sample_user_id},
+            json="What happened?"
+        )
+
+        assert response.status_code == 422
+
+    def test_query_project_invalid_user_id(self, client, sample_project_id):
+        response = client.post(
+            f"/projects/{sample_project_id}/messages",
+            params={"userId": "invalid-uuid"},
+            json="What happened?"
+        )
+
+        assert response.status_code == 422
+
+
+class TestGetChatHistory:
+    @pytest.mark.asyncio
+    async def test_get_chat_history_success(self, test_db, client, sample_project_id, sample_user_id):
+        # Create test messages
+        async with test_db() as session:
+            question = Message(
+                projectId=sample_project_id,
+                userId=sample_user_id,
+                content="What happened?",
+                timestamp=datetime.now(UTC),
+                loading=False
+            )
+            answer = Message(
+                projectId=sample_project_id,
+                userId=sample_user_id,
+                content="Here's what happened...",
+                timestamp=datetime.now(UTC),
+                loading=False
+            )
+            session.add_all([question, answer])
+            await session.commit()
+
+        response = client.get(
+            f"/projects/{sample_project_id}/messages",
+            params={"userId": sample_user_id}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 2
+        assert all(msg["projectId"] == sample_project_id for msg in data)
+        assert all(msg["userId"] == sample_user_id for msg in data)
+
+    def test_get_chat_history_empty(self, client, sample_project_id, sample_user_id):
+        response = client.get(
+            f"/projects/{sample_project_id}/messages",
+            params={"userId": sample_user_id}
+        )
+
+        assert response.status_code == 200
+        assert response.json() == []
+
+    def test_get_chat_history_invalid_project_id(self, client, sample_user_id):
+        response = client.get(
+            "/projects/invalid-uuid/messages",
+            params={"userId": sample_user_id}
+        )
+
+        assert response.status_code == 422
+
+    def test_get_chat_history_invalid_user_id(self, client, sample_project_id):
+        response = client.get(
+            f"/projects/{sample_project_id}/messages",
+            params={"userId": "invalid-uuid"}
+        )
+
+        assert response.status_code == 422
+
+
+class TestBlockingJobs:
+    @patch('app.langchain_provider.summarize_entries')
+    @patch('app.main.async_session')
+    def test_blocking_summary_job(self, mock_session, mock_summarize):
+        from app.main import _blocking_summary_job
+
+        mock_summarize.return_value = {"output_text": "Generated summary"}
+        mock_session_instance = AsyncMock()
+        mock_session.return_value.__aenter__.return_value = mock_session_instance
+
+        _blocking_summary_job(1, "project-id", 1000, 2000, ["user-id"])
+
+        mock_summarize.assert_called_once_with("project-id", 1000, 2000, ["user-id"])
+
+    @patch('app.langchain_provider.answer_question')
+    @patch('app.main.async_session')
+    def test_blocking_qa_job(self, mock_session, mock_answer):
+        from app.main import _blocking_qa_job
+
+        mock_answer.return_value = {"result": "Generated answer"}
+        mock_session_instance = AsyncMock()
+        mock_session.return_value.__aenter__.return_value = mock_session_instance
+
+        _blocking_qa_job(1, "project-id", "What happened?")
+
+        mock_answer.assert_called_once_with("project-id", "What happened?")
+
+    @patch('app.langchain_provider.answer_question')
+    @patch('app.main.async_session')
+    def test_blocking_qa_job_error_handling(self, mock_session, mock_answer):
+        from app.main import _blocking_qa_job
+
+        mock_answer.return_value = None  # Simulate error
+        mock_session_instance = AsyncMock()
+        mock_session.return_value.__aenter__.return_value = mock_session_instance
+
+        _blocking_qa_job(1, "project-id", "What happened?")
+
+        # Should handle the error gracefully
+
+
+class TestEdgeCases:
+    def test_negative_timestamps(self, client, sample_project_id):
+        response = client.post(
+            f"/projects/{sample_project_id}/summary",
+            params={
+                "startTime": -2,
+                "endTime": -1
+            }
+        )
+
+        assert response.status_code == 422
+
+    def test_large_user_ids_list(self, client, sample_project_id):
+        user_ids = [str(uuid.uuid4()) for _ in range(100)]
+
+        response = client.post(
+            f"/projects/{sample_project_id}/summary",
+            params={
+                "startTime": 1000,
+                "endTime": 2000,
+                "userIds": user_ids
+            }
+        )
+
+        assert response.status_code == 200
+
+    @patch('app.main.rabbit_channel')
+    def test_post_content_large_payload(self, mock_channel, client, sample_project_id, sample_user_id):
+        mock_channel.default_exchange.publish = AsyncMock()
+
+        # Create a large content entry
+        large_content = {"data": "x" * 10000}
+        entry = ContentEntry(
+            metadata=Metadata(
+                type="commit",
+                user=sample_user_id,
+                timestamp=int(datetime.now(UTC).timestamp()),
+                projectId=sample_project_id
+            ),
+            content=large_content
+        )
+
+        response = client.post("/content", json=[entry.model_dump()])
+
+        assert response.status_code == 200
