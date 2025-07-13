@@ -23,25 +23,43 @@ import static org.apache.commons.io.FilenameUtils.getExtension;
  * REST controller responsible for handling transcript-related operations within a transcription project.
  * <p>
  * Provides endpoints to upload audio for transcription, list existing transcripts,
- * and stream raw audio files as ZIP archives.
+ * retrieve individual transcripts, download audio files, and stream raw audio files as ZIP archives.
  * </p>
  */
 @RestController
 @RequestMapping("projects/{projectId}")
 public class TranscriptController {
 
+    /**
+     * Logger instance for this controller.
+     */
     public static Logger logger = LoggerFactory.getLogger(TranscriptController.class);
 
+    /**
+     * Thread pool executor for handling asynchronous transcription processing.
+     */
     private final ThreadPoolTaskExecutor executor;
+
+    /**
+     * Base URL of the GenAI core service for forwarding completed transcripts.
+     */
     private final String genaiServiceUrl;
+
+    /**
+     * REST template for making HTTP requests to external services.
+     */
     private final RestTemplate restTemplate = new RestTemplate();
+
+    /**
+     * Service for handling transcript persistence and retrieval operations.
+     */
     private final TranscriptService transcriptService;
 
     /**
      * Constructs a TranscriptController with required dependencies.
      *
-     * @param executor         thread pool executor for asynchronous processing
-     * @param genaiServiceUrl  base URL of the GenAI core service (e.g., "http://genai:8080")
+     * @param executor          thread pool executor for asynchronous processing
+     * @param genaiServiceUrl   base URL of the GenAI core service (e.g., "http://genai:8080")
      * @param transcriptService service for persisting and retrieving transcripts
      */
     public TranscriptController(
@@ -146,12 +164,20 @@ public class TranscriptController {
     }
 
     /**
-     * GET projects/{projectId}/transcripts/{transcriptId}/audio
+     * Retrieves a specific transcript by its ID within a project.
      * <p>
-     * Returns the transcript entity for the given project and transcript ID.
+     * Returns the complete transcript entity including metadata and transcription content.
+     * </p>
+     *
+     * @param projectId    UUID of the project containing the transcript
+     * @param transcriptId UUID of the specific transcript to retrieve
+     * @return 200 OK with the {@link TranscriptEntity},
+     *         or 404 Not Found if the transcript does not exist
      */
     @GetMapping("/transcripts/{transcriptId}")
-    public ResponseEntity<?> getTranscriptById(@PathVariable("projectId") UUID projectId, @PathVariable("transcriptId") UUID transcriptId) {
+    public ResponseEntity<?> getTranscriptById(
+            @PathVariable("projectId") UUID projectId,
+            @PathVariable("transcriptId") UUID transcriptId) {
         TranscriptEntity transcript = transcriptService.getTranscriptById(projectId, transcriptId);
         if (transcript == null) {
             return ResponseEntity.notFound().build();
@@ -161,12 +187,21 @@ public class TranscriptController {
     }
 
     /**
-     * GET projects/{projectId}/transcripts/{transcriptId}/audio
+     * Downloads the raw audio file associated with a specific transcript.
      * <p>
-     * Returns the audio file of a transcript
+     * Returns the audio data with appropriate headers for inline display or download.
+     * The filename is constructed using the transcript ID and original audio extension.
+     * </p>
+     *
+     * @param projectId    UUID of the project containing the transcript
+     * @param transcriptId UUID of the transcript whose audio file is requested
+     * @return 200 OK with audio file as byte array and appropriate headers,
+     *         or 404 Not Found if the transcript does not exist
      */
     @GetMapping("/transcripts/{transcriptId}/audio")
-    public ResponseEntity<?> getAudioFile(@PathVariable("projectId") UUID projectId, @PathVariable("transcriptId") UUID transcriptId) {
+    public ResponseEntity<?> getAudioFile(
+            @PathVariable("projectId") UUID projectId,
+            @PathVariable("transcriptId") UUID transcriptId) {
         TranscriptEntity transcript = transcriptService.getTranscriptById(projectId, transcriptId);
         if (transcript == null) {
             return ResponseEntity.notFound().build();
@@ -187,14 +222,18 @@ public class TranscriptController {
     /**
      * Streams a ZIP archive containing all raw audio files for a project.
      * <p>
-     * Writes the ZIP directly to the servlet response output stream.
+     * Writes the ZIP directly to the servlet response output stream with appropriate
+     * headers for file download. The archive contains all audio files from transcripts
+     * within the specified project.
      * </p>
      *
      * @param projectId UUID of the project whose audio files are requested
-     * @param response  HTTP response used to stream the ZIP data
+     * @param response  HTTP servlet response to write the ZIP data to
      */
     @GetMapping("/audios")
-    public void streamAllSamples(@PathVariable("projectId") UUID projectId, HttpServletResponse response) {
+    public void streamAllSamples(
+            @PathVariable("projectId") UUID projectId,
+            HttpServletResponse response) {
         transcriptService.streamAllAudios(projectId, response);
     }
 }
