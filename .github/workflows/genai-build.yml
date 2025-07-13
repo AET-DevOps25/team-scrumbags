@@ -45,7 +45,7 @@ jobs:
       weaviate:
         image: cr.weaviate.io/semitechnologies/weaviate:1.31.2
         ports:
-          - 6969:8080
+          - 8080:8080
           - 50051:50051
         volumes:
           - weaviate_data:/var/lib/weaviate
@@ -56,7 +56,7 @@ jobs:
           ENABLE_API_BASED_MODULES: 'true'
           CLUSTER_HOSTNAME: 'node1'
         options: >-
-          --health-cmd "curl --request GET --url http://localhost:6969/v1/ || exit 1 || exit 1"
+          --health-cmd "curl --request GET --url http://localhost:8080/v1/ || exit 1 || exit 1"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -90,7 +90,7 @@ jobs:
           done
           
           # Wait for Weaviate
-          while ! curl -f http://127.0.0.1:6969/v1/.well-known/ready; do
+          while ! curl -f http://127.0.0.1:8080/v1/.well-known/ready; do
             echo "Waiting for Weaviate..."
             sleep 2
           done
