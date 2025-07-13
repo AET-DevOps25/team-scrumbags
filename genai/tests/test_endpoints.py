@@ -13,9 +13,10 @@ import app.db as db
 from app.db import Message, Base
 from app.langchain_provider import summarize_entries, answer_question
 
+TestBase = declarative_base(metadata=MetaData())
 
 # Create a test-specific Summary model without the computed column
-class TestSummary(Base):
+class TestSummary(TestBase):
     __tablename__ = "summaries"
     id = Column(Integer, primary_key=True, index=True)
     projectId = Column(String(length=36), index=True)
@@ -32,27 +33,35 @@ class TestSummary(Base):
         UniqueConstraint("projectId", "startTime", "endTime", name="uq_project_timeframe_test"),
     )
 
+# Test Message model using the same TestBase
+class TestMessage(TestBase):
+    __tablename__ = "messages"
+    id = Column(Integer, primary_key=True, index=True)
+    userId = Column(String(length=36), index=True)
+    projectId = Column(String(length=36), index=True)
+    timestamp = Column(DateTime)
+    content = Column(Text)
+    loading = Column(Boolean, nullable=False)
 
 # -------- Setup Fixtures --------
 
 @pytest.fixture(scope="function", autouse=True)
 def setup_environment(monkeypatch):
     """
-    - mock environment for testing:
-    - use dummy credentials for SQLite in-memory
-    - mock RabbitMQ
-    - disable Weaviate storage calls and LLM calls
+    Mock environment for testing
     """
-    # Use SQLite in-memory by faking MySQL env vars (DB engine will be overridden later)
+    # Use SQLite in-memory
     monkeypatch.setenv("MYSQL_USER", "test")
     monkeypatch.setenv("MYSQL_PASSWORD", "test")
     monkeypatch.setenv("MYSQL_DATABASE", "testdb")
 
-    # Replace the Summary model with our test version
+    # Replace the models with our test versions
     monkeypatch.setattr(db, "Summary", TestSummary)
     monkeypatch.setattr(main, "Summary", TestSummary)
+    monkeypatch.setattr(db, "Message", TestMessage)
+    monkeypatch.setattr(main, "Message", TestMessage)
 
-    # Prevent connecting to real RabbitMQ: monkeypatch connect_robust
+    # Mock RabbitMQ
     class DummyConnection:
         async def channel(self):
             class DummyChannel:
@@ -63,9 +72,7 @@ def setup_environment(monkeypatch):
                 def default_exchange(self):
                     class DummyExchange:
                         async def publish(self, message, routing_key):
-                            # Simulate successful publish
                             return
-
                     return DummyExchange()
 
                 async def declare_queue(self, *args, **kwargs):
@@ -73,13 +80,9 @@ def setup_environment(monkeypatch):
                         async def iterator(self):
                             class DummyIterator:
                                 def __aiter__(self): return self
-
                                 async def __anext__(self): raise StopAsyncIteration
-
                             return DummyIterator()
-
                     return DummyQueue()
-
             return DummyChannel()
 
     async def fake_connect(url):
@@ -87,15 +90,13 @@ def setup_environment(monkeypatch):
 
     monkeypatch.setattr(main, "connect_robust", fake_connect)
 
-    # Disable Weaviate storage calls
+    # Disable external services
     import app.weaviate_client as wc
     monkeypatch.setattr(wc, "store_entry_async", lambda entry: asyncio.Future())
-
-    # Stub out the blocking background jobs so they do nothing during tests
     monkeypatch.setattr(main, "_blocking_summary_job", lambda *args, **kwargs: None)
     monkeypatch.setattr(main, "_blocking_qa_job", lambda *args, **kwargs: None)
 
-    # Stub LLM-based functions to return predictable output
+    # Mock LLM functions
     monkeypatch.setattr(summarize_entries, "__call__", lambda *args, **kwargs: {"output_text": "MOCK SUMMARY"})
     monkeypatch.setattr(answer_question, "__call__", lambda *args, **kwargs: {"result": "MOCK ANSWER"})
 
@@ -114,7 +115,7 @@ def init_test_db():
 
     async def init_tables():
         async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+            await conn.run_sync(TestBase.metadata.create_all)
 
     loop.run_until_complete(init_tables())
 
@@ -189,7 +190,7 @@ def test_get_summaries_empty(client):
     """
     Initially, no summaries exist for the project; GET should return an empty list.
     """
-    response = client.get(f"/project/{test_project_id}/summary")
+    response = client.get(f"/projects/{test_project_id}/summary")  # Fixed URL
     assert response.status_code == 200
     data = response.json()
     assert data == []
@@ -199,7 +200,7 @@ def test_post_summary_create(client):
     """
     Creating a summary (POST) should return a placeholder with loading=True.
     """
-    response = client.post(f"/project/{test_project_id}/summary?startTime={test_start}&endTime={test_end}")
+    response = client.post(f"/projects/{test_project_id}/summary?startTime={test_start}&endTime={test_end}")
     assert response.status_code == 200
     data = response.json()
     assert data["projectId"] == str(test_project_id)
@@ -221,7 +222,7 @@ def test_get_summary_list(client):
     """
     After creation, GET should return the summary placeholder.
     """
-    response = client.get(f"/project/{test_project_id}/summary")
+    response = client.get(f"/projects/{test_project_id}/summary")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
@@ -235,11 +236,11 @@ def test_put_summary_refresh(client):
     """
     Refreshing (PUT) the same summary should delete the old and create a new placeholder.
     """
-    response = client.put(f"/project/{test_project_id}/summary?startTime={test_start}&endTime={test_end}")
+    response = client.put(f"/projects/{test_project_id}/summary?startTime={test_start}&endTime={test_end}")
     assert response.status_code == 201
     data = response.json()
     # After refresh, exactly one summary should exist (old deleted).
-    response_all = client.get(f"/project/{test_project_id}/summary")
+    response_all = client.get(f"/projects/{test_project_id}/summary")
     all_summaries = response_all.json()
     assert len(all_summaries) == 1
 
@@ -273,7 +274,7 @@ def test_post_message_and_get_history(client):
     assert data["loading"] is True
 
     # Now retrieve history
-    history_resp = client.get(f"/project/{test_project_id}/messages?userId={test_user_id}")
+    history_resp = client.get(f"/projects/{test_project_id}/messages?userId={test_user_id}")
     assert history_resp.status_code == 200
     history = history_resp.json()
     # Should have 2 entries: question (loading False) and answer placeholder (loading True)
@@ -289,7 +290,7 @@ def test_post_message_question_validation(client):
     """
     An empty question parameter should yield a 422 error.
     """
-    response = client.post(f"/project/{test_project_id}/messages?userId={test_user_id}&question=")
+    response = client.post(f"/projects/{test_project_id}/messages?userId={test_user_id}&question=")
     assert response.status_code == 422
 
 
@@ -298,7 +299,7 @@ def test_get_chat_history_no_messages(client):
     GET chat history for a user/project with no messages should return an empty list.
     """
     other_project = uuid.uuid4()
-    response = client.get(f"/project/{other_project}/messages?userId={test_user_id}")
+    response = client.get(f"/projects/{other_project}/messages?userId={test_user_id}")
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list) and len(data) == 0
