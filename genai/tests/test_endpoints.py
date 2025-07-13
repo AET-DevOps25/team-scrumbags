@@ -34,6 +34,7 @@ TEST_USER_ID_2 = str(uuid4())
 async def setup_database():
     """Setup test database"""
     async with test_engine.begin() as conn:
+        # Create tables without MySQL-specific constraints
         await conn.run_sync(Base.metadata.create_all)
     yield
     async with test_engine.begin() as conn:
@@ -100,9 +101,9 @@ async def sample_content_entry():
     return ContentEntry(
         metadata=Metadata(
             type="commit",
-            user=TEST_USER_ID,
-            timestamp=1609459200,  # 2021-01-01 00:00:00 UTC
-            projectId=TEST_PROJECT_ID
+            user=uuid4(),
+            timestamp=1609459200,
+            projectId=uuid4()
         ),
         content={"message": "Test commit message", "files": ["test.py"]}
     )
@@ -125,9 +126,7 @@ class TestContentEndpoint:
         invalid_entry = {
             "metadata": {
                 "type": "commit",
-                "user": "invalid-uuid",
-                "timestamp": 1609459200,
-                "projectId": TEST_PROJECT_ID
+                # Missing required fields: user, timestamp, projectId
             },
             "content": {"message": "Test"}
         }
@@ -144,7 +143,7 @@ class TestSummaryEndpoints:
             params={
                 "startTime": 1609459200,
                 "endTime": 1609545600,
-                "userIds": [TEST_USER_ID]
+                "userIds": []
             }
         )
 
@@ -158,8 +157,8 @@ class TestSummaryEndpoints:
         response = await client.post(
             f"/projects/{TEST_PROJECT_ID}/summary",
             params={
-                "startTime": 1609545600,
-                "endTime": 1609459200,  # End before start
+                "startTime": 1609545600,  # Later than endTime
+                "endTime": 1609459200,
                 "userIds": []
             }
         )
@@ -173,7 +172,7 @@ class TestSummaryEndpoints:
             params={
                 "startTime": 1609459200,
                 "endTime": 1609545600,
-                "userIds": [TEST_USER_ID]
+                "userIds": []
             }
         )
 
@@ -196,7 +195,7 @@ class TestMessageEndpoints:
         response = await client.post(
             f"/projects/{TEST_PROJECT_ID}/messages",
             params={"userId": TEST_USER_ID},
-            json="What is the status of the project?"
+            json="What happened in this project?"
         )
 
         assert response.status_code == 200
@@ -263,6 +262,7 @@ async def test_app_startup():
             patch('app.main.connect_robust') as mock_connect, \
             patch('app.weaviate_client.get_embeddings') as mock_embeddings, \
             patch('app.weaviate_client.get_client') as mock_client:
+
         mock_init_db.return_value = None
         mock_init_collection.return_value = None
         mock_connect.return_value = AsyncMock()
