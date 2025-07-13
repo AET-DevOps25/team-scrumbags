@@ -8,7 +8,6 @@ from typing import AsyncGenerator
 from unittest.mock import patch, AsyncMock
 from uuid import uuid4
 
-from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy import select, text
@@ -61,7 +60,7 @@ async def override_db_session(setup_database):
 @pytest_asyncio.fixture
 async def client(override_db_session) -> AsyncGenerator[AsyncClient, None]:
     """Create test client"""
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    async with AsyncClient(base_url="http://testserver") as ac:
         yield ac
 
 
@@ -122,8 +121,9 @@ class TestContentEndpoint:
     async def test_post_content_success(self, client: AsyncClient, mock_services, sample_content_entry):
         """Test successful content posting"""
         response = await client.post(
-            "/content",
-            json=[sample_content_entry.model_dump()]
+            f"{app.url_path_for('post_content')}",
+            json=[sample_content_entry.model_dump()],
+            headers={"Host": "testserver"}
         )
 
         assert response.status_code == 200
@@ -135,12 +135,18 @@ class TestContentEndpoint:
         invalid_entry = {
             "metadata": {
                 "type": "commit",
-                # Missing required fields: user, timestamp, projectId
+                "user": "invalid-uuid",  # Invalid UUID
+                "timestamp": 1609459200,
+                "projectId": str(uuid4())
             },
             "content": {"message": "Test"}
         }
 
-        response = await client.post("/content", json=[invalid_entry])
+        response = await client.post(
+            f"{app.url_path_for('post_content')}",
+            json=[invalid_entry],
+            headers={"Host": "testserver"}
+        )
         assert response.status_code == 422
 
 
@@ -148,12 +154,13 @@ class TestSummaryEndpoints:
     async def test_get_summary_new(self, client: AsyncClient, mock_services):
         """Test getting a new summary"""
         response = await client.post(
-            f"/projects/{TEST_PROJECT_ID}/summary",
+            f"{app.url_path_for('get_summary', projectId=TEST_PROJECT_ID)}",
             params={
                 "startTime": 1609459200,
                 "endTime": 1609545600,
-                "userIds": []
-            }
+                "userIds": [TEST_USER_ID]
+            },
+            headers={"Host": "testserver"}
         )
 
         assert response.status_code == 200
@@ -164,12 +171,13 @@ class TestSummaryEndpoints:
     async def test_get_summary_invalid_time_range(self, client: AsyncClient, mock_services):
         """Test summary with invalid time range"""
         response = await client.post(
-            f"/projects/{TEST_PROJECT_ID}/summary",
+            f"{app.url_path_for('get_summary', projectId=TEST_PROJECT_ID)}",
             params={
-                "startTime": 1609545600,  # Later than endTime
+                "startTime": 1609545600,  # End before start
                 "endTime": 1609459200,
                 "userIds": []
-            }
+            },
+            headers={"Host": "testserver"}
         )
 
         assert response.status_code == 422
@@ -177,12 +185,13 @@ class TestSummaryEndpoints:
     async def test_refresh_summary(self, client: AsyncClient, mock_services):
         """Test refreshing a summary"""
         response = await client.put(
-            f"/projects/{TEST_PROJECT_ID}/summary",
+            f"{app.url_path_for('refresh_summary', projectId=TEST_PROJECT_ID)}",
             params={
                 "startTime": 1609459200,
                 "endTime": 1609545600,
-                "userIds": []
-            }
+                "userIds": [TEST_USER_ID]
+            },
+            headers={"Host": "testserver"}
         )
 
         assert response.status_code == 201
@@ -191,7 +200,10 @@ class TestSummaryEndpoints:
 
     async def test_get_all_summaries(self, client: AsyncClient, mock_services):
         """Test getting all summaries for a project"""
-        response = await client.get(f"/projects/{TEST_PROJECT_ID}/summary")
+        response = await client.get(
+            f"{app.url_path_for('get_summaries', projectId=TEST_PROJECT_ID)}",
+            headers={"Host": "testserver"}
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -202,9 +214,10 @@ class TestMessageEndpoints:
     async def test_query_project_success(self, client: AsyncClient, mock_services):
         """Test successful project query"""
         response = await client.post(
-            f"/projects/{TEST_PROJECT_ID}/messages",
+            f"{app.url_path_for('query_project', projectId=TEST_PROJECT_ID)}",
             params={"userId": TEST_USER_ID},
-            json="What happened in this project?"
+            json="What happened in this project?",
+            headers={"Host": "testserver"}
         )
 
         assert response.status_code == 200
@@ -216,9 +229,10 @@ class TestMessageEndpoints:
     async def test_query_project_empty_question(self, client: AsyncClient, mock_services):
         """Test query with empty question"""
         response = await client.post(
-            f"/projects/{TEST_PROJECT_ID}/messages",
+            f"{app.url_path_for('query_project', projectId=TEST_PROJECT_ID)}",
             params={"userId": TEST_USER_ID},
-            json=""
+            json="",
+            headers={"Host": "testserver"}
         )
 
         assert response.status_code == 422
@@ -226,8 +240,9 @@ class TestMessageEndpoints:
     async def test_get_chat_history(self, client: AsyncClient, mock_services):
         """Test getting chat history"""
         response = await client.get(
-            f"/projects/{TEST_PROJECT_ID}/messages",
-            params={"userId": TEST_USER_ID}
+            f"{app.url_path_for('get_chat_history', projectId=TEST_PROJECT_ID)}",
+            params={"userId": TEST_USER_ID},
+            headers={"Host": "testserver"}
         )
 
         assert response.status_code == 200
@@ -244,7 +259,8 @@ class TestValidation:
                 "startTime": 1609459200,
                 "endTime": 1609545600,
                 "userIds": []
-            }
+            },
+            headers={"Host": "testserver"}
         )
 
         assert response.status_code == 422
@@ -252,12 +268,13 @@ class TestValidation:
     async def test_negative_timestamp(self, client: AsyncClient, mock_services):
         """Test negative timestamp validation"""
         response = await client.post(
-            f"/projects/{TEST_PROJECT_ID}/summary",
+            f"{app.url_path_for('get_summary', projectId=TEST_PROJECT_ID)}",
             params={
-                "startTime": -5,  # Invalid negative timestamp
+                "startTime": -10,  # Invalid negative timestamp
                 "endTime": 1609545600,
                 "userIds": []
-            }
+            },
+            headers={"Host": "testserver"}
         )
 
         assert response.status_code == 422
