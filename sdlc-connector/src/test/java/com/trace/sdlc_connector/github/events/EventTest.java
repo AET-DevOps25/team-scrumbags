@@ -1,6 +1,7 @@
 package com.trace.sdlc_connector.github.events;
 
 import com.trace.sdlc_connector.SupportedSystem;
+import com.trace.sdlc_connector.config.MockKeycloakConfig;
 import com.trace.sdlc_connector.github.GithubConnector;
 import com.trace.sdlc_connector.message.persist.MessageRepo;
 import com.trace.sdlc_connector.token.TokenEntity;
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -22,6 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(MockKeycloakConfig.class)
 abstract class EventTest {
 
     @Autowired

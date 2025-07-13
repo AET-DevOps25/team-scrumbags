@@ -1,14 +1,17 @@
 package com.trace.sdlc_connector;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.trace.sdlc_connector.config.MockKeycloakConfig;
 import com.trace.sdlc_connector.token.TokenEntity;
 import com.trace.sdlc_connector.token.TokenRepo;
 import com.trace.sdlc_connector.user.UserMapping;
 import com.trace.sdlc_connector.user.UserMappingRepo;
+import com.trace.sdlc_connector.utils.JwtUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -22,6 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(MockKeycloakConfig.class)
 class UserTest {
 
     @Autowired
@@ -29,6 +33,9 @@ class UserTest {
 
     @Autowired
     private UserMappingRepo userMappingRepo;
+
+    @Autowired
+    private JwtUtils jwtUtils;
 
     @Test
     void saveUser() throws Exception {
@@ -41,7 +48,9 @@ class UserTest {
 
         var resp = mockMvc.perform(post("/projects/{projectId}/users", projectId)
                         .content(objectMapper.writeValueAsBytes(userMapping))
-                        .contentType(MediaType.APPLICATION_JSON))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Authorization", "Bearer " + jwtUtils.constructJWT(userId, projectId))
+                )
                 .andExpect(status().isOk())
                 .andReturn().getResponse();
 
@@ -67,7 +76,9 @@ class UserTest {
         ObjectMapper objectMapper = new ObjectMapper();
 
         var resp = mockMvc.perform(get("/projects/{projectId}/users", projectId)
-                        .contentType(MediaType.APPLICATION_JSON))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Authorization", "Bearer " + jwtUtils.constructJWT(userId, projectId))
+                )
                 .andExpect(status().isOk())
                 .andReturn().getResponse();
 

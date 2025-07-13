@@ -1,10 +1,12 @@
 package com.trace.sdlc_connector.github.events;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.trace.sdlc_connector.config.MockKeycloakConfig;
 import com.trace.sdlc_connector.message.MessageEntity;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Import;
 
 import java.util.Map;
 import java.util.UUID;
