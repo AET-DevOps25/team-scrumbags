@@ -8,13 +8,13 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.main import app
+from app.main import app, _blocking_summary_job, _blocking_qa_job
 from app.db import Base, Summary, Message, async_session
 from app.models import ContentEntry, Metadata
 
+
 # Test database setup
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
-
 
 @pytest.fixture
 async def test_db():
@@ -73,9 +73,14 @@ class TestPostContent:
     def test_post_content_success(self, mock_channel, client, sample_content_entry):
         mock_channel.default_exchange.publish = AsyncMock()
 
+        # Convert to dict and ensure UUIDs are strings
+        entry_dict = sample_content_entry.model_dump()
+        entry_dict['metadata']['user'] = str(entry_dict['metadata']['user'])
+        entry_dict['metadata']['projectId'] = str(entry_dict['metadata']['projectId'])
+
         response = client.post(
             "/content",
-            json=[sample_content_entry.model_dump()]
+            json=[entry_dict]
         )
 
         assert response.status_code == 200
@@ -96,7 +101,10 @@ class TestPostContent:
                 ),
                 content={"message": f"Test commit {i}"}
             )
-            entries.append(entry.model_dump())
+            entry_dict = entry.model_dump()
+            entry_dict['metadata']['user'] = str(entry_dict['metadata']['user'])
+            entry_dict['metadata']['projectId'] = str(entry_dict['metadata']['projectId'])
+            entries.append(entry_dict)
 
         response = client.post("/content", json=entries)
 
@@ -108,8 +116,7 @@ class TestPostContent:
             "metadata": {
                 "type": "commit",
                 "user": sample_user_id,
-                "timestamp": int(datetime.now(UTC).timestamp()),
-                # Missing projectId
+                "timestamp": int(datetime.now(UTC).timestamp())
             },
             "content": {"message": "Test commit"}
         }
@@ -122,8 +129,7 @@ class TestPostContent:
             "metadata": {
                 "type": "commit",
                 "user": sample_user_id,
-                "projectId": sample_project_id,
-                # Missing timestamp
+                "projectId": sample_project_id
             },
             "content": {"message": "Test commit"}
         }
@@ -133,9 +139,13 @@ class TestPostContent:
 
     @patch('app.main.rabbit_channel', None)
     def test_post_content_rabbitmq_not_initialized(self, client, sample_content_entry):
+        entry_dict = sample_content_entry.model_dump()
+        entry_dict['metadata']['user'] = str(entry_dict['metadata']['user'])
+        entry_dict['metadata']['projectId'] = str(entry_dict['metadata']['projectId'])
+
         response = client.post(
             "/content",
-            json=[sample_content_entry.model_dump()]
+            json=[entry_dict]
         )
 
         assert response.status_code == 500
@@ -431,8 +441,6 @@ class TestBlockingJobs:
     @patch('app.langchain_provider.summarize_entries')
     @patch('app.main.async_session')
     def test_blocking_summary_job(self, mock_session, mock_summarize):
-        from app.main import _blocking_summary_job
-
         mock_summarize.return_value = {"output_text": "Generated summary"}
         mock_session_instance = AsyncMock()
         mock_session.return_value.__aenter__.return_value = mock_session_instance
@@ -444,8 +452,6 @@ class TestBlockingJobs:
     @patch('app.langchain_provider.answer_question')
     @patch('app.main.async_session')
     def test_blocking_qa_job(self, mock_session, mock_answer):
-        from app.main import _blocking_qa_job
-
         mock_answer.return_value = {"result": "Generated answer"}
         mock_session_instance = AsyncMock()
         mock_session.return_value.__aenter__.return_value = mock_session_instance
@@ -457,8 +463,6 @@ class TestBlockingJobs:
     @patch('app.langchain_provider.answer_question')
     @patch('app.main.async_session')
     def test_blocking_qa_job_error_handling(self, mock_session, mock_answer):
-        from app.main import _blocking_qa_job
-
         mock_answer.return_value = None  # Simulate error
         mock_session_instance = AsyncMock()
         mock_session.return_value.__aenter__.return_value = mock_session_instance
@@ -510,6 +514,10 @@ class TestEdgeCases:
             content=large_content
         )
 
-        response = client.post("/content", json=[entry.model_dump()])
+        entry_dict = entry.model_dump()
+        entry_dict['metadata']['user'] = str(entry_dict['metadata']['user'])
+        entry_dict['metadata']['projectId'] = str(entry_dict['metadata']['projectId'])
+
+        response = client.post("/content", json=[entry_dict])
 
         assert response.status_code == 200
