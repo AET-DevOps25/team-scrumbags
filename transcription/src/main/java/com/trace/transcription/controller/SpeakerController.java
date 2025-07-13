@@ -2,6 +2,13 @@ package com.trace.transcription.controller;
 
 import com.trace.transcription.model.SpeakerEntity;
 import com.trace.transcription.service.SpeakerService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +31,7 @@ import java.util.UUID;
  */
 @RestController
 @RequestMapping("projects/{projectId}")
+@Tag(name = "Speaker Management", description = "Operations for managing speaker profiles and audio samples within projects")
 public class SpeakerController {
 
     /**
@@ -52,7 +60,27 @@ public class SpeakerController {
      * @return 200 OK with a list of {@link SpeakerEntity}, or 204 No Content if none are found
      */
     @GetMapping("/speakers")
+    @Operation(
+            summary = "Get all speakers for a project",
+            description = "Retrieves a list of all speakers associated with the specified project, including their metadata and audio sample information"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Successfully retrieved speakers",
+                    content = @Content(schema = @Schema(implementation = SpeakerEntity.class))
+            ),
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "No speakers found for the project"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Project not found"
+            )
+    })
     public ResponseEntity<List<SpeakerEntity>> getAllSpeakers(
+            @Parameter(description = "Project UUID", required = true, example = "123e4567-e89b-12d3-a456-426614174000")
             @PathVariable("projectId") UUID projectId) {
         List<SpeakerEntity> speakers = speakerService.getSpeakersByProjectId(projectId);
         if (speakers.isEmpty()) {
@@ -73,8 +101,30 @@ public class SpeakerController {
      *         or 404 Not Found if speaker or sample does not exist
      */
     @GetMapping("/speakers/{userId}/sample")
+    @Operation(
+            summary = "Download speaker audio sample",
+            description = "Downloads the audio sample file for a specific speaker. " +
+                    "Returns the binary audio data with appropriate headers for file download."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Successfully retrieved audio sample",
+                    content = @Content(
+                            mediaType = "application/octet-stream",
+                            schema = @Schema(type = "string", format = "binary")
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Speaker or audio sample not found"
+            )
+    })
     public ResponseEntity<byte[]> getSpeakerSample(
+            @Parameter(description = "Project UUID", required = true, example = "123e4567-e89b-12d3-a456-426614174000")
             @PathVariable("projectId") UUID projectId,
+
+            @Parameter(description = "Speaker/User identifier", required = true, example = "5f24b61b-0dd4-4441-afce-9a343f3ad377")
             @PathVariable("userId") String userId) {
         SpeakerEntity speaker = speakerService.getSpeakerById(projectId, userId);
         if (speaker == null || speaker.getSpeakingSample() == null) {
@@ -103,11 +153,40 @@ public class SpeakerController {
      *         400 Bad Request if list sizes mismatch,
      *         or 500 Internal Server Error on processing failure
      */
-    @PostMapping("/speakers")
+    @PostMapping(value = "/speakers", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+            summary = "Bulk add speakers to project",
+            description = "Adds multiple speakers to the project in a single request. " +
+                    "All arrays (userIds, userNames, speakingSamples) must have the same length and matching order."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Successfully added speakers",
+                    content = @Content(schema = @Schema(implementation = String.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid request - array lengths don't match or other validation errors",
+                    content = @Content(schema = @Schema(implementation = String.class))
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Internal server error during speaker processing",
+                    content = @Content(schema = @Schema(implementation = String.class))
+            )
+    })
     public ResponseEntity<String> saveSpeakers(
+            @Parameter(description = "Project UUID", required = true, example = "123e4567-e89b-12d3-a456-426614174000")
             @PathVariable("projectId") UUID projectId,
+
+            @Parameter(description = "List of unique speaker identifiers", required = true)
             @RequestParam("userIds") List<String> userIds,
+
+            @Parameter(description = "List of speaker display names (must match userIds order)", required = true)
             @RequestParam("userNames") List<String> userNames,
+
+            @Parameter(description = "List of audio sample files (must match userIds order)", required = true)
             @RequestParam("speakingSamples") List<MultipartFile> speakingSamples) {
 
         int count = userIds.size();
@@ -144,11 +223,45 @@ public class SpeakerController {
      * @throws IOException          if file processing fails
      * @throws InterruptedException if audio processing is interrupted
      */
-    @PostMapping("/speakers/{userId}")
+    @PostMapping(value = "/speakers/{userId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+            summary = "Create a new speaker",
+            description = "Creates a new speaker profile with audio sample. " +
+                    "The speaker ID must be unique within the project."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "Speaker successfully created",
+                    content = @Content(schema = @Schema(implementation = SpeakerEntity.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid request - audio sample too short or other validation errors",
+                    content = @Content(schema = @Schema(implementation = String.class))
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Speaker with this ID already exists in the project",
+                    content = @Content(schema = @Schema(implementation = String.class))
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Internal server error during speaker creation",
+                    content = @Content(schema = @Schema(implementation = String.class))
+            )
+    })
     public ResponseEntity<?> saveSpeaker(
+            @Parameter(description = "Project UUID", required = true, example = "123e4567-e89b-12d3-a456-426614174000")
             @PathVariable("projectId") UUID projectId,
+
+            @Parameter(description = "Unique speaker identifier", required = true, example = "5f24b61b-0dd4-4441-afce-9a343f3ad377")
             @PathVariable("userId") String userId,
+
+            @Parameter(description = "Display name for the speaker", required = true, example = "John Doe")
             @RequestParam("userName") String userName,
+
+            @Parameter(description = "Audio sample file for speaker voice recognition", required = true)
             @RequestParam("speakingSample") MultipartFile speakingSample) {
         try {
             if (speakerService.getSpeakerById(projectId, userId) != null) {
@@ -180,8 +293,27 @@ public class SpeakerController {
      *         or 404 Not Found if the speaker does not exist
      */
     @DeleteMapping("/speakers/{userId}")
+    @Operation(
+            summary = "Delete a speaker",
+            description = "Removes a speaker and their associated audio sample data from the project"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Speaker successfully deleted",
+                    content = @Content(schema = @Schema(implementation = String.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Speaker not found in the project",
+                    content = @Content(schema = @Schema(implementation = String.class))
+            )
+    })
     public ResponseEntity<String> deleteSpeaker(
+            @Parameter(description = "Project UUID", required = true, example = "123e4567-e89b-12d3-a456-426614174000")
             @PathVariable("projectId") UUID projectId,
+
+            @Parameter(description = "Speaker identifier to delete", required = true, example = "5f24b61b-0dd4-4441-afce-9a343f3ad377")
             @PathVariable("userId") String userId) {
 
         boolean deleted = speakerService.deleteSpeaker(projectId, userId);
@@ -209,11 +341,40 @@ public class SpeakerController {
      *         or 404 Not Found if the speaker does not exist
      * @throws IOException if sample file processing fails
      */
-    @PutMapping("/speakers/{userId}")
+    @PutMapping(value = "/speakers/{userId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+            summary = "Update an existing speaker",
+            description = "Updates a speaker's display name and/or audio sample. " +
+                    "Both parameters are optional - only provided values will be updated."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Speaker successfully updated",
+                    content = @Content(schema = @Schema(implementation = SpeakerEntity.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Speaker not found in the project",
+                    content = @Content(schema = @Schema(implementation = String.class))
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Internal server error during speaker update",
+                    content = @Content(schema = @Schema(implementation = String.class))
+            )
+    })
     public ResponseEntity<?> updateSpeaker(
+            @Parameter(description = "Project UUID", required = true, example = "123e4567-e89b-12d3-a456-426614174000")
             @PathVariable("projectId") UUID projectId,
+
+            @Parameter(description = "Speaker identifier to update", required = true, example = "5f24b61b-0dd4-4441-afce-9a343f3ad377")
             @PathVariable("userId") String userId,
+
+            @Parameter(description = "New display name for the speaker (optional)", example = "John Smith")
             @RequestParam(value = "userName", required = false) String userName,
+
+            @Parameter(description = "New audio sample file (optional)")
             @RequestParam(value = "speakingSample", required = false) MultipartFile speakingSample)
             throws IOException {
 
@@ -238,7 +399,31 @@ public class SpeakerController {
      * @param response  HTTP servlet response to write the ZIP data to
      */
     @GetMapping("/samples")
+    @Operation(
+            summary = "Download all speaker samples as ZIP",
+            description = "Streams a ZIP archive containing all speaker audio samples for the project. " +
+                    "The response is streamed directly to avoid memory issues with large files."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Successfully streaming ZIP archive",
+                    content = @Content(
+                            mediaType = "application/zip",
+                            schema = @Schema(type = "string", format = "binary")
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Project not found or no speaker samples available"
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Error creating ZIP archive"
+            )
+    })
     public void streamAllSamples(
+            @Parameter(description = "Project UUID", required = true, example = "123e4567-e89b-12d3-a456-426614174000")
             @PathVariable("projectId") UUID projectId,
             HttpServletResponse response) {
         speakerService.streamAllSamples(projectId, response);

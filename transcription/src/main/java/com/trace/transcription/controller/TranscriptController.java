@@ -4,6 +4,13 @@ import com.trace.transcription.dto.LoadingResponse;
 import com.trace.transcription.service.TranscriptService;
 import com.trace.transcription.model.TranscriptEntity;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +35,7 @@ import static org.apache.commons.io.FilenameUtils.getExtension;
  */
 @RestController
 @RequestMapping("projects/{projectId}")
+@Tag(name = "Transcript Management", description = "Operations for managing transcripts within projects")
 public class TranscriptController {
 
     /**
@@ -87,11 +95,40 @@ public class TranscriptController {
      *         or 400 Bad Request if inputs are invalid
      * @throws IOException if reading the multipart file fails
      */
-    @PostMapping("/transcripts")
+    @PostMapping(value = "/transcripts", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+            summary = "Upload audio file for transcription",
+            description = "Uploads an audio file and initiates asynchronous transcription processing. " +
+                    "Returns immediately with a transcript ID while processing continues in the background."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "202",
+                    description = "Audio file accepted and transcription started",
+                    content = @Content(schema = @Schema(implementation = LoadingResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid request - missing file, invalid project ID, or speaker amount < 1",
+                    content = @Content(schema = @Schema(implementation = String.class))
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Internal server error during file processing",
+                    content = @Content(schema = @Schema(implementation = String.class))
+            )
+    })
     public ResponseEntity<LoadingResponse> receiveMediaAndSendTranscript(
+            @Parameter(description = "Project UUID", required = true, example = "123e4567-e89b-12d3-a456-426614174000")
             @PathVariable("projectId") UUID projectId,
+
+            @Parameter(description = "Audio file to transcribe (supported formats: wav, mp3, m4a, etc.)", required = true)
             @RequestParam("file") MultipartFile file,
+
+            @Parameter(description = "Number of distinct speakers in the audio (minimum 1)", required = true, example = "2")
             @RequestParam("speakerAmount") int speakerAmount,
+
+            @Parameter(description = "Optional timestamp in epoch milliseconds for the transcript", example = "1640995200000")
             @RequestParam(value = "timestamp", required = false) Long timestamp
     ) throws IOException {
 
@@ -153,7 +190,27 @@ public class TranscriptController {
      * @return 200 OK with list of {@link TranscriptEntity}, or 204 No Content if none found
      */
     @GetMapping("/transcripts")
+    @Operation(
+            summary = "Get all transcripts for a project",
+            description = "Retrieves a list of all transcripts associated with the specified project"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Successfully retrieved transcripts",
+                    content = @Content(schema = @Schema(implementation = TranscriptEntity.class))
+            ),
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "No transcripts found for the project"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Project not found"
+            )
+    })
     public ResponseEntity<List<TranscriptEntity>> getAllTranscripts(
+            @Parameter(description = "Project UUID", required = true, example = "123e4567-e89b-12d3-a456-426614174000")
             @PathVariable("projectId") UUID projectId) {
 
         List<TranscriptEntity> transcripts = transcriptService.getAllTranscripts(projectId);
@@ -175,8 +232,26 @@ public class TranscriptController {
      *         or 404 Not Found if the transcript does not exist
      */
     @GetMapping("/transcripts/{transcriptId}")
+    @Operation(
+            summary = "Get transcript by ID",
+            description = "Retrieves a specific transcript by its ID within a project, including all metadata and transcription content"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Successfully retrieved transcript",
+                    content = @Content(schema = @Schema(implementation = TranscriptEntity.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Transcript or project not found"
+            )
+    })
     public ResponseEntity<?> getTranscriptById(
+            @Parameter(description = "Project UUID", required = true, example = "123e4567-e89b-12d3-a456-426614174000")
             @PathVariable("projectId") UUID projectId,
+
+            @Parameter(description = "Transcript UUID", required = true, example = "987fcdeb-51a2-43d1-9f4e-123456789abc")
             @PathVariable("transcriptId") UUID transcriptId) {
         TranscriptEntity transcript = transcriptService.getTranscriptById(projectId, transcriptId);
         if (transcript == null) {
@@ -199,8 +274,30 @@ public class TranscriptController {
      *         or 404 Not Found if the transcript does not exist
      */
     @GetMapping("/transcripts/{transcriptId}/audio")
+    @Operation(
+            summary = "Download transcript audio file",
+            description = "Downloads the original audio file associated with a transcript. " +
+                    "Returns the audio data with appropriate MIME type and filename headers."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Successfully retrieved audio file",
+                    content = @Content(
+                            mediaType = "audio/*",
+                            schema = @Schema(type = "string", format = "binary")
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Transcript or audio file not found"
+            )
+    })
     public ResponseEntity<?> getAudioFile(
+            @Parameter(description = "Project UUID", required = true, example = "123e4567-e89b-12d3-a456-426614174000")
             @PathVariable("projectId") UUID projectId,
+
+            @Parameter(description = "Transcript UUID", required = true, example = "987fcdeb-51a2-43d1-9f4e-123456789abc")
             @PathVariable("transcriptId") UUID transcriptId) {
         TranscriptEntity transcript = transcriptService.getTranscriptById(projectId, transcriptId);
         if (transcript == null) {
@@ -231,7 +328,31 @@ public class TranscriptController {
      * @param response  HTTP servlet response to write the ZIP data to
      */
     @GetMapping("/audios")
+    @Operation(
+            summary = "Download all audio files as ZIP",
+            description = "Streams a ZIP archive containing all audio files from transcripts within the project. " +
+                    "The response is streamed directly to avoid memory issues with large files."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Successfully streaming ZIP archive",
+                    content = @Content(
+                            mediaType = "application/zip",
+                            schema = @Schema(type = "string", format = "binary")
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Project not found or no audio files available"
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Error creating ZIP archive"
+            )
+    })
     public void streamAllSamples(
+            @Parameter(description = "Project UUID", required = true, example = "123e4567-e89b-12d3-a456-426614174000")
             @PathVariable("projectId") UUID projectId,
             HttpServletResponse response) {
         transcriptService.streamAllAudios(projectId, response);
