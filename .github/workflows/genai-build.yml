@@ -20,6 +20,41 @@ jobs:
       run:
         working-directory: ./genai
 
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: summaries
+          MYSQL_USER: user
+          MYSQL_PASSWORD: password
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping -h localhost" --health-interval=10s --health-timeout=5s --health-retries=3
+
+      rabbitmq:
+        image: rabbitmq:management
+        env:
+          RABBITMQ_DEFAULT_USER: guest
+          RABBITMQ_DEFAULT_PASS: guest
+        ports:
+          - 5672:5672
+          - 15672:15672
+        options: --health-cmd="rabbitmq-diagnostics -q ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+      weaviate:
+        image: cr.weaviate.io/semitechnologies/weaviate:1.31.2
+        env:
+          QUERY_DEFAULTS_LIMIT: 25
+          AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+          PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+          ENABLE_API_BASED_MODULES: 'true'
+          CLUSTER_HOSTNAME: 'node1'
+        ports:
+          - 6969:6969
+          - 50051:50051
+        options: --health-cmd="wget --no-verbose --tries=1 --spider http://localhost:6969/v1/.well-known/ready || exit 1" --health-interval=10s --health-timeout=5s --health-retries=5
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -34,6 +69,34 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Wait for services to be ready
+        run: |
+          # Wait for MySQL
+          while ! mysqladmin ping -h"127.0.0.1" -P3306 -u root -ppassword --silent; do
+            echo "Waiting for MySQL..."
+            sleep 2
+          done
+          
+          # Wait for RabbitMQ
+          while ! curl -f http://127.0.0.1:15672/api/overview -u guest:guest; do
+            echo "Waiting for RabbitMQ..."
+            sleep 2
+          done
+          
+          # Wait for Weaviate
+          while ! curl -f http://127.0.0.1:6969/v1/.well-known/ready; do
+            echo "Waiting for Weaviate..."
+            sleep 2
+          done
+
+      - name: Set environment variables for testing
+        run: |
+          echo "MYSQL_URL=mysql+asyncmy://user:password@127.0.0.1:3306/summaries" >> $GITHUB_ENV
+          echo "RABBITMQ_URL=amqp://guest:guest@127.0.0.1/" >> $GITHUB_ENV
+          echo "WEAVIATE_URL=http://127.0.0.1:6969/" >> $GITHUB_ENV
+          echo "NOMIC_API_KEY=test-key" >> $GITHUB_ENV
+          echo "OLLAMA_LOCAL_URL=http://127.0.0.1:11434/" >> $GITHUB_ENV
+
       - name: Lint with flake8
         id: flake8
         run: |
@@ -41,6 +104,10 @@ jobs:
           flake8 app --count --max-complexity=15 --max-line-length=127 --statistics
 
       - name: Run tests
-        #env:
-        #RABBITMQ_URL: amqp://guest:guest@localhost:5672/
-        run: PYTHONPATH=. pytest
+        env:
+          MYSQL_URL: mysql+asyncmy://user:password@127.0.0.1:3306/summaries
+          RABBITMQ_URL: amqp://guest:guest@127.0.0.1/
+          WEAVIATE_URL: http://127.0.0.1:6969/
+          NOMIC_API_KEY: test-key
+          OLLAMA_LOCAL_URL: http://127.0.0.1:11434/
+        run: PYTHONPATH=. pytest -v --cov=app --cov-report=term-missing
