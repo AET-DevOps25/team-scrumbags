@@ -117,7 +117,7 @@ services:
       dockerfile: Dockerfile
     network_mode: host
     depends_on:
-      mysql-db: 
+      mysql-db:
         condition: service_healthy
     environment:
       - DEBUG=true
@@ -193,9 +193,7 @@ services:
       - --scheme
       - http
     image: cr.weaviate.io/semitechnologies/weaviate:1.31.2
-    ports:
-      - "6969:6969"
-      - "50051:50051"
+    network_mode: host
     volumes:
       - weaviate_data:/var/lib/weaviate
     restart: on-failure:0

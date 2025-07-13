@@ -5,7 +5,9 @@ import com.trace.transcription.service.SpeakerService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -40,6 +42,28 @@ public class SpeakerController {
     }
 
     /**
+     * GET /{projectId}/speakers/{userId}/sample
+     * <p>
+     * Returns the audio sample for a specific speaker.
+     */
+    @GetMapping("projects/{projectId}/speakers/{userId}/sample")
+    public ResponseEntity<byte[]> getSpeakerSample(
+            @PathVariable("projectId") UUID projectId,
+            @PathVariable("userId") String userId) {
+        SpeakerEntity speaker = speakerService.getSpeakerById(projectId, userId);
+        if (speaker == null || speaker.getSpeakingSample() == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        headers.setContentDispositionFormData("attachment", "sample." + speaker.getSampleExtension());
+        headers.setContentLength(speaker.getSpeakingSample().length);
+
+        return new ResponseEntity<>(speaker.getSpeakingSample(), headers, HttpStatus.OK);
+    }
+
+    /**
      * POST /{projectId}/speakers
      * <p>
      * Request (multipart/form-data):
@@ -71,6 +95,40 @@ public class SpeakerController {
                     .body("Error saving speakers. Please check the logs for details.");
         }
     }
+
+    /**
+     * POST /{projectId}/speakers/{userId}
+     * <p>
+     * Request (multipart/form-data):
+     *   - userName: String
+     *   - speakingSample: MultipartFile
+     * <p>
+     * Creates a new speaker with the given details.
+     */
+    @PostMapping("projects/{projectId}/speakers/{userId}")
+    public ResponseEntity<?> saveSpeaker(
+            @PathVariable("projectId") UUID projectId,
+            @PathVariable("userId") String userId,
+            @RequestParam("userName") String userName,
+            @RequestParam("speakingSample") MultipartFile speakingSample) {
+        try {
+            if (speakerService.getSpeakerById(projectId, userId) != null) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body("Speaker with ID " + userId + " already exists in project " + projectId + ".");
+            }
+            SpeakerEntity savedSpeaker = speakerService.saveSpeaker(projectId, userId, userName, speakingSample);
+            if (savedSpeaker != null) {
+                return ResponseEntity.status(HttpStatus.CREATED).body(savedSpeaker);
+            } else {
+                return ResponseEntity.badRequest().body("Could not save speaker. The audio sample might be too short.");
+            }
+        } catch (IOException | InterruptedException e) {
+            logger.error("Error saving speaker {} for project {}: {}", userId, projectId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error saving speaker: " + e.getMessage());
+        }
+    }
+
 
     /**
      * DELETE /
