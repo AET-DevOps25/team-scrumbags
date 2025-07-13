@@ -30,16 +30,16 @@ class Summary(Base):
     userIds = Column(JSON, nullable=False, default=list)
     loading = Column(Boolean, nullable=False)
 
-    # Only add MySQL-specific computed column for MySQL
-    if not DATABASE_URL.startswith('sqlite'):
-        userIdsHash = Column(
-            String(32),
-            Computed("MD5(userIds)", persisted=True),
-            index=True
-        )
-        __table_args__ = (
-            UniqueConstraint("projectId", "startTime", "endTime", "userIdsHash", name="uq_project_timeframe"),
-        )
+    # MySQL will store the MD5 of the JSON text
+    userIdsHash = Column(
+        String(32),
+        Computed("MD5(userIds)", persisted=True),
+        index=True
+    )
+
+    __table_args__ = (
+        UniqueConstraint("projectId", "startTime", "endTime", "userIdsHash", name="uq_project_timeframe"),
+    )
 
 
 class Message(Base):

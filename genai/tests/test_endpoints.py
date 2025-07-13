@@ -11,14 +11,17 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.main import app
 from app.db import Base, Summary, Message, async_session
 from app.models import ContentEntry, Metadata
 
-# Test database URL - using SQLite for testing
-TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
+# Use MySQL for testing - matches CI environment
+TEST_DATABASE_URL = os.getenv(
+    "MYSQL_URL",
+    "mysql+asyncmy://user:password@127.0.0.1:3306/summaries"
+)
 
 # Override the database session for testing
 test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
@@ -34,11 +37,17 @@ TEST_USER_ID_2 = str(uuid4())
 async def setup_database():
     """Setup test database"""
     async with test_engine.begin() as conn:
-        # Create tables without MySQL-specific constraints
+        # Drop all tables first to ensure clean state
+        await conn.run_sync(Base.metadata.drop_all)
+        # Create all tables
         await conn.run_sync(Base.metadata.create_all)
     yield
+    # Clean up after tests
     async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+        # Clean tables instead of dropping to avoid foreign key issues
+        await conn.execute(text("DELETE FROM messages"))
+        await conn.execute(text("DELETE FROM summaries"))
+        await conn.commit()
 
 
 @pytest_asyncio.fixture
