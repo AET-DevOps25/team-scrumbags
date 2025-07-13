@@ -45,10 +45,14 @@ public class TokenService {
         return tokens;
     }
 
-    public TokenEntity getTokenById(@NonNull UUID tokenId) {
+    public TokenEntity getTokenById(@NonNull UUID projectId, @NonNull UUID tokenId) {
+        if (!securityService.hasProjectAccess(projectId)) {
+            throw new SecurityException("Access denied to project with ID: " + projectId);
+        }
+
         var token = tokenRepo.findById(tokenId).orElse(null);
-        if (!securityService.hasProjectAccess(token.getProjectId())) {
-            throw new SecurityException("Access denied to project with ID: " + token.getProjectId());
+        if (token != null && !token.getProjectId().equals(projectId)) {
+            throw new SecurityException("Token with ID: " + tokenId + " does not belong to project with ID: " + projectId);
         }
 
         return token;
