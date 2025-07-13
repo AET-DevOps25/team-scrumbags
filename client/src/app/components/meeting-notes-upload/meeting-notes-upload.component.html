@@ -19,7 +19,7 @@
       <input
         type="file"
         (change)="onFileSelected($event)"
-        accept=".pdf,.txt,.md,.mp3,.wav,.m4a"
+        accept=".pdf,.txt,.md,.mp3,.wav,.m4a, .mp4"
         class="block w-full text-sm rounded-lg cursor-pointer border border-(--mat-sys-outline-variant) file:bg-(--mat-sys-primary) file:text-(--mat-sys-on-primary) file:font-semibold file:py-2 file:px-4 file:border-0 file:rounded file:mr-4 hover:file:text-(--mat-sys-on-primary-hover) hover:file:bg-(--mat-sys-primary-hover)"
         [disabled]="isSubmitting()"
       />

@@ -16,8 +16,12 @@ export class MeetingNotesService {
       tap((meetingNotes) => {
         for (const note of meetingNotes) {
           // trigger polling for each note that is still loading
-          if (note.isLoading) {
+          if (note.loading) {
             this.pollMeetingNote(projectId, note.id);
+          }
+
+          if (!note.name || note.name === '') {
+            note.name = 'Note ' + note.id;
           }
         }
 
@@ -33,10 +37,14 @@ export class MeetingNotesService {
   ): Observable<MeetingNote> {
     return this.api.uploadMeetingNoteFile(projectId, speakerAmount, file).pipe(
       tap((meetingNote) => {
+        console.log('Meeting note uploaded:', meetingNote);
+        if (!meetingNote.name || meetingNote.name === '') {
+          meetingNote.name = 'Note ' + meetingNote.id;
+        }
         this.projectState.updateMeetingNote(projectId, meetingNote);
 
         // trigger polling for until the note has loading false
-        if (meetingNote.isLoading) {
+        if (meetingNote.loading) {
           this.pollMeetingNote(projectId, meetingNote.id);
         }
       })
@@ -53,7 +61,7 @@ export class MeetingNotesService {
     await new Promise((resolve) => setTimeout(resolve, 5000));
 
     this.api.getMeetingNote(projectId, noteId).subscribe((note) => {
-      if (note.isLoading) {
+      if (note.loading) {
         this.pollMeetingNote(projectId, noteId, count + 1);
         return;
       }

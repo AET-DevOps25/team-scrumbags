@@ -1,7 +1,6 @@
 package com.trace.transcription.controller;
 
 import com.trace.transcription.repository.TranscriptRepository;
-import com.trace.transcription.dto.LoadingResponse;
 import com.trace.transcription.service.TranscriptService;
 import com.trace.transcription.model.TranscriptEntity;
 
@@ -51,7 +50,7 @@ public class TranscriptController {
      * Receives an audio file, processes it to generate a transcript, and sends the transcript to the core service.
      */
     @PostMapping("projects/{projectId}/transcripts")
-    public ResponseEntity<LoadingResponse> receiveMediaAndSendTranscript(
+    public ResponseEntity<?> receiveMediaAndSendTranscript(
             @PathVariable("projectId") UUID projectId,
             @RequestParam("file") MultipartFile file,
             @RequestParam("speakerAmount") int speakerAmount,
@@ -111,9 +110,7 @@ public class TranscriptController {
             }
         });
 
-        // Return 202 Accepted with loading response
-        LoadingResponse response = new LoadingResponse(transcriptId, true);
-        return ResponseEntity.accepted().body(response);
+        return ResponseEntity.accepted().body(transcript);
     }
 
     /**
