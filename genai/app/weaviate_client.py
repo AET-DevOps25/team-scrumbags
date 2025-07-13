@@ -1,127 +1,120 @@
-import asyncio
-import logging
 import os
-import traceback
+import uuid
 from datetime import datetime, timezone
+from typing import List
 
 import weaviate
-import weaviate.classes.config as wc
-# from langchain.embeddings import HuggingFaceEmbeddings
 from dotenv import load_dotenv
-from urllib.parse import urlparse
 from langchain_nomic import NomicEmbeddings
-from weaviate.collections.classes.filters import Filter
-from weaviate.util import generate_uuid5
+from weaviate.classes.config import Configure
 
 load_dotenv()
 
+WEAVIATE_URL = os.getenv("WEAVIATE_URL", "http://weaviate:6969/")
 NOMIC_API_KEY = os.getenv("NOMIC_API_KEY", None)
+COLLECTION_NAME = "ContentEntries"
 
-embeddings = NomicEmbeddings(
-    model="nomic-embed-text-v1.5",
-    dimensionality=256,
-    nomic_api_key=NOMIC_API_KEY
-)
-# hf_embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-
-# Parse WEAVIATE_URL from environment
-WEAVIATE_URL = os.getenv("WEAVIATE_URL", "http://localhost:6969")
-parsed_url = urlparse(WEAVIATE_URL)
-weaviate_host = parsed_url.hostname or "localhost"
-weaviate_port = parsed_url.port or 6969
-
-# Init v4 client
-client = weaviate.connect_to_local(
-    host=weaviate_host,
-    port=weaviate_port,
+client = weaviate.connect_to_custom(
+    http_host=WEAVIATE_URL.replace("http://", "").replace("https://", "").rstrip("/"),
+    http_port=int(WEAVIATE_URL.split(":")[-1].rstrip("/")),
+    http_secure=False,
+    grpc_host=WEAVIATE_URL.replace("http://", "").replace("https://", "").rstrip("/"),
     grpc_port=50051,
+    grpc_secure=False,
 )
-COLLECTION_NAME = "ProjectContent"
+
+# Initialize embeddings lazily
+_embeddings = None
+
+
+def get_embeddings():
+    global _embeddings
+    if _embeddings is None:
+        _embeddings = NomicEmbeddings(
+            model="nomic-embed-text-v1.5",
+            dimensionality=256,
+            nomic_api_key=NOMIC_API_KEY
+        )
+    return _embeddings
 
 
 def init_collection():
-    if COLLECTION_NAME not in [c for c in client.collections.list_all()]:
-        client.collections.create(
-            name=COLLECTION_NAME,
-            properties=[
-                wc.Property(name="type", data_type=wc.DataType.TEXT),
-                wc.Property(name="user", data_type=wc.DataType.UUID),
-                wc.Property(name="timestamp", data_type=wc.DataType.DATE),
-                wc.Property(name="projectId", data_type=wc.DataType.UUID),
-                wc.Property(name="content", data_type=wc.DataType.TEXT),
-            ]
-        )
+    if client.collections.exists(COLLECTION_NAME):
+        print(f"Collection {COLLECTION_NAME} already exists, skipping creation")
+        return
+
+    client.collections.create(
+        name=COLLECTION_NAME,
+        vectorizer_config=Configure.Vectorizer.none(),
+        properties=[
+            weaviate.classes.config.Property(name="content", data_type=weaviate.classes.config.DataType.TEXT),
+            weaviate.classes.config.Property(name="type", data_type=weaviate.classes.config.DataType.TEXT),
+            weaviate.classes.config.Property(name="user", data_type=weaviate.classes.config.DataType.TEXT),
+            weaviate.classes.config.Property(name="timestamp", data_type=weaviate.classes.config.DataType.INT),
+            weaviate.classes.config.Property(name="projectId", data_type=weaviate.classes.config.DataType.TEXT),
+        ]
+    )
+    print(f"Collection {COLLECTION_NAME} created successfully")
 
 
-async def blocking_store(entry):
-    # put blocking code here
-    store_entry(entry)
-
-
-logger = logging.getLogger(__name__)
-
-
-async def store_entry_async(entry):
+async def store_entry_async(entry_data: dict):
+    """Store a content entry in Weaviate"""
     try:
-        await asyncio.to_thread(store_entry, entry)  # if store_entry is blocking
+        metadata = entry_data.get("metadata", {})
+        content = entry_data.get("content", {})
+
+        # Convert content dict to string for storage
+        content_str = str(content) if content else ""
+
+        # Generate embedding
+        embeddings = get_embeddings()  # Use lazy initialization
+        vector = embeddings.embed_query(content_str)
+
+        # Store in Weaviate
+        collection = client.collections.get(COLLECTION_NAME)
+        collection.data.insert(
+            uuid=uuid.uuid4(),
+            properties={
+                "content": content_str,
+                "type": metadata.get("type", "unknown"),
+                "user": str(metadata.get("user", "unknown")),
+                "timestamp": metadata.get("timestamp", 0),
+                "projectId": str(metadata.get("projectId", "unknown")),
+            },
+            vector=vector
+        )
+        print(f"Stored entry for project {metadata.get('projectId')}")
+
     except Exception as e:
-        logger.error(e)
-        traceback.print_exc()  # Full traceback for debugging
+        print(f"Error storing entry in Weaviate: {e}")
+        raise
 
 
-def store_entry(entry: dict):
-    # Assume already validated ContentEntry upstream
-
-    entry["content"]["userId"] = entry["metadata"]["user"]
-    entry["content"]["contentType"] = entry["metadata"]["type"]
-    entry["content"]["unixTimestamp"] = entry["metadata"]["timestamp"]
-
-    content_text = str(entry["content"])
-    # Compute embedding using the chosen model
-    vector = embeddings.embed_documents([content_text])[0]
-
-    metadata = entry["metadata"]
-
-    entry_obj = {
-        "type": metadata.get("type") if metadata.get("type") not in [None, "None", "null"] else None,
-        "user": metadata.get("user") if metadata.get("user") not in [None, "None", "null"] else None,
-        "timestamp": datetime.fromtimestamp(metadata["timestamp"], tz=timezone.utc).isoformat(),
-        "projectId": str(metadata["projectId"]),
-        "content": content_text,
-    }
-    content_uuid = generate_uuid5(f"{entry['metadata']['projectId']}{entry['metadata']['timestamp']}{content_text}")
-
+def get_entries(project_id: str, start_time: int, end_time: int) -> List:
+    """Retrieve entries from Weaviate based on project ID and time range"""
     try:
         collection = client.collections.get(COLLECTION_NAME)
-        with collection.batch.fixed_size(batch_size=1) as batch:
-            # Store the object **with** its precomputed vector
-            batch.add_object(properties=entry_obj, uuid=content_uuid, vector=vector)
-        print(f"Stored entry with UUID {content_uuid} in collection {COLLECTION_NAME}")
-    except weaviate.exceptions as e:
-        logger.error(f"Failed to store entry: {e}")
-        traceback.print_exc()
 
+        # Build the where filter
+        where_filter = weaviate.classes.query.Filter.by_property("projectId").equal(project_id)
 
-def get_entries(projectId: str, start: int, end: int):
-    collection = client.collections.get(COLLECTION_NAME)
+        if start_time != -1 and end_time != -1:
+            where_filter = where_filter & weaviate.classes.query.Filter.by_property("timestamp").greater_or_equal(
+                start_time)
+            where_filter = where_filter & weaviate.classes.query.Filter.by_property("timestamp").less_or_equal(end_time)
+        elif start_time != -1:
+            where_filter = where_filter & weaviate.classes.query.Filter.by_property("timestamp").greater_or_equal(
+                start_time)
+        elif end_time != -1:
+            where_filter = where_filter & weaviate.classes.query.Filter.by_property("timestamp").less_or_equal(end_time)
 
-    if start == -1:
-        start = 0
-    if end == -1:
-        end = int(datetime.now(timezone.utc).timestamp())
+        response = collection.query.fetch_objects(
+            where=where_filter,
+            limit=1000
+        )
 
-    start_dt = datetime.fromtimestamp(start, tz=timezone.utc).isoformat()
-    end_dt = datetime.fromtimestamp(end, tz=timezone.utc).isoformat()
+        return response.objects
 
-    results = collection.query.fetch_objects(
-        filters=(
-                Filter.by_property("projectId").equal(projectId) &
-                Filter.by_property("timestamp").greater_or_equal(start_dt) &
-                Filter.by_property("timestamp").less_or_equal(end_dt)
-        ),
-        limit=1000
-    )
-
-    print(f"Found {len(results.objects)} objects in collection {COLLECTION_NAME}")
-
-    return results.objects
+    except Exception as e:
+        print(f"Error retrieving entries from Weaviate: {e}")
+        return []
