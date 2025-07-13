@@ -1,4 +1,5 @@
 import asyncio
+import os
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import asynccontextmanager
 from datetime import datetime, UTC
@@ -17,8 +18,11 @@ from app.db import init_db
 from app.langchain_provider import summarize_entries, answer_question
 from app.models import ContentEntry
 from app.queue_consumer import consume
+from dotenv import load_dotenv
 
-RABBIT_URL = "amqp://guest:guest@rabbitmq/"
+load_dotenv()
+
+RABBIT_URL = (f"{os.getenv('RABBITMQ_URL', 'amqp://guest:guest@rabbitmq/')}")
 QUEUE_NAME = "content_queue"
 
 rabbit_connection: RobustConnection | None = None
@@ -74,7 +78,7 @@ async def post_content(
     return {"status": f"Published {len(entries)} message(s) to queue."}
 
 
-@app.post("/project/{projectId}/summary", summary="Get a summary of content entries")
+@app.post("/projects/{projectId}/summary", summary="Get a summary of content entries")
 async def get_summary(
         projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)"),
         startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp (>=-1)"),
@@ -156,7 +160,7 @@ async def get_summary(
     }
 
 
-@app.put("/project/{projectId}/summary", summary="Regenerate and overwrite summary for given time frame",
+@app.put("/projects/{projectId}/summary", summary="Regenerate and overwrite summary for given time frame",
          status_code=status.HTTP_201_CREATED)
 async def refresh_summary(
         projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)"),
@@ -228,7 +232,7 @@ async def refresh_summary(
     }
 
 
-@app.get("/project/{projectId}/summary", summary="Get all summaries for a project")
+@app.get("/projects/{projectId}/summary", summary="Get all summaries for a project")
 async def get_summaries(
         projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)")
 ):
@@ -240,6 +244,7 @@ async def get_summaries(
 
     return [
         {
+            "id": s.id,
             "projectId": s.projectId,
             "startTime": s.startTime,
             "endTime": s.endTime,
@@ -252,11 +257,11 @@ async def get_summaries(
     ]
 
 
-@app.post("/project/{projectId}/messages", summary="Query the project for answers")
+@app.post("/projects/{projectId}/messages", summary="Query the project for answers")
 async def query_project(
         projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)"),
         userId: UUID4 = Query(..., description="User UUID (must be UUID4)"),
-        question: str = Query(..., description="Question to ask about the project content")
+        question: str = Body(..., description="Question to ask about the project content")
 ):
     if not question or len(question.strip()) == 0:
         raise HTTPException(
@@ -295,6 +300,7 @@ async def query_project(
         )
 
     return {
+        "id": answer_placeholder.id,
         "userId": answer_placeholder.userId,
         "projectId": answer_placeholder.projectId,
         "timestamp": answer_placeholder.timestamp.isoformat(),
@@ -303,7 +309,7 @@ async def query_project(
     }
 
 
-@app.get("/project/{projectId}/messages", summary="Get Q&A history for a user")
+@app.get("/projects/{projectId}/messages", summary="Get Q&A history for a user")
 async def get_chat_history(
         projectId: UUID4 = Path(..., description="Optional Project UUID"),
         userId: UUID4 = Query(..., description="User UUID (must be UUID4)")
@@ -314,6 +320,7 @@ async def get_chat_history(
         history = result.scalars().all()
     return [
         {
+            "id": entry.id,
             "userId": entry.userId,
             "projectId": entry.projectId,
             "timestamp": entry.timestamp.isoformat(),

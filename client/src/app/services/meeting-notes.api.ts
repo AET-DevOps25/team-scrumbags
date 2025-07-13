@@ -1,9 +1,10 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { environment } from '../environment';
 import { MeetingNote } from '../models/meeting-note.model';
+import { handleError } from './api-utils';
 
 @Injectable({
   providedIn: 'root',
@@ -14,60 +15,39 @@ export class MeetingNotesApi {
   getMeetingNotesMetadata(projectId: string): Observable<MeetingNote[]> {
     return this.http
       .get<MeetingNote[]>(
-        `${environment.meetingNotesUrl}/projects/${projectId}/meeting-notes`
+        `${environment.meetingNotesUrl}/projects/${projectId}/transcripts`
       )
-      .pipe(catchError(this.handleError('Error fetching project list')));
+      .pipe(catchError(handleError('Error fetching project list')));
+  }
+
+  getMeetingNote(projectId: string, noteId: string): Observable<MeetingNote> {
+    return this.http
+      .get<MeetingNote>(
+        `${environment.meetingNotesUrl}/projects/${projectId}/transcripts/${noteId}`
+      )
+      .pipe(catchError(handleError('Error fetching meeting note')));
   }
 
   uploadMeetingNoteFile(
     projectId: string,
+    speakerAmount: number,
     file: File
   ): Observable<MeetingNote> {
     const formData = new FormData();
     formData.append('file', file);
     return this.http
       .post<MeetingNote>(
-        `${environment.meetingNotesUrl}/projects/${projectId}/meeting-notes`,
+        `${environment.meetingNotesUrl}/projects/${projectId}/transcripts?speakerAmount=${speakerAmount}`,
         formData
       )
-      .pipe(catchError(this.handleError('Error uploading meeting note')));
-  }
-
-  getMeetingNoteFile(projectId: string, noteId: string): Observable<Blob> {
-    return this.http
-      .get(
-        `${environment.meetingNotesUrl}/projects/${projectId}/meeting-notes/${noteId}/file`,
-        {
-          responseType: 'blob',
-        }
-      )
-      .pipe(
-        catchError(this.handleError('Error downloading meeting note file'))
-      );
+      .pipe(catchError(handleError('Error uploading meeting note')));
   }
 
   getMeetingNoteUrl(projectId: string, noteId: string): Observable<string> {
     return new Observable((observer) => {
-      const url = `${environment.meetingNotesUrl}/projects/${projectId}/meeting-notes/${noteId}/file`;
+      const url = `${environment.meetingNotesUrl}/projects/${projectId}/transcripts/${noteId}/audio`;
       observer.next(url);
       observer.complete();
     });
-  }
-
-  private handleError(operation: string) {
-    return (error: HttpErrorResponse): Observable<never> => {
-      console.error(`${operation}:`, error);
-
-      let errorMessage = 'An unknown error occurred';
-      if (error.error instanceof ErrorEvent) {
-        // Client-side error
-        errorMessage = `Client error: ${error.error.message}`;
-      } else {
-        // Server-side error
-        errorMessage = `Server error: ${error.status} ${error.statusText}`;
-      }
-
-      return throwError(() => new Error(errorMessage));
-    };
   }
 }

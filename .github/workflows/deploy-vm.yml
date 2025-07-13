@@ -38,6 +38,15 @@ jobs:
           source: "./docker-compose.prod.yml"
           target: /home/${{ vars.VM_USER }}
 
+      - name: Copy Keycloak Config From Repo to VM Host
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ vars.PUBLIC_IP }}
+          username: ${{ vars.VM_USER }}
+          key: ${{ secrets.VM_PRIVATE_KEY }}
+          source: "./project-management/keycloak/trace-realm.json"
+          target: /home/${{ vars.VM_USER }}/keycloak
+
       - name: SSH to VM and Create .env.prod
         uses: appleboy/ssh-action@v1.0.3
         with:

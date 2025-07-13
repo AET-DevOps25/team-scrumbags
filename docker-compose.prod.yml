@@ -29,7 +29,7 @@ services:
       - SDLC_URL=https://${DOMAIN}/api/sdlc
       - MEETING_NOTES_URL=https://${DOMAIN}/api/meeting-notes
       - COMMUNICATION_URL=https://${DOMAIN}/api/communication
-      - GEN_AI_URL=https://${DOMAIN}/api/gen-ai
+      - GEN_AI_URL=https://${DOMAIN}/api/genai
       - KEYCLOAK_URL=https://${DOMAIN}/keycloak
       - KEYCLOAK_REALM=trace
       - KEYCLOAK_CLIENT=trace-api
@@ -87,9 +87,12 @@ services:
       - DEBUG=${DEBUG}
       - TOKEN_SECRET=${SDLC_TOKEN_SECRET}
       - MODE=forward
-      - DB_URL=jdbc:postgresql://sdlc:5432/sdlc-db
+      - GENAI_URL=https://${DOMAIN}/api/genai
+      - DB_URL=jdbc:postgresql://sdlc-db:5432/sdlc-db
       - DB_USER=${SDLC_DB_USER}
       - DB_PASSWORD=${SDLC_DB_PASSWORD}
+      - KEYCLOAK_REALM=trace
+      - KEYCLOAK_AUTH_URL=https://${DOMAIN}/keycloak
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.sdlc.rule=Host(`${DOMAIN}`) && PathPrefix(`/api/sdlc`)"
@@ -125,6 +128,22 @@ services:
       - "traefik.http.middlewares.strip-meeting-notes.stripprefix.prefixes=/api/meeting-notes"
       - "traefik.http.routers.meeting-notes.middlewares=strip-meeting-notes"
 
+  mock-genai:
+    image: ghcr.io/aet-devops25/team-scrumbags/mock-genai:${GENAI_IMAGE_TAG:-main}
+    ports:
+      - "3031:3030"
+    environment:
+      - SERVER_PORT=3030
+      - DEBUG=${DEBUG}
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.genai.rule=Host(`${DOMAIN}`) && PathPrefix(`/api/genai`)"
+      - "traefik.http.services.genai.loadbalancer.server.port=3030"
+      - "traefik.http.routers.genai.entrypoints=websecure"
+      - "traefik.http.routers.genai.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.strip-genai.stripprefix.prefixes=/api/genai"
+      - "traefik.http.routers.genai.middlewares=strip-genai"
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.2.5
@@ -144,7 +163,7 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
     volumes:
-      - ./project-management/keycloak/:/opt/keycloak/data/import/
+      - ./keycloak/:/opt/keycloak/data/import/
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.keycloak.rule=Host(`${DOMAIN}`) && PathPrefix(`/keycloak`)"

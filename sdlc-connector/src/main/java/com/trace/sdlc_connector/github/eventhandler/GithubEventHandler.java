@@ -29,9 +29,9 @@ public abstract class GithubEventHandler {
         Map<String, Object> content = new HashMap<>();
         content.put("platform", SupportedSystem.GITHUB);
 
-        UUID userId = userMappingRepo.findById(new UserMapping.UserMappingId(
+        UUID userId = userMappingRepo.findAllByProjectIdAndPlatformAndPlatformUserId(
                 projectId, SupportedSystem.GITHUB, payload.read("$.sender.id", String.class)
-        )).map(UserMapping::getUserId).orElse(null);
+        ).stream().findFirst().map(UserMapping::getUserId).orElse(null);
 
         return new Message(
 

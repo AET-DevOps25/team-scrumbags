@@ -1,2 +1,12 @@
 <h1 class="mb-8 text-3xl font-bold">Settings of {{project()?.name}}</h1>
-<app-project-people></app-project-people>
+<div class="flex flex-col gap-4">
+  <app-settings-project-users
+    class="p-4 outline !outline-(--mat-sys-outline-variant) rounded !shadow-(--mat-sys-level2)"
+  ></app-settings-project-users>
+  <app-settings-sdlc
+    class="p-4 outline !outline-(--mat-sys-outline-variant) rounded !shadow-(--mat-sys-level2)"
+  ></app-settings-sdlc>
+  <app-settings-transcription
+    class="p-4 outline !outline-(--mat-sys-outline-variant) rounded !shadow-(--mat-sys-level2)"
+  ></app-settings-transcription>
+</div>

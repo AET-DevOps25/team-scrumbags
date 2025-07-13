@@ -4,16 +4,32 @@ import {
   effect,
   inject,
   input,
+  signal,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { ProjectService } from '../../services/project.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MeetingNotesService } from '../../services/meeting-notes.service';
-import { NotesListComponent } from '../../components/meeting-notes/notes-list/notes-list.component';
+import { MatDialog } from '@angular/material/dialog';
+import { NotesUploadDialog } from '../../components/meeting-notes-upload/meeting-notes-upload.component';
+import { MeetingNote } from '../../models/meeting-note.model';
+import { CommonModule } from '@angular/common';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatListModule } from '@angular/material/list';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 @Component({
   selector: 'app-meeting-notes',
-  imports: [NotesListComponent, MatButtonModule],
+  imports: [
+    CommonModule,
+    MatButtonModule,
+    MatToolbarModule,
+    MatListModule,
+    MatIconModule,
+    MatButtonModule,
+    MatProgressSpinnerModule
+  ],
   templateUrl: './meeting-notes.view.html',
   styleUrl: './meeting-notes.view.scss',
 })
@@ -21,12 +37,29 @@ export class MeetingNotesView {
   router = inject(Router);
   projectService = inject(ProjectService);
   meetingNotesService = inject(MeetingNotesService);
+  private dialog = inject(MatDialog);
 
-  prelookCount = input<number | undefined>(undefined);
+  prelookInput = input<number | undefined>(undefined);
+  prelookCount = signal<number | undefined>(undefined);
+  // flag thats true if
+  displayMoreButton = computed(() => {
+    const project = this.projectService.selectedProject();
+    let notesMetadata: MeetingNote[] = [];
+    if (project && project.meetingNotes) {
+      notesMetadata = Array.from(project.meetingNotes.values());
+    }
+    const prelookInputValue = this.prelookInput();
+    return prelookInputValue ? notesMetadata.length > prelookInputValue : false;
+  });
+
   prelookMetadata = computed(() => {
     const end = this.prelookCount();
-    const notesMetadata = this.projectService.selectedProject()?.meetingNotes ?? [];
-    console.log('Prelook metadata:', notesMetadata, 'End:', end);
+    const project = this.projectService.selectedProject();
+    let notesMetadata: MeetingNote[] = [];
+    if (project && project.meetingNotes) {
+      notesMetadata = Array.from(project.meetingNotes.values());
+    }
+
     return end ? notesMetadata.slice(0, end) : notesMetadata;
   });
 
@@ -36,12 +69,31 @@ export class MeetingNotesView {
       if (projectId) {
         this.meetingNotesService.loadMeetingNotes(projectId).subscribe();
       }
+
+      this.prelookCount.set(this.prelookInput());
     });
   }
 
   viewAllNotes() {
-    this.router.navigate([
-      `/projects/${this.projectService.selectedProjectId()}/meetings`,
-    ]);
+    this.prelookCount.set(undefined);
+  }
+
+  viewLess() {
+    this.prelookCount.set(this.prelookInput());
+  }
+
+  openFile(note: MeetingNote) {
+    const projectId = this.projectService.selectedProjectId();
+    if (!projectId) {
+      console.error('No project selected for downloading meeting note file');
+      return;
+    }
+
+    const url = `${window.location.origin}/projects/${projectId}/meetings/${note.id}`;
+    window.open(url, '_blank');
+  }
+
+  openUploadDialog() {
+    this.dialog.open(NotesUploadDialog);
   }
 }

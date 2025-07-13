@@ -2,6 +2,8 @@ import { Injectable, signal } from '@angular/core';
 import { Project } from '../models/project.model';
 import { User } from '../models/user.model';
 import { MeetingNote } from '../models/meeting-note.model';
+import { Report } from '../models/report.model';
+import { Message } from '../models/message.model';
 
 @Injectable({
   providedIn: 'root',
@@ -62,17 +64,59 @@ export class ProjectState {
   }
 
   setMeetingNotes(id: string, meetingNotes: MeetingNote[]) {
-    this.updateProject(id, { meetingNotes: meetingNotes });
+    const meetingNotesMap = new Map(
+      meetingNotes.map((meetingNote) => [meetingNote.id, meetingNote])
+    );
+
+    this.updateProject(id, { meetingNotes: meetingNotesMap });
   }
 
-  addMeetingNote(id: string, meetingNote: MeetingNote) {
+  updateMeetingNote(id: string, meetingNote: MeetingNote) {
     const project = this.allProjects().get(id);
     if (!project) {
       return;
     }
 
-    let meetingNotes = project.meetingNotes || [];
-    meetingNotes = [...meetingNotes, meetingNote];
+    const meetingNotes = project.meetingNotes || new Map<string, Report>();
+    meetingNotes.set(meetingNote.id, meetingNote);
+
     this.updateProject(id, { meetingNotes: meetingNotes });
+  }
+
+  setReports(id: string, reports: Report[]) {
+    const reportMap = new Map(reports.map((report) => [report.id, report]));
+
+    this.updateProject(id, { reports: reportMap });
+  }
+
+  updateReport(id: string, report: Report) {
+    const project = this.allProjects().get(id);
+    if (!project) {
+      return;
+    }
+
+    const reports = project.reports || new Map<string, Report>();
+    reports.set(report.id, report);
+
+    this.updateProject(id, { reports: reports });
+  }
+
+  setMessages(id: string, messages: Message[]) {
+    const messageMap = new Map(messages.map((msg) => [msg.id, msg]));
+    this.updateProject(id, { messages: messageMap });
+  }
+
+  addMessages(id: string, messages: Message[]) {
+    const project = this.allProjects().get(id);
+    if (!project) {
+      return;
+    }
+
+    const projectMessages = project.messages || new Map<string, Message>();
+    for (const message of messages) {
+      projectMessages.set(message.id, message);
+    }
+
+    this.updateProject(id, { messages: projectMessages });
   }
 }
