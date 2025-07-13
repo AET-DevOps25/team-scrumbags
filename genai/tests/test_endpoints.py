@@ -8,7 +8,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy import select, Column, String, Text, Integer, DateTime, UniqueConstraint, JSON, Boolean, MetaData
 from sqlalchemy.orm import declarative_base
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 # Import the FastAPI app and modules
 import app.main as main
@@ -40,121 +40,96 @@ class TestSummary(TestBase):
 class TestMessage(TestBase):
     __tablename__ = "messages"
     id = Column(Integer, primary_key=True, index=True)
-    userId = Column(String(length=36), index=True)
     projectId = Column(String(length=36), index=True)
-    timestamp = Column(DateTime)
+    userId = Column(String(length=36), index=True)
     content = Column(Text)
+    timestamp = Column(DateTime, index=True)
     loading = Column(Boolean, nullable=False)
 
 
 @pytest.fixture(scope="function", autouse=True)
 def setup_environment(monkeypatch):
-    """
-    Mock environment for testing
-    """
-    # Use SQLite in-memory
-    monkeypatch.setenv("MYSQL_USER", "test")
-    monkeypatch.setenv("MYSQL_PASSWORD", "test")
-    monkeypatch.setenv("MYSQL_DATABASE", "testdb")
+    """Set up test environment variables and mocks."""
+    # Use SQLite for testing
+    monkeypatch.setenv("DATABASE_URL", "sqlite+aiosqlite:///test.db")
+    monkeypatch.setenv("MYSQL_URL", "sqlite+aiosqlite:///test.db")
 
-    # Replace the models with our test versions
-    monkeypatch.setattr(db, "Summary", TestSummary)
-    monkeypatch.setattr(main, "Summary", TestSummary)
-    monkeypatch.setattr(db, "Message", TestMessage)
-    monkeypatch.setattr(main, "Message", TestMessage)
+    # Mock external services
+    mock_weaviate_client = MagicMock()
+    mock_weaviate_client.connect.return_value = None
+    mock_weaviate_client.close.return_value = None
+    mock_weaviate_client.collections.list_all.return_value = ["ProjectContent"]
+    mock_weaviate_client.collections.create.return_value = None
 
-    # Mock Weaviate client completely
-    import app.weaviate_client as wc
-    mock_client = MagicMock()
-    mock_client.collections.list_all.return_value = []
-    mock_client.collections.create.return_value = None
-    mock_client.close.return_value = None
-    monkeypatch.setattr(wc, "client", mock_client)
-    monkeypatch.setattr(wc, "init_collection", lambda: None)
-    monkeypatch.setattr(wc, "store_entry_async", lambda entry: asyncio.Future())
+    monkeypatch.setattr("app.weaviate_client.client", mock_weaviate_client)
+    monkeypatch.setattr("app.main.wc.client", mock_weaviate_client)
+    monkeypatch.setattr("app.main.wc.init_collection", MagicMock())
 
     # Mock RabbitMQ
-    class DummyConnection:
-        async def channel(self):
-            class DummyChannel:
-                async def set_qos(self, **kwargs):
-                    pass
+    mock_connection = AsyncMock()
+    mock_channel = AsyncMock()
+    mock_channel.set_qos = AsyncMock()
+    mock_channel.default_exchange = AsyncMock()
+    mock_channel.default_exchange.publish = AsyncMock()
 
-                @property
-                def default_exchange(self):
-                    class DummyExchange:
-                        async def publish(self, message, routing_key):
-                            pass
+    monkeypatch.setattr("app.main.rabbit_connection", mock_connection)
+    monkeypatch.setattr("app.main.rabbit_channel", mock_channel)
+    monkeypatch.setattr("aio_pika.connect_robust", AsyncMock(return_value=mock_connection))
 
-                    return DummyExchange()
+    # Mock queue consumer
+    monkeypatch.setattr("app.main.consume", AsyncMock())
 
-                async def declare_queue(self, *args, **kwargs):
-                    class DummyQueue:
-                        async def iterator(self):
-                            return AsyncMock()
-
-                    return DummyQueue()
-
-            return DummyChannel()
-
-    async def fake_connect(url):
-        return DummyConnection()
-
-    monkeypatch.setattr(main, "connect_robust", fake_connect)
-
-    # Mock executor jobs
-    monkeypatch.setattr(main, "_blocking_summary_job", lambda *args, **kwargs: None)
-    monkeypatch.setattr(main, "_blocking_qa_job", lambda *args, **kwargs: None)
-
-    # Mock LLM functions
-    mock_summary_func = lambda *args, **kwargs: {"output_text": "MOCK SUMMARY"}
-    mock_qa_func = lambda *args, **kwargs: {"result": "MOCK ANSWER"}
-    monkeypatch.setattr("app.langchain_provider.summarize_entries", mock_summary_func)
-    monkeypatch.setattr("app.langchain_provider.answer_question", mock_qa_func)
-
-    # Mock the queue consumer
-    async def mock_consume():
-        pass
-
-    monkeypatch.setattr("app.queue_consumer.consume", mock_consume)
+    # Mock langchain functions
+    monkeypatch.setattr("app.langchain_provider.summarize_entries",
+                        lambda *args: {"output_text": "Test summary"})
+    monkeypatch.setattr("app.langchain_provider.answer_question",
+                        lambda *args: {"result": "Test answer"})
 
 
 @pytest.fixture(scope="session")
 def init_test_db():
-    """
-    Create an in-memory SQLite database and initialize tables.
-    """
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
-    db.async_session = async_sessionmaker(engine, expire_on_commit=False)
-    db.engine = engine
+    """Initialize test database with SQLite."""
+    # Create async engine for SQLite
+    engine = create_async_engine("sqlite+aiosqlite:///test.db", echo=False)
 
-    loop = asyncio.get_event_loop()
-
-    async def init_tables():
+    async def create_tables():
         async with engine.begin() as conn:
             await conn.run_sync(TestBase.metadata.create_all)
 
-    loop.run_until_complete(init_tables())
+    # Run the coroutine
+    asyncio.run(create_tables())
+
     yield
-    loop.run_until_complete(engine.dispose())
+
+    # Cleanup
+    async def drop_tables():
+        async with engine.begin() as conn:
+            await conn.run_sync(TestBase.metadata.drop_all)
+
+    asyncio.run(drop_tables())
 
 
 @pytest.fixture
 def client(init_test_db):
-    """
-    Provide a TestClient for the FastAPI app, ensuring the startup events (DB init, etc.) run.
-    """
-    with TestClient(main.app) as c:
-        yield c
+    """Provide a TestClient for the FastAPI app with mocked database."""
+    # Patch the database session to use SQLite
+    test_engine = create_async_engine("sqlite+aiosqlite:///test.db", echo=False)
+    test_session = async_sessionmaker(test_engine, expire_on_commit=False)
+
+    with patch.object(db, 'async_session', test_session):
+        with TestClient(main.app) as c:
+            yield c
 
 
 @pytest.fixture
 async def async_client(init_test_db):
-    """
-    Provide an AsyncClient for testing async endpoints if needed.
-    """
-    async with AsyncClient(app=main.app, base_url="http://test") as ac:
-        yield ac
+    """Provide an AsyncClient for the FastAPI app."""
+    test_engine = create_async_engine("sqlite+aiosqlite:///test.db", echo=False)
+    test_session = async_sessionmaker(test_engine, expire_on_commit=False)
+
+    with patch.object(db, 'async_session', test_session):
+        async with AsyncClient(app=main.app, base_url="http://test") as ac:
+            yield ac
 
 
 def test_post_content_success(client):
