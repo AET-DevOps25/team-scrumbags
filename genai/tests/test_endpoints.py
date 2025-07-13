@@ -4,6 +4,7 @@ import pytest
 import uuid
 from datetime import datetime, UTC
 from unittest.mock import AsyncMock, MagicMock, patch
+
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -18,12 +19,10 @@ TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 @pytest.fixture
 async def test_db():
-    # Create test engine and session
+    # Create test engine with in-memory SQLite
     engine = create_async_engine(
         TEST_DATABASE_URL,
-        connect_args={
-            "check_same_thread": False,
-        },
+        connect_args={"check_same_thread": False},
         poolclass=StaticPool,
         echo=True
     )
@@ -33,9 +32,10 @@ async def test_db():
         await conn.run_sync(Base.metadata.create_all)
 
     # Create session factory
-    test_session = async_sessionmaker(engine, expire_on_commit=False)
+    test_async_session = async_sessionmaker(engine, expire_on_commit=False)
 
-    yield test_session
+    # Yield session maker
+    yield test_async_session
 
     # Cleanup
     await engine.dispose()
@@ -43,14 +43,19 @@ async def test_db():
 
 @pytest.fixture
 def client(test_db):
-    # Override the dependency with the test database
-    def override_get_db():
-        return test_db
+    # Override the dependency with our test database
+    app.dependency_overrides[async_session] = lambda: test_db
 
-    app.dependency_overrides[async_session] = override_get_db
-    client = TestClient(app)
-    yield client
-    # Cleanup
+    # Mock RabbitMQ connection and channel
+    with patch('app.main.rabbit_connection'), patch('app.main.rabbit_channel'):
+        # Mock Weaviate client
+        with patch('app.main.wc.init_collection'), patch('app.main.wc.store_entry_async'):
+            # Mock the consumer task
+            with patch('app.main.consume', return_value=asyncio.Future()):
+                client = TestClient(app)
+                yield client
+
+    # Clean up dependency overrides after test
     app.dependency_overrides.clear()
 
 
@@ -98,19 +103,16 @@ class TestPostContent:
 
         entries = []
         for i in range(3):
-            entry = ContentEntry(
-                metadata=Metadata(
-                    type="message",
-                    user=sample_user_id,
-                    timestamp=1234567890 + i,
-                    projectId=sample_project_id
-                ),
-                content={"text": f"Test message {i}"}
-            )
-            entry_dict = entry.model_dump()
-            entry_dict['metadata']['user'] = str(entry_dict['metadata']['user'])
-            entry_dict['metadata']['projectId'] = str(entry_dict['metadata']['projectId'])
-            entries.append(entry_dict)
+            entry = {
+                "metadata": {
+                    "type": "message",
+                    "user": str(sample_user_id),
+                    "timestamp": 1234567890 + i,
+                    "projectId": str(sample_project_id)
+                },
+                "content": {"text": f"Test message {i}"}
+            }
+            entries.append(entry)
 
         response = client.post("/content", json=entries)
 
@@ -122,7 +124,7 @@ class TestPostContent:
         entry = {
             "metadata": {
                 "type": "message",
-                "user": sample_user_id,
+                "user": str(sample_user_id),
                 "timestamp": 1234567890,
                 "projectId": None
             },
@@ -136,9 +138,9 @@ class TestPostContent:
         entry = {
             "metadata": {
                 "type": "message",
-                "user": sample_user_id,
+                "user": str(sample_user_id),
                 "timestamp": None,
-                "projectId": sample_project_id
+                "projectId": str(sample_project_id)
             },
             "content": {"text": "Test message"}
         }
@@ -162,16 +164,16 @@ class TestGetSummary:
     async def test_get_summary_existing(self, test_db, client, sample_project_id, sample_user_id):
         # Create existing summary
         async with test_db() as session:
-            summary = Summary(
+            existing_summary = Summary(
                 projectId=sample_project_id,
                 startTime=1000,
                 endTime=2000,
-                userIds=[sample_user_id],
+                userIds=[str(sample_user_id)],
+                loading=False,
                 generatedAt=datetime.now(UTC),
-                summary="Existing summary",
-                loading=False
+                summary="Existing summary"
             )
-            session.add(summary)
+            session.add(existing_summary)
             await session.commit()
 
         response = client.post(
@@ -237,16 +239,16 @@ class TestRefreshSummary:
     async def test_refresh_summary_success(self, test_db, client, sample_project_id, sample_user_id):
         # Create existing summary to delete
         async with test_db() as session:
-            summary = Summary(
+            existing_summary = Summary(
                 projectId=sample_project_id,
                 startTime=1000,
                 endTime=2000,
-                userIds=[sample_user_id],
+                userIds=[str(sample_user_id)],
+                loading=False,
                 generatedAt=datetime.now(UTC),
-                summary="Old summary",
-                loading=False
+                summary="Existing summary"
             )
-            session.add(summary)
+            session.add(existing_summary)
             await session.commit()
 
         response = client.put(
@@ -283,19 +285,19 @@ class TestGetSummaries:
                 projectId=sample_project_id,
                 startTime=1000,
                 endTime=2000,
-                userIds=[sample_user_id],
+                userIds=[str(sample_user_id)],
+                loading=False,
                 generatedAt=datetime.now(UTC),
-                summary="Summary 1",
-                loading=False
+                summary="Summary 1"
             )
             summary2 = Summary(
                 projectId=sample_project_id,
                 startTime=3000,
                 endTime=4000,
-                userIds=[sample_user_id],
+                userIds=[str(sample_user_id)],
+                loading=False,
                 generatedAt=datetime.now(UTC),
-                summary="Summary 2",
-                loading=False
+                summary="Summary 2"
             )
             session.add_all([summary1, summary2])
             await session.commit()
@@ -328,7 +330,7 @@ class TestQueryProject:
         assert response.status_code == 200
         data = response.json()
         assert data["projectId"] == sample_project_id
-        assert data["userId"] == sample_user_id
+        assert data["userId"] == str(sample_user_id)
         assert data["loading"] is True
 
     def test_query_project_empty_question(self, client, sample_project_id, sample_user_id):
@@ -372,14 +374,14 @@ class TestGetChatHistory:
         async with test_db() as session:
             message1 = Message(
                 projectId=sample_project_id,
-                userId=sample_user_id,
+                userId=str(sample_user_id),
                 content="Question 1",
                 timestamp=datetime.now(UTC),
                 loading=False
             )
             message2 = Message(
                 projectId=sample_project_id,
-                userId=sample_user_id,
+                userId=str(sample_user_id),
                 content="Answer 1",
                 timestamp=datetime.now(UTC),
                 loading=False
@@ -452,7 +454,7 @@ class TestEdgeCases:
         response = client.post(
             f"/projects/{sample_project_id}/summary",
             params={
-                "startTime": -5,
+                "startTime": -2,
                 "endTime": -1
             }
         )

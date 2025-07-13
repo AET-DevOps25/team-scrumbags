@@ -24,23 +24,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Bring up Services
-        run: docker compose -f docker-compose.workflow.yml up -d
-
-      - name: Map weaviate hostname
-        run: echo "127.0.0.1 weaviate" | sudo tee -a /etc/hosts
-
-      - name: Wait for Weaviate to be ready
-        run: |
-          for i in {1..30}; do
-            if curl -sf http://weaviate:6969/v1/.well-known/ready; then
-              echo "Weaviate is ready" && break
-            else
-              echo "Waiting for Weaviate... attempt $i";
-              sleep $i;
-            fi
-          done
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
