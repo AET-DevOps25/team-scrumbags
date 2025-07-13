@@ -34,33 +34,24 @@ TEST_USER_ID_2 = str(uuid4())
 
 @pytest_asyncio.fixture
 async def setup_database():
-    """Setup test database"""
     async with test_engine.begin() as conn:
-        # Drop all tables first to ensure clean state
         await conn.run_sync(Base.metadata.drop_all)
-        # Create all tables
         await conn.run_sync(Base.metadata.create_all)
     yield
-    # Clean up after tests
-    async with test_engine.begin() as conn:
-        # Clean tables instead of dropping to avoid foreign key issues
-        await conn.execute(text("DELETE FROM messages"))
-        await conn.execute(text("DELETE FROM summaries"))
-        await conn.commit()
-
+    # (optional cleanup after tests)
 
 @pytest_asyncio.fixture
 async def override_db_session(setup_database):
-    """Override the database session dependency"""
-    app.dependency_overrides[async_session] = lambda: test_async_session()
+    async def get_test_db():
+        async with test_async_session() as session:
+            yield session
+    app.dependency_overrides[async_session] = get_test_db
     yield
     app.dependency_overrides.clear()
 
-
 @pytest_asyncio.fixture
 async def client(override_db_session) -> AsyncGenerator[AsyncClient, None]:
-    """Create test client"""
-    async with AsyncClient(base_url="http://testserver") as ac:
+    async with AsyncClient(app=app, base_url="http://testserver") as ac:
         yield ac
 
 
@@ -118,6 +109,8 @@ async def sample_content_entry():
 
 
 class TestContentEndpoint:
+
+    @pytest.mark.asyncio
     async def test_post_content_success(self, client: AsyncClient, mock_services, sample_content_entry):
         """Test successful content posting"""
         response = await client.post(
@@ -130,6 +123,7 @@ class TestContentEndpoint:
         data = response.json()
         assert data["status"] == "Published 1 message(s) to queue."
 
+    @pytest.mark.asyncio
     async def test_post_content_invalid_entry(self, client: AsyncClient, mock_services):
         """Test posting content with invalid entry"""
         invalid_entry = {
@@ -151,6 +145,8 @@ class TestContentEndpoint:
 
 
 class TestSummaryEndpoints:
+
+    @pytest.mark.asyncio
     async def test_get_summary_new(self, client: AsyncClient, mock_services):
         """Test getting a new summary"""
         response = await client.post(
@@ -168,6 +164,7 @@ class TestSummaryEndpoints:
         assert data["projectId"] == TEST_PROJECT_ID
         assert data["loading"] is True
 
+    @pytest.mark.asyncio
     async def test_get_summary_invalid_time_range(self, client: AsyncClient, mock_services):
         """Test summary with invalid time range"""
         response = await client.post(
@@ -182,6 +179,7 @@ class TestSummaryEndpoints:
 
         assert response.status_code == 422
 
+    @pytest.mark.asyncio
     async def test_refresh_summary(self, client: AsyncClient, mock_services):
         """Test refreshing a summary"""
         response = await client.put(
@@ -198,6 +196,7 @@ class TestSummaryEndpoints:
         data = response.json()
         assert data["projectId"] == TEST_PROJECT_ID
 
+    @pytest.mark.asyncio
     async def test_get_all_summaries(self, client: AsyncClient, mock_services):
         """Test getting all summaries for a project"""
         response = await client.get(
@@ -211,6 +210,8 @@ class TestSummaryEndpoints:
 
 
 class TestMessageEndpoints:
+
+    @pytest.mark.asyncio
     async def test_query_project_success(self, client: AsyncClient, mock_services):
         """Test successful project query"""
         response = await client.post(
@@ -226,6 +227,7 @@ class TestMessageEndpoints:
         assert data["userId"] == TEST_USER_ID
         assert data["loading"] is True
 
+    @pytest.mark.asyncio
     async def test_query_project_empty_question(self, client: AsyncClient, mock_services):
         """Test query with empty question"""
         response = await client.post(
@@ -237,6 +239,7 @@ class TestMessageEndpoints:
 
         assert response.status_code == 422
 
+    @pytest.mark.asyncio
     async def test_get_chat_history(self, client: AsyncClient, mock_services):
         """Test getting chat history"""
         response = await client.get(
@@ -251,6 +254,8 @@ class TestMessageEndpoints:
 
 
 class TestValidation:
+
+    @pytest.mark.asyncio
     async def test_invalid_uuid_format(self, client: AsyncClient, mock_services):
         """Test invalid UUID format"""
         response = await client.post(
@@ -265,6 +270,7 @@ class TestValidation:
 
         assert response.status_code == 422
 
+    @pytest.mark.asyncio
     async def test_negative_timestamp(self, client: AsyncClient, mock_services):
         """Test negative timestamp validation"""
         response = await client.post(
@@ -279,7 +285,7 @@ class TestValidation:
 
         assert response.status_code == 422
 
-
+@pytest.mark.asyncio
 async def test_app_startup():
     """Test that the app can be created without errors"""
     # Mock the services to avoid initialization issues
