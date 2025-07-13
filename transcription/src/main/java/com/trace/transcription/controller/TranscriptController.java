@@ -123,7 +123,7 @@ public class TranscriptController {
             }
         });
 
-        // Return loading response immediately
+        // Return 202 Accepted with loading response
         LoadingResponse response = new LoadingResponse(transcriptId, true);
         return ResponseEntity.accepted().body(response);
     }
@@ -146,6 +146,45 @@ public class TranscriptController {
     }
 
     /**
+     * GET projects/{projectId}/transcripts/{transcriptId}/audio
+     * <p>
+     * Returns the transcript entity for the given project and transcript ID.
+     */
+    @GetMapping("/transcripts/{transcriptId}")
+    public ResponseEntity<?> getTranscriptById(@PathVariable("projectId") UUID projectId, @PathVariable("transcriptId") UUID transcriptId) {
+        TranscriptEntity transcript = transcriptService.getTranscriptById(projectId, transcriptId);
+        if (transcript == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok(transcript);
+    }
+
+    /**
+     * GET projects/{projectId}/transcripts/{transcriptId}/audio
+     * <p>
+     * Returns the audio file of a transcript
+     */
+    @GetMapping("/transcripts/{transcriptId}/audio")
+    public ResponseEntity<?> getAudioFile(@PathVariable("projectId") UUID projectId, @PathVariable("transcriptId") UUID transcriptId) {
+        TranscriptEntity transcript = transcriptService.getTranscriptById(projectId, transcriptId);
+        if (transcript == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String fileName = transcript.getId() + "." + transcript.getAudioExtension();
+        String mimeType = "audio/" + transcript.getAudioExtension();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(mimeType));
+        headers.setContentDisposition(ContentDisposition.inline().filename(fileName).build());
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(transcript.getAudio());
+    }
+
+    /**
      * Streams a ZIP archive containing all raw audio files for a project.
      * <p>
      * Writes the ZIP directly to the servlet response output stream.
@@ -155,10 +194,7 @@ public class TranscriptController {
      * @param response  HTTP response used to stream the ZIP data
      */
     @GetMapping("/audios")
-    public void streamAllSamples(
-            @PathVariable("projectId") UUID projectId,
-            HttpServletResponse response
-    ) {
+    public void streamAllSamples(@PathVariable("projectId") UUID projectId, HttpServletResponse response) {
         transcriptService.streamAllAudios(projectId, response);
     }
 }

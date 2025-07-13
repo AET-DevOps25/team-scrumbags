@@ -1,0 +1,107 @@
+<div class="flex flex-col h-full">
+  <mat-toolbar class="flex justify-between !p-0">
+    <div class="flex flex-row gap-2 items-center">
+      <button
+        mat-icon-button
+        aria-label="Back to report overview"
+        [disabled]="!selectedReportId()"
+        (click)="selectedReportId.set(undefined)"
+      >
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+    <span class="break-words whitespace-normal max-w-full line-clamp-2">
+        {{selectedReport() ? selectedReport()!.name : "Reports"}}
+      </span>
+    </div>
+    <button
+      mat-icon-button
+      aria-label="Add report"
+      [matMenuTriggerFor]="addReportMenu"
+      (menuOpened)="openMenu()"
+      [matMenuTriggerRestoreFocus]="false"
+    >
+      <mat-icon>add</mat-icon>
+    </button>
+  </mat-toolbar>
+
+  <!-- switch between list and content -->
+  <div class="flex-1 min-h-0 overflow-y-auto">
+    @if (selectedReportId()){
+    <app-report-content [report]="selectedReport()!"></app-report-content>
+    } @else {
+    <app-report-list
+      (selectedReportId)="selectedReportId.set($event)"
+    ></app-report-list>
+    }
+  </div>
+
+  <mat-menu
+    #addReportMenu="matMenu"
+    class="p-4"
+    xPosition="before"
+    (closed)="onCancel()"
+  >
+    <form
+      matMenuContent
+      class="flex flex-col gap-4"
+      (ngSubmit)="onSubmit(); addReportMenu.closed.emit()"
+    >
+      <mat-form-field appearance="outline">
+        <mat-label>Start Date</mat-label>
+        <input
+          matInput
+          [matDatepicker]="startPicker"
+          [(ngModel)]="periodStart"
+          [max]="periodEnd() ? periodEnd() : now()"
+          name="startDate"
+        />
+        <mat-datepicker-toggle
+          matIconSuffix
+          [for]="startPicker"
+        ></mat-datepicker-toggle>
+        <mat-datepicker #startPicker></mat-datepicker>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>End Date</mat-label>
+        <input
+          matInput
+          [matDatepicker]="endPicker"
+          [(ngModel)]="periodEnd"
+          [min]="periodStart()"
+          [max]="now()"
+          name="endDate"
+        />
+        <mat-datepicker-toggle
+          matIconSuffix
+          [for]="endPicker"
+        ></mat-datepicker-toggle>
+        <mat-datepicker #endPicker></mat-datepicker>
+      </mat-form-field>
+      <mat-form-field appearance="outline" (click)="$event.stopPropagation()">
+        <mat-label>Users</mat-label>
+        <mat-select multiple [(ngModel)]="userIds" name="userIds">
+          @for (user of possibleUsers(); track user.id) {
+          <mat-option [value]="user.id">{{ user.username }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <div class="flex justify-end gap-2">
+        <button
+          matButton="outlined"
+          type="button"
+          (click)="onCancel(); addReportMenu.closed.emit()"
+        >
+          Cancel
+        </button>
+        <button
+          matButton="filled"
+          color="primary"
+          type="submit"
+          aria-label="Generate"
+        >
+          Generate
+        </button>
+      </div>
+    </form>
+  </mat-menu>
+</div>

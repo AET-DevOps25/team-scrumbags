@@ -1,0 +1,15 @@
+meta {
+  name: Get Project Users
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{api_url}}/projects/:projectId/users
+  body: none
+  auth: inherit
+}
+
+params:path {
+  projectId: 8587153b-e44c-4b59-adda-a43cab0db474
+}
