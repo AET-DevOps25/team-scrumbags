@@ -61,7 +61,8 @@ async def mock_services():
     with patch('app.main.rabbit_channel') as mock_rabbit, \
             patch('app.weaviate_client.store_entry_async') as mock_weaviate, \
             patch('app.langchain_provider.summarize_entries') as mock_summarize, \
-            patch('app.langchain_provider.answer_question') as mock_answer:
+            patch('app.langchain_provider.answer_question') as mock_answer, \
+            patch('app.langchain_provider.get_embeddings') as mock_embeddings:
         # Mock RabbitMQ
         mock_rabbit.return_value = AsyncMock()
         mock_rabbit.default_exchange = AsyncMock()
@@ -74,11 +75,15 @@ async def mock_services():
         mock_summarize.return_value = {"output_text": "Test summary content"}
         mock_answer.return_value = {"result": "Test answer content"}
 
+        # Mock embeddings
+        mock_embeddings.return_value = AsyncMock()
+
         yield {
             'rabbit': mock_rabbit,
             'weaviate': mock_weaviate,
             'summarize': mock_summarize,
-            'answer': mock_answer
+            'answer': mock_answer,
+            'embeddings': mock_embeddings
         }
 
 
