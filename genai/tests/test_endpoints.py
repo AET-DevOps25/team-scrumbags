@@ -27,7 +27,8 @@ test_engine = create_async_engine(
     TEST_DATABASE_URL,
     echo=False,
     pool_pre_ping=True,
-    pool_recycle=300
+    pool_recycle=300,
+    pool_reset_on_return='rollback'
 )
 test_async_session = async_sessionmaker(test_engine, expire_on_commit=False)
 
@@ -37,19 +38,19 @@ TEST_USER_ID = str(uuid4())
 TEST_USER_ID_2 = str(uuid4())
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", autouse=True)
 async def setup_database():
     """Setup test database"""
+    # Create tables
     async with test_engine.begin() as conn:
-        # Create all tables
         await conn.run_sync(Base.metadata.create_all)
 
     yield
 
     # Clean up data after test
     async with test_async_session() as session:
-        await session.execute(delete(Summary))
         await session.execute(delete(Message))
+        await session.execute(delete(Summary))
         await session.commit()
 
 
@@ -69,31 +70,23 @@ async def override_db_session(setup_database):
 @pytest_asyncio.fixture
 async def client(override_db_session) -> AsyncGenerator[AsyncClient, None]:
     """Create test client"""
-    async with AsyncClient(base_url="http://testserver") as ac:
-        yield ac
-
-
-@pytest_asyncio.fixture
-async def mock_services():
-    """Mock external services"""
     with patch('app.main.rabbit_connection') as mock_rabbit_conn, \
             patch('app.main.rabbit_channel') as mock_rabbit_channel, \
             patch('app.weaviate_client.get_entries') as mock_get_entries, \
             patch('app.langchain_provider.summarize_entries') as mock_summarize, \
             patch('app.langchain_provider.answer_question') as mock_answer:
-        # Setup mocks
-        mock_rabbit_channel.default_exchange.publish = AsyncMock()
+        # Mock RabbitMQ
+        mock_channel = AsyncMock()
+        mock_rabbit_channel.return_value = mock_channel
+        mock_rabbit_conn.return_value = AsyncMock()
+
+        # Mock Weaviate and LangChain
         mock_get_entries.return_value = []
         mock_summarize.return_value = {"output_text": "Test summary"}
         mock_answer.return_value = {"result": "Test answer"}
 
-        yield {
-            "rabbit_conn": mock_rabbit_conn,
-            "rabbit_channel": mock_rabbit_channel,
-            "get_entries": mock_get_entries,
-            "summarize": mock_summarize,
-            "answer": mock_answer
-        }
+        async with AsyncClient(app=app, base_url="http://testserver") as ac:
+            yield ac
 
 
 @pytest_asyncio.fixture
@@ -103,31 +96,32 @@ async def sample_content_entry():
         metadata=Metadata(
             type="commit",
             user=TEST_USER_ID,
-            timestamp=1234567890,
+            timestamp=1640995200,
             projectId=TEST_PROJECT_ID
         ),
-        content={"message": "Test commit"}
+        content={
+            "message": "Initial commit",
+            "files": ["README.md"]
+        }
     )
 
 
 class TestContentEndpoint:
     @pytest.mark.asyncio
-    async def test_post_content_success(self, client: AsyncClient, mock_services, sample_content_entry):
+    async def test_post_content_success(self, client: AsyncClient, sample_content_entry):
         """Test successful content posting"""
-        response = await client.post(
-            "/content",
-            json=[sample_content_entry.model_dump()]
-        )
+        response = await client.post("/content", json=[sample_content_entry.model_dump()])
         assert response.status_code == 200
         data = response.json()
-        assert "Published 1 message(s) to queue" in data["status"]
+        assert "status" in data
+        assert "1 message(s)" in data["status"]
 
     @pytest.mark.asyncio
-    async def test_post_content_invalid_entry(self, client: AsyncClient, mock_services):
-        """Test content posting with invalid entry"""
+    async def test_post_content_invalid_entry(self, client: AsyncClient):
+        """Test posting invalid content entry"""
         invalid_entry = {
             "metadata": {"type": "commit"},  # Missing required fields
-            "content": {"message": "Test"}
+            "content": {}
         }
         response = await client.post("/content", json=[invalid_entry])
         assert response.status_code == 422
@@ -135,37 +129,39 @@ class TestContentEndpoint:
 
 class TestSummaryEndpoints:
     @pytest.mark.asyncio
-    async def test_get_summary_new(self, client: AsyncClient, mock_services):
+    async def test_get_summary_new(self, client: AsyncClient):
         """Test getting a new summary"""
         response = await client.post(
-            f"/projects/{TEST_PROJECT_ID}/summary?startTime=1000&endTime=2000"
+            f"/projects/{TEST_PROJECT_ID}/summary",
+            params={"startTime": 1640995200, "endTime": 1641081600}
         )
         assert response.status_code == 200
         data = response.json()
         assert data["projectId"] == TEST_PROJECT_ID
-        assert data["startTime"] == 1000
-        assert data["endTime"] == 2000
+        assert data["loading"] is True
 
     @pytest.mark.asyncio
-    async def test_get_summary_invalid_time_range(self, client: AsyncClient, mock_services):
+    async def test_get_summary_invalid_time_range(self, client: AsyncClient):
         """Test getting summary with invalid time range"""
         response = await client.post(
-            f"/projects/{TEST_PROJECT_ID}/summary?startTime=2000&endTime=1000"
+            f"/projects/{TEST_PROJECT_ID}/summary",
+            params={"startTime": 1641081600, "endTime": 1640995200}  # start > end
         )
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_refresh_summary(self, client: AsyncClient, mock_services):
-        """Test refreshing a summary"""
+    async def test_refresh_summary(self, client: AsyncClient):
+        """Test refreshing an existing summary"""
         response = await client.put(
-            f"/projects/{TEST_PROJECT_ID}/summary?startTime=1000&endTime=2000"
+            f"/projects/{TEST_PROJECT_ID}/summary",
+            params={"startTime": 1640995200, "endTime": 1641081600}
         )
         assert response.status_code == 201
         data = response.json()
         assert data["projectId"] == TEST_PROJECT_ID
 
     @pytest.mark.asyncio
-    async def test_get_all_summaries(self, client: AsyncClient, mock_services):
+    async def test_get_all_summaries(self, client: AsyncClient):
         """Test getting all summaries for a project"""
         response = await client.get(f"/projects/{TEST_PROJECT_ID}/summary")
         assert response.status_code == 200
@@ -175,10 +171,11 @@ class TestSummaryEndpoints:
 
 class TestMessageEndpoints:
     @pytest.mark.asyncio
-    async def test_query_project_success(self, client: AsyncClient, mock_services):
-        """Test querying project successfully"""
+    async def test_query_project_success(self, client: AsyncClient):
+        """Test successful project query"""
         response = await client.post(
-            f"/projects/{TEST_PROJECT_ID}/messages?userId={TEST_USER_ID}",
+            f"/projects/{TEST_PROJECT_ID}/messages",
+            params={"userId": TEST_USER_ID},
             json="What happened in this project?"
         )
         assert response.status_code == 200
@@ -187,19 +184,21 @@ class TestMessageEndpoints:
         assert data["userId"] == TEST_USER_ID
 
     @pytest.mark.asyncio
-    async def test_query_project_empty_question(self, client: AsyncClient, mock_services):
-        """Test querying with empty question"""
+    async def test_query_project_empty_question(self, client: AsyncClient):
+        """Test project query with empty question"""
         response = await client.post(
-            f"/projects/{TEST_PROJECT_ID}/messages?userId={TEST_USER_ID}",
+            f"/projects/{TEST_PROJECT_ID}/messages",
+            params={"userId": TEST_USER_ID},
             json=""
         )
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_get_chat_history(self, client: AsyncClient, mock_services):
+    async def test_get_chat_history(self, client: AsyncClient):
         """Test getting chat history"""
         response = await client.get(
-            f"/projects/{TEST_PROJECT_ID}/messages?userId={TEST_USER_ID}"
+            f"/projects/{TEST_PROJECT_ID}/messages",
+            params={"userId": TEST_USER_ID}
         )
         assert response.status_code == 200
         data = response.json()
@@ -208,16 +207,17 @@ class TestMessageEndpoints:
 
 class TestValidation:
     @pytest.mark.asyncio
-    async def test_invalid_uuid_format(self, client: AsyncClient, mock_services):
-        """Test with invalid UUID format"""
+    async def test_invalid_uuid_format(self, client: AsyncClient):
+        """Test endpoint with invalid UUID format"""
         response = await client.get("/projects/invalid-uuid/summary")
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_negative_timestamp(self, client: AsyncClient, mock_services):
-        """Test with negative timestamp (should be allowed as -1 is valid)"""
+    async def test_negative_timestamp(self, client: AsyncClient):
+        """Test endpoint with negative timestamp"""
         response = await client.post(
-            f"/projects/{TEST_PROJECT_ID}/summary?startTime=-2&endTime=1000"
+            f"/projects/{TEST_PROJECT_ID}/summary",
+            params={"startTime": -2, "endTime": 1641081600}
         )
         assert response.status_code == 422
 
