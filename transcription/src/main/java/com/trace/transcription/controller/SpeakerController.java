@@ -26,8 +26,14 @@ import java.util.UUID;
 @RequestMapping("projects/{projectId}")
 public class SpeakerController {
 
+    /**
+     * Logger instance for this controller.
+     */
     public static final Logger logger = LoggerFactory.getLogger(SpeakerController.class);
 
+    /**
+     * Service for handling speaker-related operations.
+     */
     private final SpeakerService speakerService;
 
     /**
@@ -56,9 +62,15 @@ public class SpeakerController {
     }
 
     /**
-     * GET /{projectId}/speakers/{userId}/sample
+     * Retrieves the audio sample for a specific speaker.
      * <p>
-     * Returns the audio sample for a specific speaker.
+     * Returns the binary audio data with appropriate headers for file download.
+     * </p>
+     *
+     * @param projectId UUID of the project
+     * @param userId    identifier of the speaker
+     * @return 200 OK with audio sample as byte array and download headers,
+     *         or 404 Not Found if speaker or sample does not exist
      */
     @GetMapping("/speakers/{userId}/sample")
     public ResponseEntity<byte[]> getSpeakerSample(
@@ -116,13 +128,21 @@ public class SpeakerController {
     }
 
     /**
-     * POST /{projectId}/speakers/{userId}
-     * <p>
-     * Request (multipart/form-data):
-     *   - userName: String
-     *   - speakingSample: MultipartFile
-     * <p>
      * Creates a new speaker with the given details.
+     * <p>
+     * Accepts multipart form data with userName and speakingSample fields.
+     * </p>
+     *
+     * @param projectId      UUID of the project
+     * @param userId         unique identifier for the new speaker
+     * @param userName       display name for the speaker
+     * @param speakingSample audio file sample for the speaker
+     * @return 201 Created with the created {@link SpeakerEntity},
+     *         400 Bad Request if audio sample is too short,
+     *         409 Conflict if speaker already exists,
+     *         or 500 Internal Server Error on processing failure
+     * @throws IOException          if file processing fails
+     * @throws InterruptedException if audio processing is interrupted
      */
     @PostMapping("/speakers/{userId}")
     public ResponseEntity<?> saveSpeaker(
@@ -148,13 +168,15 @@ public class SpeakerController {
         }
     }
 
-
     /**
      * Deletes a specific speaker from the project.
+     * <p>
+     * Removes the speaker and associated audio sample data.
+     * </p>
      *
      * @param projectId UUID of the project
      * @param userId    identifier of the speaker to delete
-     * @return 200 OK if deleted,
+     * @return 200 OK with success message if deleted,
      *         or 404 Not Found if the speaker does not exist
      */
     @DeleteMapping("/speakers/{userId}")
@@ -176,13 +198,14 @@ public class SpeakerController {
      * Updates an existing speaker's name and/or audio sample.
      * <p>
      * Either or both parameters {@code userName} and {@code speakingSample} may be provided.
+     * If a parameter is not provided, the existing value is preserved.
      * </p>
      *
      * @param projectId      UUID of the project
      * @param userId         identifier of the speaker to update
-     * @param userName       (optional) new display name
-     * @param speakingSample (optional) new audio file
-     * @return 200 OK if update succeeds,
+     * @param userName       (optional) new display name for the speaker
+     * @param speakingSample (optional) new audio file sample
+     * @return 200 OK with updated {@link SpeakerEntity} if update succeeds,
      *         or 404 Not Found if the speaker does not exist
      * @throws IOException if sample file processing fails
      */
@@ -207,11 +230,12 @@ public class SpeakerController {
     /**
      * Streams a ZIP archive of all speaker audio samples for the given project.
      * <p>
-     * Writes the ZIP directly to the response output stream.
+     * Writes the ZIP directly to the response output stream with appropriate headers
+     * for file download. The ZIP contains all audio samples with speaker-specific filenames.
      * </p>
      *
      * @param projectId UUID of the project
-     * @param response  servlet response to write the ZIP data
+     * @param response  HTTP servlet response to write the ZIP data to
      */
     @GetMapping("/samples")
     public void streamAllSamples(
