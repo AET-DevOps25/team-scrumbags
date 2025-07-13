@@ -255,19 +255,19 @@ class TestValidation:
         assert response.status_code == 422
 
 
-    async def test_app_startup():
-        """Test that the app can be created without errors"""
-        # Mock the services to avoid initialization issues
-        with patch('app.main.init_db') as mock_init_db, \
-                patch('app.weaviate_client.init_collection') as mock_init_collection, \
-                patch('app.main.connect_robust') as mock_connect, \
-                patch('app.weaviate_client.get_embeddings') as mock_embeddings, \
-                patch('app.weaviate_client.get_client') as mock_client:
-            mock_init_db.return_value = None
-            mock_init_collection.return_value = None
-            mock_connect.return_value = AsyncMock()
-            mock_embeddings.return_value = AsyncMock()
-            mock_client.return_value = AsyncMock()
+async def test_app_startup():
+    """Test that the app can be created without errors"""
+    # Mock the services to avoid initialization issues
+    with patch('app.main.init_db') as mock_init_db, \
+            patch('app.weaviate_client.init_collection') as mock_init_collection, \
+            patch('app.main.connect_robust') as mock_connect, \
+            patch('app.weaviate_client.get_embeddings') as mock_embeddings, \
+            patch('app.weaviate_client.get_client') as mock_client:
+        mock_init_db.return_value = None
+        mock_init_collection.return_value = None
+        mock_connect.return_value = AsyncMock()
+        mock_embeddings.return_value = AsyncMock()
+        mock_client.return_value = AsyncMock()
 
-            # In a real test environment, the services would be mocked
-            assert app is not None
+        # In a real test environment, the services would be mocked
+        assert app is not None
