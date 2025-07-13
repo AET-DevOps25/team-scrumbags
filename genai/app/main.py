@@ -78,7 +78,7 @@ async def post_content(
 async def get_summary(
         projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)"),
         startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp (>=-1)"),
-        endTime: int = Query(-1, ge=-1, description="End   UNIX timestamp (>=-1)"),
+        endTime: int = Query(-1, ge=-1, description="End UNIX timestamp (>=-1)"),
         userIds: List[UUID4] = Query([], description="Optional list of user UUIDs to make the LLM focus on")
 ):
     if startTime > endTime:
