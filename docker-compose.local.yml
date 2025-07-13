@@ -96,7 +96,7 @@ services:
         USE_WHISPERX: ${USE_WHISPERX:-false}
     network_mode: host
     depends_on:
-      mysql-db: 
+      mysql-db:
         condition: service_healthy
     environment:
       - DEBUG=true
@@ -109,6 +109,7 @@ services:
       - TRANSCRIPTION_TIMEOUT=${TRANSCRIPTION_TIMEOUT:-300000}
       - GENAI_URL=http://localhost:4242
       - SERVER_PORT=8083
+      - USE_WHISPERX=${USE_WHISPERX:-false}
     restart: unless-stopped
 
   genai:
@@ -208,8 +209,7 @@ services:
     image: mysql:8.0
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-test}
-    ports:
-      - "3306:3306"
+    network_mode: host
     volumes:
       - mysql_data:/var/lib/mysql/
       - ./init-mysql.sql:/docker-entrypoint-initdb.d/init.sql

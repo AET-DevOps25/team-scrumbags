@@ -4,6 +4,7 @@ import com.trace.transcription.model.SpeakerEntity;
 import com.trace.transcription.repository.SpeakerRepository;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.io.FilenameUtils;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -74,7 +75,7 @@ public class SpeakerService {
                 String extension = FilenameUtils.getExtension(file.getOriginalFilename());
 
                 // create and set entity
-                SpeakerEntity speaker = new SpeakerEntity(userId, userName, projectId, file.getBytes(), extension);
+                SpeakerEntity speaker = new SpeakerEntity(userId, userName, projectId, file.getBytes(), extension, file.getOriginalFilename());
 
                 toSave.add(speaker);
             }
@@ -128,7 +129,7 @@ public class SpeakerService {
         String extension = FilenameUtils.getExtension(speakingSample.getOriginalFilename());
 
         // create and set entity
-        SpeakerEntity speaker = new SpeakerEntity(userId, userName, projectId, speakingSample.getBytes(), extension);
+        SpeakerEntity speaker = new SpeakerEntity(userId, userName, projectId, speakingSample.getBytes(), extension, speakingSample.getOriginalFilename());
 
         return speakerRepository.save(speaker);
     }
@@ -149,29 +150,27 @@ public class SpeakerService {
         }
     }
 
-    public boolean updateSpeaker(
+    public SpeakerEntity updateSpeaker(
             UUID projectId,
             String userId,
             String userName,
             MultipartFile speakingSample) throws IOException {
         SpeakerEntity speaker = getSpeakerById(projectId, userId);
         if (speaker == null) {
-            logger.warn("Speaker with ID {} not found in project {}", userId, projectId);
-            return false;
+            return null;
         }
 
         if (userName != null && !userName.isEmpty()) {
             speaker.setUserName(userName);
         }
+
         if (speakingSample != null && !speakingSample.isEmpty()) {
-            String extension = FilenameUtils.getExtension(speakingSample.getOriginalFilename());
             speaker.setSpeakingSample(speakingSample.getBytes());
-            speaker.setSampleExtension(extension);
+            speaker.setSampleExtension(FilenameUtils.getExtension(speakingSample.getOriginalFilename()));
+            speaker.setOriginalFileName(speakingSample.getOriginalFilename());
         }
 
-        speakerRepository.save(speaker);
-        logger.info("Updated speaker with ID: {}", userId);
-        return true;
+        return speakerRepository.save(speaker);
     }
 
     //get all speaking samples for project and return all files as zip

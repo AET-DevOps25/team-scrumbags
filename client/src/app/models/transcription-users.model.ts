@@ -3,4 +3,5 @@ export interface TranscriptionUserMapping {
   userName: string;
   projectId: string;
   sampleExtension: string;
+  originalFileName?: string;
 }

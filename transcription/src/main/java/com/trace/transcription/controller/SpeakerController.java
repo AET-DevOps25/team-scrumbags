@@ -159,14 +159,15 @@ public class SpeakerController {
      * Updates the speaker's name and/or speaking sample.
      */
     @PutMapping("projects/{projectId}/speakers/{userId}")
-    public ResponseEntity<String> updateSpeaker(
+    public ResponseEntity<?> updateSpeaker(
             @PathVariable("projectId") UUID projectId,
             @PathVariable("userId") String userId,
             @RequestParam(value = "userName", required = false) String userName,
             @RequestParam(value = "speakingSample", required = false) MultipartFile speakingSample) throws IOException {
 
-        if (speakerService.updateSpeaker(projectId, userId, userName, speakingSample)) {
-            return ResponseEntity.ok("Speaker " + userId + " updated successfully.");
+        SpeakerEntity updatedSpeaker = speakerService.updateSpeaker(projectId, userId, userName, speakingSample);
+        if (updatedSpeaker != null) {
+            return ResponseEntity.ok(updatedSpeaker);
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("Speaker with ID " + userId + " not found in project " + projectId + ".");

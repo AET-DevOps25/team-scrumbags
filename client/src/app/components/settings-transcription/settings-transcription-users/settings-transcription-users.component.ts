@@ -3,7 +3,7 @@ import { User } from '../../../models/user.model';
 import { ProjectService } from '../../../services/project.service';
 import { TranscriptionApi } from '../../../services/transcription.api';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { catchError, finalize, tap } from 'rxjs';
+import { catchError, EMPTY, finalize, tap } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { MatListModule } from '@angular/material/list';
 import { MatButtonModule } from '@angular/material/button';
@@ -41,19 +41,20 @@ export class SettingsTranscriptionUsersComponent {
 
   userVoiceSamples = computed<UserVoiceSample[]>(() => {
     const users = this.projectsUser();
+    const speakers = this.speakers() ?? [];
     const speakerMap = new Map(
-      this.speakers().map((s) => [s.userId, s.sampleExtension])
+      speakers.map((s) => [s.userId, s.originalFileName || `sample.${s.sampleExtension}`])
     );
     return users.map((user) => ({
       user,
       fileName: speakerMap.has(user.id)
-        ? `sample.${speakerMap.get(user.id)}`
+        ? speakerMap.get(user.id)!
         : null,
     }));
   });
 
   isLoading = signal(false);
-  isUploading = signal<string | null>(null); // store userId of user being uploaded for
+  isUploading = signal<string | null>(null);
 
   constructor() {
     effect(
@@ -105,12 +106,22 @@ export class SettingsTranscriptionUsersComponent {
     }
 
     this.isUploading.set(user.id);
-    this.transcriptionApi
-      .assignVoiceSample(projectId, user.id, user.username, file)
+
+    const currentSpeakers = this.speakers();
+    const speakerExists = currentSpeakers && currentSpeakers.some((s) => s.userId === user.id);
+
+    const upload$ = speakerExists
+      ? this.transcriptionApi.updateSpeaker(projectId, user.id, user.username, file)
+      : this.transcriptionApi.createSpeaker(projectId, user.id, user.username, file);
+
+    upload$
       .pipe(
         finalize(() => this.isUploading.set(null)),
         tap((savedSpeaker) => {
           this.speakers.update((currentSpeakers) => {
+            if (!currentSpeakers) {
+              return [savedSpeaker];
+            }
             const index = currentSpeakers.findIndex(
               (s) => s.userId === savedSpeaker.userId
             );
@@ -118,20 +129,19 @@ export class SettingsTranscriptionUsersComponent {
               const updatedSpeakers = [...currentSpeakers];
               updatedSpeakers[index] = savedSpeaker;
               return updatedSpeakers;
+            } else {
+              return [...currentSpeakers, savedSpeaker];
             }
-            return [...currentSpeakers, savedSpeaker];
           });
-          this.snackBar.open(`Voice sample for user updated.`, 'Close', {
+          this.snackBar.open('Voice sample uploaded successfully.', 'Close', {
             duration: 3000,
           });
         }),
-        catchError((error) => {
-          this.snackBar.open(
-            `Error uploading file: ${error.message}`,
-            'Close',
-            { duration: 3000 }
-          );
-          return [];
+        catchError((error: Error) => {
+          this.snackBar.open(`Error uploading file: ${error.message}`, 'Close', {
+            duration: 5000,
+          });
+          return EMPTY;
         })
       )
       .subscribe();
