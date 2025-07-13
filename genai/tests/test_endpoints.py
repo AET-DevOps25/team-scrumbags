@@ -51,7 +51,7 @@ async def override_db_session(setup_database):
 
 @pytest_asyncio.fixture
 async def client(override_db_session) -> AsyncGenerator[AsyncClient, None]:
-    async with AsyncClient(app=app, base_url="http://testserver") as ac:
+    async with AsyncClient(base_url="http://testserver") as ac:
         yield ac
 
 
