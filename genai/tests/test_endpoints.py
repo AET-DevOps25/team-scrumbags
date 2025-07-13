@@ -5,13 +5,33 @@ from datetime import datetime, timezone
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from sqlalchemy import select
+from sqlalchemy import select, Column, String, Text, Integer, DateTime, UniqueConstraint, JSON, Boolean
 
 # Import the FastAPI app and modules
 import app.main as main
 import app.db as db
-from app.db import Summary, Message, Base
+from app.db import Message, Base
 from app.langchain_provider import summarize_entries, answer_question
+
+
+# Create a test-specific Summary model without the computed column
+class TestSummary(Base):
+    __tablename__ = "summaries"
+    id = Column(Integer, primary_key=True, index=True)
+    projectId = Column(String(length=36), index=True)
+    startTime = Column(Integer, index=True)
+    endTime = Column(Integer, index=True)
+    generatedAt = Column(DateTime)
+    summary = Column(Text)
+    userIds = Column(JSON, nullable=False, default=list)
+    loading = Column(Boolean, nullable=False)
+
+    # For SQLite testing, we'll skip the computed column and unique constraint
+    # that depends on MD5 function
+    __table_args__ = (
+        UniqueConstraint("projectId", "startTime", "endTime", name="uq_project_timeframe_test"),
+    )
+
 
 # -------- Setup Fixtures --------
 
@@ -27,6 +47,10 @@ def setup_environment(monkeypatch):
     monkeypatch.setenv("MYSQL_USER", "test")
     monkeypatch.setenv("MYSQL_PASSWORD", "test")
     monkeypatch.setenv("MYSQL_DATABASE", "testdb")
+
+    # Replace the Summary model with our test version
+    monkeypatch.setattr(db, "Summary", TestSummary)
+    monkeypatch.setattr(main, "Summary", TestSummary)
 
     # Prevent connecting to real RabbitMQ: monkeypatch connect_robust
     class DummyConnection:
@@ -75,6 +99,7 @@ def setup_environment(monkeypatch):
     monkeypatch.setattr(summarize_entries, "__call__", lambda *args, **kwargs: {"output_text": "MOCK SUMMARY"})
     monkeypatch.setattr(answer_question, "__call__", lambda *args, **kwargs: {"result": "MOCK ANSWER"})
 
+
 @pytest.fixture(scope="session")
 def init_test_db():
     """
@@ -86,15 +111,18 @@ def init_test_db():
     db.engine = engine
 
     loop = asyncio.get_event_loop()
+
     async def init_tables():
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+
     loop.run_until_complete(init_tables())
 
     yield
 
     # Dispose engine after tests
     loop.run_until_complete(engine.dispose())
+
 
 @pytest.fixture
 def client(init_test_db):
@@ -103,6 +131,7 @@ def client(init_test_db):
     """
     with TestClient(main.app) as c:
         yield c
+
 
 @pytest.fixture
 async def async_client(init_test_db):
@@ -148,6 +177,7 @@ def test_post_content_missing_fields(client):
     response = client.post("/content", json=[entry])
     assert response.status_code == 422
 
+
 import uuid
 
 test_project_id = uuid.uuid4()
@@ -180,7 +210,7 @@ def test_post_summary_create(client):
     # Verify it's stored in the database
     session = db.async_session()
     result = asyncio.get_event_loop().run_until_complete(
-        session.execute(select(Summary).where(Summary.projectId == str(test_project_id)))
+        session.execute(select(TestSummary).where(TestSummary.projectId == str(test_project_id)))
     )
     summaries = result.scalars().all()
     assert len(summaries) == 1
@@ -223,6 +253,7 @@ def test_summary_time_validation(client):
 
 
 test_user_id = uuid.uuid4()
+
 
 def test_post_message_and_get_history(client):
     """
