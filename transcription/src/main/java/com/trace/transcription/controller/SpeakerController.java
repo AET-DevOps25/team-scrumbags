@@ -57,7 +57,7 @@ public class SpeakerController {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        headers.setContentDispositionFormData("attachment", "sample." + speaker.getSampleExtension());
+        headers.setContentDispositionFormData("attachment", speaker.getOriginalFileName());
         headers.setContentLength(speaker.getSpeakingSample().length);
 
         return new ResponseEntity<>(speaker.getSpeakingSample(), headers, HttpStatus.OK);
