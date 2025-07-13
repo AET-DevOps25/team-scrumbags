@@ -30,19 +30,20 @@ async def test_db():
 
     test_session = async_sessionmaker(engine, expire_on_commit=False)
 
-    # Override the dependency
-    app.dependency_overrides[async_session] = lambda: test_session()
-
     yield test_session
 
     # Cleanup
-    app.dependency_overrides.clear()
     await engine.dispose()
 
 
 @pytest.fixture
-def client():
-    return TestClient(app)
+def client(test_db):
+    # Override the dependency with the test database
+    app.dependency_overrides[async_session] = test_db
+    client = TestClient(app)
+    yield client
+    # Cleanup
+    app.dependency_overrides.clear()
 
 
 @pytest.fixture
