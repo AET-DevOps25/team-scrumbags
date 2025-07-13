@@ -5,8 +5,9 @@
 <div mat-dialog-content class="!pt-1">
   <div class="flex flex-col gap-4">
     <div>
-      <label> Speaker Amount </label>
+      <label for="speaker-amount"> Speaker Amount </label>
       <input
+        id="speaker-amount"
         type="number"
         [(ngModel)]="speakerAmount"
         min="1"
@@ -24,9 +25,9 @@
         [disabled]="isSubmitting()"
       />
       @if (selectedFile()) {
-      <span class="mt-2 text-xs text-(--mat-sys-on-surface-variant)"
+        <span class="mt-2 text-xs text-(--mat-sys-on-surface-variant)"
         >Selected: {{ selectedFile()?.name }}</span
-      >
+        >
       }
     </div>
   </div>

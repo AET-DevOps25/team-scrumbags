@@ -94,9 +94,9 @@ export class TranscriptionApi {
       );
   }
 
-  deleteVoiceSample(projectId: string, userId: string): Observable<any> {
+  deleteVoiceSample(projectId: string, userId: string): Observable<void> {
     return this.http
-      .delete(`${this.baseUrl}/${projectId}/speakers/${userId}`)
+      .delete<void>(`${this.baseUrl}/${projectId}/speakers/${userId}`)
       .pipe(catchError(handleError('Error deleting voice sample')));
   }
 }
