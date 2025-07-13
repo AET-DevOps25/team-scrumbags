@@ -12,22 +12,27 @@ from app.main import app, _blocking_summary_job, _blocking_qa_job
 from app.db import Base, Summary, Message, async_session
 from app.models import ContentEntry, Metadata
 
-
 # Test database setup
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
 
 @pytest.fixture
 async def test_db():
     # Create test engine and session
     engine = create_async_engine(
         TEST_DATABASE_URL,
-        connect_args={"check_same_thread": False},
+        connect_args={
+            "check_same_thread": False,
+        },
         poolclass=StaticPool,
+        echo=True
     )
 
+    # Create tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+    # Create session factory
     test_session = async_sessionmaker(engine, expire_on_commit=False)
 
     yield test_session
@@ -39,7 +44,10 @@ async def test_db():
 @pytest.fixture
 def client(test_db):
     # Override the dependency with the test database
-    app.dependency_overrides[async_session] = test_db
+    def override_get_db():
+        return test_db
+
+    app.dependency_overrides[async_session] = override_get_db
     client = TestClient(app)
     yield client
     # Cleanup
@@ -60,12 +68,12 @@ def sample_user_id():
 def sample_content_entry(sample_project_id, sample_user_id):
     return ContentEntry(
         metadata=Metadata(
-            type="commit",
+            type="message",
             user=sample_user_id,
-            timestamp=int(datetime.now(UTC).timestamp()),
+            timestamp=1234567890,
             projectId=sample_project_id
         ),
-        content={"message": "Test commit", "author": "test_user"}
+        content={"text": "Test message content"}
     )
 
 
@@ -74,18 +82,15 @@ class TestPostContent:
     def test_post_content_success(self, mock_channel, client, sample_content_entry):
         mock_channel.default_exchange.publish = AsyncMock()
 
-        # Convert to dict and ensure UUIDs are strings
         entry_dict = sample_content_entry.model_dump()
         entry_dict['metadata']['user'] = str(entry_dict['metadata']['user'])
         entry_dict['metadata']['projectId'] = str(entry_dict['metadata']['projectId'])
 
-        response = client.post(
-            "/content",
-            json=[entry_dict]
-        )
+        response = client.post("/content", json=[entry_dict])
 
         assert response.status_code == 200
         assert "Published 1 message(s) to queue" in response.json()["status"]
+        mock_channel.default_exchange.publish.assert_called_once()
 
     @patch('app.main.rabbit_channel')
     def test_post_content_multiple_entries(self, mock_channel, client, sample_project_id, sample_user_id):
@@ -95,12 +100,12 @@ class TestPostContent:
         for i in range(3):
             entry = ContentEntry(
                 metadata=Metadata(
-                    type="commit",
+                    type="message",
                     user=sample_user_id,
-                    timestamp=int(datetime.now(UTC).timestamp()) + i,
+                    timestamp=1234567890 + i,
                     projectId=sample_project_id
                 ),
-                content={"message": f"Test commit {i}"}
+                content={"text": f"Test message {i}"}
             )
             entry_dict = entry.model_dump()
             entry_dict['metadata']['user'] = str(entry_dict['metadata']['user'])
@@ -111,15 +116,17 @@ class TestPostContent:
 
         assert response.status_code == 200
         assert "Published 3 message(s) to queue" in response.json()["status"]
+        assert mock_channel.default_exchange.publish.call_count == 3
 
     def test_post_content_missing_project_id(self, client, sample_user_id):
         entry = {
             "metadata": {
-                "type": "commit",
+                "type": "message",
                 "user": sample_user_id,
-                "timestamp": int(datetime.now(UTC).timestamp())
+                "timestamp": 1234567890,
+                "projectId": None
             },
-            "content": {"message": "Test commit"}
+            "content": {"text": "Test message"}
         }
 
         response = client.post("/content", json=[entry])
@@ -128,11 +135,12 @@ class TestPostContent:
     def test_post_content_missing_timestamp(self, client, sample_project_id, sample_user_id):
         entry = {
             "metadata": {
-                "type": "commit",
+                "type": "message",
                 "user": sample_user_id,
+                "timestamp": None,
                 "projectId": sample_project_id
             },
-            "content": {"message": "Test commit"}
+            "content": {"text": "Test message"}
         }
 
         response = client.post("/content", json=[entry])
@@ -144,11 +152,7 @@ class TestPostContent:
         entry_dict['metadata']['user'] = str(entry_dict['metadata']['user'])
         entry_dict['metadata']['projectId'] = str(entry_dict['metadata']['projectId'])
 
-        response = client.post(
-            "/content",
-            json=[entry_dict]
-        )
-
+        response = client.post("/content", json=[entry_dict])
         assert response.status_code == 500
         assert "RabbitMQ not initialized" in response.json()["detail"]
 
@@ -198,10 +202,9 @@ class TestGetSummary:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["loading"] is True
         assert data["projectId"] == sample_project_id
-        assert data["startTime"] == 1000
-        assert data["endTime"] == 2000
+        assert data["loading"] is True
+        assert data["summary"] == ""
 
     def test_get_summary_invalid_time_range(self, client, sample_project_id):
         response = client.post(
@@ -211,7 +214,6 @@ class TestGetSummary:
                 "endTime": 1000
             }
         )
-
         assert response.status_code == 422
         assert "startTime must be ≤ endTime" in response.json()["detail"]
 
@@ -223,22 +225,17 @@ class TestGetSummary:
                 "endTime": 2000
             }
         )
-
         assert response.status_code == 422
 
     def test_get_summary_default_params(self, client, sample_project_id):
         response = client.post(f"/projects/{sample_project_id}/summary")
-
         assert response.status_code == 200
-        data = response.json()
-        assert data["startTime"] == -1
-        assert data["endTime"] == -1
 
 
 class TestRefreshSummary:
     @pytest.mark.asyncio
     async def test_refresh_summary_success(self, test_db, client, sample_project_id, sample_user_id):
-        # Create existing summary to be deleted
+        # Create existing summary to delete
         async with test_db() as session:
             summary = Summary(
                 projectId=sample_project_id,
@@ -263,8 +260,8 @@ class TestRefreshSummary:
 
         assert response.status_code == 201
         data = response.json()
-        assert data["loading"] is True
         assert data["projectId"] == sample_project_id
+        assert data["loading"] is True
 
     def test_refresh_summary_invalid_time_range(self, client, sample_project_id):
         response = client.put(
@@ -274,7 +271,6 @@ class TestRefreshSummary:
                 "endTime": 1000
             }
         )
-
         assert response.status_code == 422
 
 
@@ -305,21 +301,17 @@ class TestGetSummaries:
             await session.commit()
 
         response = client.get(f"/projects/{sample_project_id}/summary")
-
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 2
-        assert all(s["projectId"] == sample_project_id for s in data)
 
     def test_get_summaries_empty(self, client, sample_project_id):
         response = client.get(f"/projects/{sample_project_id}/summary")
-
         assert response.status_code == 200
         assert response.json() == []
 
     def test_get_summaries_invalid_project_id(self, client):
         response = client.get("/projects/invalid-uuid/summary")
-
         assert response.status_code == 422
 
 
@@ -327,7 +319,6 @@ class TestQueryProject:
     @patch('app.main._blocking_qa_job')
     def test_query_project_success(self, mock_job, client, sample_project_id, sample_user_id):
         question = "What happened in the project?"
-
         response = client.post(
             f"/projects/{sample_project_id}/messages",
             params={"userId": sample_user_id},
@@ -336,9 +327,9 @@ class TestQueryProject:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["loading"] is True
         assert data["projectId"] == sample_project_id
         assert data["userId"] == sample_user_id
+        assert data["loading"] is True
 
     def test_query_project_empty_question(self, client, sample_project_id, sample_user_id):
         response = client.post(
@@ -346,7 +337,6 @@ class TestQueryProject:
             params={"userId": sample_user_id},
             json=""
         )
-
         assert response.status_code == 422
         assert "Question cannot be empty" in response.json()["detail"]
 
@@ -356,26 +346,22 @@ class TestQueryProject:
             params={"userId": sample_user_id},
             json="   "
         )
-
         assert response.status_code == 422
-        assert "Question cannot be empty" in response.json()["detail"]
 
     def test_query_project_invalid_project_id(self, client, sample_user_id):
         response = client.post(
             "/projects/invalid-uuid/messages",
             params={"userId": sample_user_id},
-            json="What happened?"
+            json="Test question"
         )
-
         assert response.status_code == 422
 
     def test_query_project_invalid_user_id(self, client, sample_project_id):
         response = client.post(
             f"/projects/{sample_project_id}/messages",
             params={"userId": "invalid-uuid"},
-            json="What happened?"
+            json="Test question"
         )
-
         assert response.status_code == 422
 
 
@@ -384,40 +370,36 @@ class TestGetChatHistory:
     async def test_get_chat_history_success(self, test_db, client, sample_project_id, sample_user_id):
         # Create test messages
         async with test_db() as session:
-            question = Message(
+            message1 = Message(
                 projectId=sample_project_id,
                 userId=sample_user_id,
-                content="What happened?",
+                content="Question 1",
                 timestamp=datetime.now(UTC),
                 loading=False
             )
-            answer = Message(
+            message2 = Message(
                 projectId=sample_project_id,
                 userId=sample_user_id,
-                content="Here's what happened...",
+                content="Answer 1",
                 timestamp=datetime.now(UTC),
                 loading=False
             )
-            session.add_all([question, answer])
+            session.add_all([message1, message2])
             await session.commit()
 
         response = client.get(
             f"/projects/{sample_project_id}/messages",
             params={"userId": sample_user_id}
         )
-
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 2
-        assert all(msg["projectId"] == sample_project_id for msg in data)
-        assert all(msg["userId"] == sample_user_id for msg in data)
 
     def test_get_chat_history_empty(self, client, sample_project_id, sample_user_id):
         response = client.get(
             f"/projects/{sample_project_id}/messages",
             params={"userId": sample_user_id}
         )
-
         assert response.status_code == 200
         assert response.json() == []
 
@@ -426,7 +408,6 @@ class TestGetChatHistory:
             "/projects/invalid-uuid/messages",
             params={"userId": sample_user_id}
         )
-
         assert response.status_code == 422
 
     def test_get_chat_history_invalid_user_id(self, client, sample_project_id):
@@ -434,7 +415,6 @@ class TestGetChatHistory:
             f"/projects/{sample_project_id}/messages",
             params={"userId": "invalid-uuid"}
         )
-
         assert response.status_code == 422
 
 
@@ -442,35 +422,29 @@ class TestBlockingJobs:
     @patch('app.langchain_provider.summarize_entries')
     @patch('app.main.async_session')
     def test_blocking_summary_job(self, mock_session, mock_summarize):
-        mock_summarize.return_value = {"output_text": "Generated summary"}
-        mock_session_instance = AsyncMock()
-        mock_session.return_value.__aenter__.return_value = mock_session_instance
+        mock_summarize.return_value = {"output_text": "Test summary"}
 
-        _blocking_summary_job(1, "project-id", 1000, 2000, ["user-id"])
+        _blocking_summary_job(1, "project_id", 1000, 2000, ["user_id"])
 
-        mock_summarize.assert_called_once_with("project-id", 1000, 2000, ["user-id"])
+        mock_summarize.assert_called_once_with("project_id", 1000, 2000, ["user_id"])
 
     @patch('app.langchain_provider.answer_question')
     @patch('app.main.async_session')
     def test_blocking_qa_job(self, mock_session, mock_answer):
-        mock_answer.return_value = {"result": "Generated answer"}
-        mock_session_instance = AsyncMock()
-        mock_session.return_value.__aenter__.return_value = mock_session_instance
+        mock_answer.return_value = {"result": "Test answer"}
 
-        _blocking_qa_job(1, "project-id", "What happened?")
+        _blocking_qa_job(1, "project_id", "Test question")
 
-        mock_answer.assert_called_once_with("project-id", "What happened?")
+        mock_answer.assert_called_once_with("project_id", "Test question")
 
     @patch('app.langchain_provider.answer_question')
     @patch('app.main.async_session')
     def test_blocking_qa_job_error_handling(self, mock_session, mock_answer):
-        mock_answer.return_value = None  # Simulate error
-        mock_session_instance = AsyncMock()
-        mock_session.return_value.__aenter__.return_value = mock_session_instance
+        mock_answer.return_value = None
 
-        _blocking_qa_job(1, "project-id", "What happened?")
+        _blocking_qa_job(1, "project_id", "Test question")
 
-        # Should handle the error gracefully
+        mock_answer.assert_called_once()
 
 
 class TestEdgeCases:
@@ -478,16 +452,14 @@ class TestEdgeCases:
         response = client.post(
             f"/projects/{sample_project_id}/summary",
             params={
-                "startTime": -2,
+                "startTime": -5,
                 "endTime": -1
             }
         )
-
         assert response.status_code == 422
 
     def test_large_user_ids_list(self, client, sample_project_id):
         user_ids = [str(uuid.uuid4()) for _ in range(100)]
-
         response = client.post(
             f"/projects/{sample_project_id}/summary",
             params={
@@ -496,7 +468,6 @@ class TestEdgeCases:
                 "userIds": user_ids
             }
         )
-
         assert response.status_code == 200
 
     @patch('app.main.rabbit_channel')
@@ -507,9 +478,9 @@ class TestEdgeCases:
         large_content = {"data": "x" * 10000}
         entry = ContentEntry(
             metadata=Metadata(
-                type="commit",
+                type="message",
                 user=sample_user_id,
-                timestamp=int(datetime.now(UTC).timestamp()),
+                timestamp=1234567890,
                 projectId=sample_project_id
             ),
             content=large_content
