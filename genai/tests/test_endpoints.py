@@ -111,6 +111,7 @@ async def sample_content_entry():
 
 
 class TestContentEndpoint:
+    @pytest.mark.asyncio
     async def test_post_content_success(self, client: AsyncClient, mock_services, sample_content_entry):
         """Test successful content posting"""
         response = await client.post(
@@ -121,6 +122,7 @@ class TestContentEndpoint:
         data = response.json()
         assert "Published 1 message(s) to queue" in data["status"]
 
+    @pytest.mark.asyncio
     async def test_post_content_invalid_entry(self, client: AsyncClient, mock_services):
         """Test content posting with invalid entry"""
         invalid_entry = {
@@ -132,6 +134,7 @@ class TestContentEndpoint:
 
 
 class TestSummaryEndpoints:
+    @pytest.mark.asyncio
     async def test_get_summary_new(self, client: AsyncClient, mock_services):
         """Test getting a new summary"""
         response = await client.post(
@@ -143,6 +146,7 @@ class TestSummaryEndpoints:
         assert data["startTime"] == 1000
         assert data["endTime"] == 2000
 
+    @pytest.mark.asyncio
     async def test_get_summary_invalid_time_range(self, client: AsyncClient, mock_services):
         """Test getting summary with invalid time range"""
         response = await client.post(
@@ -150,6 +154,7 @@ class TestSummaryEndpoints:
         )
         assert response.status_code == 422
 
+    @pytest.mark.asyncio
     async def test_refresh_summary(self, client: AsyncClient, mock_services):
         """Test refreshing a summary"""
         response = await client.put(
@@ -159,6 +164,7 @@ class TestSummaryEndpoints:
         data = response.json()
         assert data["projectId"] == TEST_PROJECT_ID
 
+    @pytest.mark.asyncio
     async def test_get_all_summaries(self, client: AsyncClient, mock_services):
         """Test getting all summaries for a project"""
         response = await client.get(f"/projects/{TEST_PROJECT_ID}/summary")
@@ -168,6 +174,7 @@ class TestSummaryEndpoints:
 
 
 class TestMessageEndpoints:
+    @pytest.mark.asyncio
     async def test_query_project_success(self, client: AsyncClient, mock_services):
         """Test querying project successfully"""
         response = await client.post(
@@ -179,6 +186,7 @@ class TestMessageEndpoints:
         assert data["projectId"] == TEST_PROJECT_ID
         assert data["userId"] == TEST_USER_ID
 
+    @pytest.mark.asyncio
     async def test_query_project_empty_question(self, client: AsyncClient, mock_services):
         """Test querying with empty question"""
         response = await client.post(
@@ -187,6 +195,7 @@ class TestMessageEndpoints:
         )
         assert response.status_code == 422
 
+    @pytest.mark.asyncio
     async def test_get_chat_history(self, client: AsyncClient, mock_services):
         """Test getting chat history"""
         response = await client.get(
@@ -198,11 +207,13 @@ class TestMessageEndpoints:
 
 
 class TestValidation:
+    @pytest.mark.asyncio
     async def test_invalid_uuid_format(self, client: AsyncClient, mock_services):
         """Test with invalid UUID format"""
         response = await client.get("/projects/invalid-uuid/summary")
         assert response.status_code == 422
 
+    @pytest.mark.asyncio
     async def test_negative_timestamp(self, client: AsyncClient, mock_services):
         """Test with negative timestamp (should be allowed as -1 is valid)"""
         response = await client.post(
@@ -211,6 +222,7 @@ class TestValidation:
         assert response.status_code == 422
 
 
+@pytest.mark.asyncio
 async def test_app_startup():
     """Test that the app can be created without errors"""
     with patch('app.main.init_db') as mock_init_db, \
