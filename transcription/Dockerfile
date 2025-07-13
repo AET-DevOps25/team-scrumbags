@@ -29,10 +29,19 @@ FROM python:3.12-slim
 RUN apt-get update && apt-get install -y wget curl ffmpeg ca-certificates --no-install-recommends \
  && rm -rf /var/lib/apt/lists/*
 
-# Download and extract Temurin JDK 21 (Linux x64)
-RUN wget -qO /tmp/temurin.tar.gz https://github.com/adoptium/temurin21-binaries/releases/latest/download/OpenJDK21U-jdk_x64_linux_hotspot_21.0.7_6.tar.gz \
- && tar -xzf /tmp/temurin.tar.gz -C /usr/local --strip-components=1 \
- && rm /tmp/temurin.tar.gz
+# Download and extract Temurin JDK 21 for the correct architecture
+ARG TARGETARCH
+RUN set -e; \
+    if [ "$TARGETARCH" = "amd64" ]; then \
+        JDK_URL="https://github.com/adoptium/temurin21-binaries/releases/latest/download/OpenJDK21U-jdk_x64_linux_hotspot_21.0.7_6.tar.gz"; \
+    elif [ "$TARGETARCH" = "arm64" ]; then \
+        JDK_URL="https://github.com/adoptium/temurin21-binaries/releases/latest/download/OpenJDK21U-jdk_aarch64_linux_hotspot_21.0.7_6.tar.gz"; \
+    else \
+        echo "Unsupported architecture: $TARGETARCH"; exit 1; \
+    fi; \
+    wget -qO /tmp/temurin.tar.gz "$JDK_URL" \
+    && tar -xzf /tmp/temurin.tar.gz -C /usr/local --strip-components=1 \
+    && rm /tmp/temurin.tar.gz
 
 WORKDIR /app
 
