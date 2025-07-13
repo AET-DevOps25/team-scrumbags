@@ -104,34 +104,31 @@ public class SpeakerService {
     public SpeakerEntity saveSpeaker(UUID projectId, String userId, String userName, MultipartFile speakingSample) throws IOException, InterruptedException {
         File tmp = File.createTempFile("durationcheck-", speakingSample.getOriginalFilename());
 
-        try (InputStream in = speakingSample.getInputStream()) {
-            Files.copy(in, tmp.toPath(), StandardCopyOption.REPLACE_EXISTING);
-        }
+        try {
+            try (InputStream in = speakingSample.getInputStream()) {
+                Files.copy(in, tmp.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
 
-        Duration d = getDurationWithFFprobe(tmp);
+            Duration d = getDurationWithFFprobe(tmp);
 
-        //check if duration is more than 15 seconds
-        if (d.isZero() || d.toMillis() < 15000) {
-            logger.warn("Speaker {} has zero or too short duration ({}), skipping", userId, d);
+            //check if duration is more than 15 seconds
+            if (d.isZero() || d.toMillis() < 15000) {
+                logger.warn("Speaker {} has zero or too short duration ({}), skipping", userId, d);
+                return null;
+            }
+
+            String extension = FilenameUtils.getExtension(speakingSample.getOriginalFilename());
+
+            // create and set entity
+            SpeakerEntity speaker = new SpeakerEntity(userId, userName, projectId, speakingSample.getBytes(), extension, speakingSample.getOriginalFilename());
+
+            return speakerRepository.save(speaker);
+        } finally {
             boolean deleted = tmp.delete();
             if (!deleted) {
                 logger.warn("Temporary file {} could not be deleted", tmp.getAbsolutePath());
             }
-            return null;
         }
-
-        boolean deleted = tmp.delete();
-
-        if (!deleted) {
-            logger.warn("Temporary file {} could not be deleted", tmp.getAbsolutePath());
-        }
-
-        String extension = FilenameUtils.getExtension(speakingSample.getOriginalFilename());
-
-        // create and set entity
-        SpeakerEntity speaker = new SpeakerEntity(userId, userName, projectId, speakingSample.getBytes(), extension, speakingSample.getOriginalFilename());
-
-        return speakerRepository.save(speaker);
     }
 
     public SpeakerEntity getSpeakerById(UUID projectId, String userId) {
