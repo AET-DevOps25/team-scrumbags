@@ -5,13 +5,13 @@ from datetime import datetime, timezone
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from sqlalchemy import select, Column, String, Text, Integer, DateTime, UniqueConstraint, JSON, Boolean
+from sqlalchemy import select, Column, String, Text, Integer, DateTime, UniqueConstraint, JSON, Boolean, MetaData
 from sqlalchemy.orm import declarative_base
 
 # Import the FastAPI app and modules
 import app.main as main
 import app.db as db
-from app.db import Message, Base
+from app.db import Message
 from app.langchain_provider import summarize_entries, answer_question
 
 TestBase = declarative_base(metadata=MetaData())
