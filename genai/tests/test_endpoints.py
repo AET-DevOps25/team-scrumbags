@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy import select, Column, String, Text, Integer, DateTime, UniqueConstraint, JSON, Boolean
+from sqlalchemy.orm import declarative_base
 
 # Import the FastAPI app and modules
 import app.main as main
