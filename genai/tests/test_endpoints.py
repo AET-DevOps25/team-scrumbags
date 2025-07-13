@@ -63,7 +63,8 @@ async def mock_services():
             patch('app.langchain_provider.summarize_entries') as mock_summarize, \
             patch('app.langchain_provider.answer_question') as mock_answer, \
             patch('app.langchain_provider.get_embeddings') as mock_langchain_embeddings, \
-            patch('app.weaviate_client.get_embeddings') as mock_weaviate_embeddings:
+            patch('app.weaviate_client.get_embeddings') as mock_weaviate_embeddings, \
+            patch('app.weaviate_client.get_client') as mock_weaviate_client:
 
         # Mock RabbitMQ
         mock_rabbit.return_value = AsyncMock()
@@ -72,6 +73,7 @@ async def mock_services():
 
         # Mock Weaviate
         mock_weaviate.return_value = None
+        mock_weaviate_client.return_value = AsyncMock()
 
         # Mock LangChain
         mock_summarize.return_value = {"output_text": "Test summary content"}
@@ -87,7 +89,8 @@ async def mock_services():
             'summarize': mock_summarize,
             'answer': mock_answer,
             'langchain_embeddings': mock_langchain_embeddings,
-            'weaviate_embeddings': mock_weaviate_embeddings
+            'weaviate_embeddings': mock_weaviate_embeddings,
+            'weaviate_client': mock_weaviate_client
         }
 
 
@@ -252,18 +255,19 @@ class TestValidation:
         assert response.status_code == 422
 
 
-async def test_app_startup():
-    """Test that the app can be created without errors"""
-    # Mock the services to avoid initialization issues
-    with patch('app.main.init_db') as mock_init_db, \
-            patch('app.weaviate_client.init_collection') as mock_init_collection, \
-            patch('app.main.connect_robust') as mock_connect, \
-            patch('app.weaviate_client.get_embeddings') as mock_embeddings:
+    async def test_app_startup():
+        """Test that the app can be created without errors"""
+        # Mock the services to avoid initialization issues
+        with patch('app.main.init_db') as mock_init_db, \
+                patch('app.weaviate_client.init_collection') as mock_init_collection, \
+                patch('app.main.connect_robust') as mock_connect, \
+                patch('app.weaviate_client.get_embeddings') as mock_embeddings, \
+                patch('app.weaviate_client.get_client') as mock_client:
+            mock_init_db.return_value = None
+            mock_init_collection.return_value = None
+            mock_connect.return_value = AsyncMock()
+            mock_embeddings.return_value = AsyncMock()
+            mock_client.return_value = AsyncMock()
 
-        mock_init_db.return_value = None
-        mock_init_collection.return_value = None
-        mock_connect.return_value = AsyncMock()
-        mock_embeddings.return_value = AsyncMock()
-
-        # In a real test environment, the services would be mocked
-        assert app is not None
+            # In a real test environment, the services would be mocked
+            assert app is not None
