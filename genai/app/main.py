@@ -9,6 +9,7 @@ import aio_pika
 from aio_pika import connect_robust, RobustChannel, RobustConnection
 from fastapi import FastAPI, Query, Body, HTTPException, Path
 from fastapi import status
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import UUID4
 from sqlalchemy import select, update
@@ -102,9 +103,9 @@ async def generate_summary(
     async with async_session() as session:
         result = await session.execute(
             select(Summary).where(
-                Summary.projectId == str(projectId) and
-                Summary.startTime == startTime and
-                Summary.endTime == endTime
+                (Summary.projectId == str(projectId))
+                & (Summary.startTime == startTime)
+                & (Summary.endTime == endTime)
             )
         )
 
@@ -120,6 +121,7 @@ async def generate_summary(
         if existing_summary:
             print("Existing summary found, returning it...")
             summary = {
+                "id": existing_summary.id,
                 "projectId": existing_summary.projectId,
                 "startTime": existing_summary.startTime,
                 "endTime": existing_summary.endTime,
@@ -156,16 +158,19 @@ async def generate_summary(
             placeholder.userIds
         )
 
-    return {
-        "id": placeholder.id,
-        "projectId": placeholder.projectId,
-        "startTime": placeholder.startTime,
-        "endTime": placeholder.endTime,
-        "userIds": placeholder.userIds,
-        "generatedAt": placeholder.generatedAt,
-        "loading": placeholder.loading,
-        "summary": ""
-    }
+    return JSONResponse(
+        status_code=202 if placeholder.loading else 200,
+        content={
+            "id": placeholder.id,
+            "projectId": placeholder.projectId,
+            "startTime": placeholder.startTime,
+            "endTime": placeholder.endTime,
+            "userIds": placeholder.userIds,
+            "generatedAt": placeholder.generatedAt.isoformat(),
+            "loading": placeholder.loading,
+            "summary": "",
+        },
+    )
 
 
 @app.put("/projects/{projectId}/summary", summary="Regenerate and overwrite summary for given time frame",
@@ -186,9 +191,9 @@ async def refresh_summary(
         # Delete any existing summary for this time frame
         result = await session.execute(
             select(Summary).where(
-                Summary.projectId == str(projectId) and
-                Summary.startTime == startTime and
-                Summary.endTime == endTime
+                (Summary.projectId == str(projectId))
+                & (Summary.startTime == startTime)
+                & (Summary.endTime == endTime)
             )
         )
         summaries = result.scalars().all()
@@ -236,7 +241,7 @@ async def refresh_summary(
         "userIds": placeholder.userIds,
         "generatedAt": placeholder.generatedAt,
         "loading": placeholder.loading,
-        "summary": ""
+        "summary": placeholder.summary,
     }
 
 
@@ -271,11 +276,21 @@ async def get_summary_by_id(
 ):
     async with async_session() as session:
         result = await session.execute(
-            select(Summary).where(Summary.projectId == str(projectId) and Summary.id == summaryId)
+            select(Summary).where(
+                (Summary.projectId == str(projectId)) & (Summary.id == summaryId)
+            )
         )
-        summary = result.scalar_one()
+        summary = result.scalar_one_or_none()
 
-    return {
+    if not summary:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Summary with ID {summaryId} not found for project {projectId}.",
+        )
+
+    return JSONResponse(
+        status_code=202 if summary.loading else 200,
+        content={
             "id": summary.id,
             "projectId": summary.projectId,
             "startTime": summary.startTime,
@@ -284,7 +299,8 @@ async def get_summary_by_id(
             "generatedAt": summary.generatedAt.isoformat(),
             "loading": summary.loading,
             "summary": summary.summary,
-        }
+        },
+    )
 
 
 @app.post("/projects/{projectId}/messages", summary="Query the project for answers")
@@ -345,7 +361,9 @@ async def get_chat_history(
         userId: UUID4 = Query(..., description="User UUID (must be UUID4)")
 ):
     async with async_session() as session:
-        query = select(Message).where(Message.projectId == str(projectId) and Message.userId == str(userId))
+        query = select(Message).where(
+            (Message.projectId == str(projectId)) & (Message.userId == str(userId))
+        )
         result = await session.execute(query)
         history = result.scalars().all()
     return [
