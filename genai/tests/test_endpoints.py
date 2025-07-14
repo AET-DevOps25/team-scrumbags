@@ -671,27 +671,27 @@ class TestErrorHandling:
         assert response.status_code == 422
 
 
-@pytest.mark.asyncio(loop_scope="session")
-async def test_concurrent_summary_requests(self, client: AsyncClient):
-    """Test concurrent summary requests for same project"""
-    import asyncio
-    from uuid import uuid4
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_concurrent_summary_requests(self, client: AsyncClient):
+        """Test concurrent summary requests for same project"""
+        import asyncio
+        from uuid import uuid4
 
-    # Use different project IDs to avoid constraint violations
-    project_ids = [str(uuid4()) for _ in range(3)]
+        # Use different project IDs to avoid constraint violations
+        project_ids = [str(uuid4()) for _ in range(3)]
 
-    async def make_request(project_id: str):
-        return await client.post(
-            f"/projects/{project_id}/summary",
-            params={"startTime": 1640995200, "endTime": 1641081600}
-        )
+        async def make_request(project_id: str):
+            return await client.post(
+                f"/projects/{project_id}/summary",
+                params={"startTime": 1640995200, "endTime": 1641081600}
+            )
 
-    # Make multiple concurrent requests with different project IDs
-    responses = await asyncio.gather(*[make_request(pid) for pid in project_ids])
+        # Make multiple concurrent requests with different project IDs
+        responses = await asyncio.gather(*[make_request(pid) for pid in project_ids])
 
-    # All should succeed
-    for response in responses:
-        assert response.status_code in [200, 202]
+        # All should succeed
+        for response in responses:
+            assert response.status_code in [200, 202]
 
     @pytest.mark.asyncio(loop_scope="session")
     async def test_concurrent_message_requests(self, client: AsyncClient):
