@@ -175,9 +175,7 @@ services:
     image: rabbitmq:management
     container_name: rabbitmq
     restart: unless-stopped
-    ports:
-      - "5672:5672"
-      - "15672:15672"
+    network_mode: host
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest

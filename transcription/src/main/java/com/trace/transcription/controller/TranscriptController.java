@@ -1,6 +1,6 @@
 package com.trace.transcription.controller;
 
-import com.trace.transcription.dto.LoadingResponse;
+import com.trace.transcription.repository.TranscriptRepository;
 import com.trace.transcription.service.TranscriptService;
 import com.trace.transcription.model.TranscriptEntity;
 
@@ -19,6 +19,7 @@ import org.springframework.http.*;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.context.request.async.DeferredResult;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -77,6 +78,7 @@ public class TranscriptController {
         this.executor = executor;
         this.genaiServiceUrl = genaiServiceUrl;
         this.transcriptService = transcriptService;
+        this.transcriptRepository = transcriptRepository;
     }
 
     /**
@@ -118,7 +120,7 @@ public class TranscriptController {
                     content = @Content(schema = @Schema(implementation = String.class))
             )
     })
-    public ResponseEntity<LoadingResponse> receiveMediaAndSendTranscript(
+    public ResponseEntity<?> receiveMediaAndSendTranscript(
             @Parameter(description = "Project UUID", required = true, example = "123e4567-e89b-12d3-a456-426614174000")
             @PathVariable("projectId") UUID projectId,
 
@@ -178,9 +180,7 @@ public class TranscriptController {
             }
         });
 
-        // Return 202 Accepted with loading response
-        LoadingResponse response = new LoadingResponse(transcriptId, true);
-        return ResponseEntity.accepted().body(response);
+        return ResponseEntity.accepted().body(transcript);
     }
 
     /**
