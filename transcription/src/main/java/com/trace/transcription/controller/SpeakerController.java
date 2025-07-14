@@ -198,11 +198,14 @@ public class SpeakerController {
 
         String result = speakerService.saveSpeakers(projectId, userIds, userNames, speakingSamples);
         if (result != null) {
-            return ResponseEntity.ok(result);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(result);
         } else {
             logger.error("Failed to save speakers for project {}", projectId);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error saving speakers. Please check logs for details.");
+            // Service returns null when validation fails (e.g., audio too short)
+            return ResponseEntity.badRequest()
+                    .body("Could not save speaker. The audio sample might be too short.");
         }
     }
 
@@ -378,13 +381,19 @@ public class SpeakerController {
             @RequestParam(value = "speakingSample", required = false) MultipartFile speakingSample)
             throws IOException {
 
-        SpeakerEntity updatedSpeaker = speakerService.updateSpeaker(projectId, userId, userName, speakingSample);
-        if (updatedSpeaker != null) {
-            return ResponseEntity.ok(updatedSpeaker);
-        } else {
-            String msg = "Speaker with ID " + userId + " not found in project " + projectId + ".";
-            logger.warn(msg);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(msg);
+        try {
+            SpeakerEntity updatedSpeaker = speakerService.updateSpeaker(projectId, userId, userName, speakingSample);
+            if (updatedSpeaker != null) {
+                return ResponseEntity.ok(updatedSpeaker);
+            } else {
+                String msg = "Speaker with ID " + userId + " not found in project " + projectId + ".";
+                logger.warn(msg);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(msg);
+            }
+        } catch (IOException e) {
+            logger.error("Error updating speaker {} for project {}: {}", userId, projectId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error updating speaker: " + e.getMessage());
         }
     }
 
