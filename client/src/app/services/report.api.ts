@@ -14,7 +14,7 @@ export class ReportApi {
 
   getReports(projectId: string): Observable<Report[]> {
     return this.http
-      .get<Report[]>(`${environment.genAiUrl}/project/${projectId}/summary`)
+      .get<Report[]>(`${environment.genAiUrl}/projects/${projectId}/summary`)
       .pipe(
         map((reports) => {
           for (const report of reports) {
@@ -30,7 +30,7 @@ export class ReportApi {
   getReportbyId(projectId: string, reportId: string): Observable<Report> {
     return this.http
       .get<Report>(
-        `${environment.genAiUrl}/project/${projectId}/summary/${reportId}`
+        `${environment.genAiUrl}/projects/${projectId}/summary/${reportId}`
       )
       .pipe(
         map((report) => {
@@ -50,7 +50,7 @@ export class ReportApi {
     periodEnd: Date | null,
     userIds?: string[]
   ): Observable<Report> {
-    const url = `${environment.genAiUrl}/project/${projectId}/summary`;
+    const url = `${environment.genAiUrl}/projects/${projectId}/summary`;
     const params = new URLSearchParams();
     if (periodStart) {
       params.append(

@@ -1,16 +1,11 @@
 meta {
   name: Get Summary
   type: http
-  seq: 2
+  seq: 6
 }
 
-post {
-  url: {{base_url}}/project/0ebc399a-918d-475e-a4ed-cc301eab6460/summary?userIds=1e29dcab-03c7-4aab-8ad6-59e13feb63e5&userIds=fac124a0-8ffd-4ca8-8b52-2f4800062d8e
+get {
+  url: {{base_url}}/projects/0ebc399a-918d-475e-a4ed-cc301eab6460/summary/1
   body: none
   auth: inherit
-}
-
-params:query {
-  userIds: 1e29dcab-03c7-4aab-8ad6-59e13feb63e5
-  userIds: fac124a0-8ffd-4ca8-8b52-2f4800062d8e
 }

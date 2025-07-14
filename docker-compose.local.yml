@@ -173,10 +173,8 @@ services:
   rabbitmq:
     image: rabbitmq:management
     container_name: rabbitmq
+    network_mode: host
     restart: unless-stopped
-    ports:
-      - "5672:5672"
-      - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
@@ -193,12 +191,10 @@ services:
       - --scheme
       - http
     image: cr.weaviate.io/semitechnologies/weaviate:1.31.2
-    ports:
-      - "6969:6969"
-      - "50051:50051"
     volumes:
       - weaviate_data:/var/lib/weaviate
     restart: on-failure:0
+    network_mode: host
     environment:
       QUERY_DEFAULTS_LIMIT: 25
       AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
