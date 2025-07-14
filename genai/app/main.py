@@ -1,19 +1,11 @@
 import asyncio
 import os
-from concurrent.futures import ProcessPoolExecutor
-from contextlib import asynccontextmanager
 import time
+from contextlib import asynccontextmanager
 from typing import List
 
 import aio_pika
 from aio_pika import connect_robust, RobustChannel, RobustConnection
-from fastapi import FastAPI, Query, Body, HTTPException, Path
-from fastapi import status
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import UUID4
-from sqlalchemy import select, update
-
 from app import weaviate_client as wc
 from app.db import async_session, Summary, Message
 from app.db import init_db
@@ -21,6 +13,12 @@ from app.langchain_provider import summarize_entries, answer_question
 from app.models import ContentEntry
 from app.queue_consumer import consume
 from dotenv import load_dotenv
+from fastapi import FastAPI, Query, Body, HTTPException, Path
+from fastapi import status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from pydantic import UUID4
+from sqlalchemy import select, update
 
 load_dotenv()
 
@@ -30,7 +28,7 @@ QUEUE_NAME = "content_queue"
 rabbit_connection: RobustConnection | None = None
 rabbit_channel: RobustChannel | None = None
 
-executor = ProcessPoolExecutor()
+executor = ThreadPoolExecutor()
 
 
 @asynccontextmanager
@@ -127,7 +125,8 @@ async def generate_summary(
                 "endTime": existing_summary.endTime,
                 "userIds": existing_summary.userIds,
                 "generatedAt": existing_summary.generatedAt,
-                "output_text": existing_summary.summary,
+                "loading": existing_summary.loading,
+                "summary": existing_summary.summary,
             }
             return summary
 
@@ -147,16 +146,7 @@ async def generate_summary(
         await session.commit()
         await session.refresh(placeholder)
 
-        loop = asyncio.get_running_loop()
-        loop.run_in_executor(
-            executor,
-            _blocking_summary_job,
-            placeholder.id,
-            placeholder.projectId,
-            placeholder.startTime,
-            placeholder.endTime,
-            placeholder.userIds,
-        )
+        asyncio.create_task(_background_summary_task(new_summary.id, str(projectId), startTime, endTime, user_ids_str))
 
     return JSONResponse(
         status_code=202 if placeholder.loading else 200,
@@ -222,16 +212,7 @@ async def refresh_summary(
         await session.commit()
         await session.refresh(placeholder)
 
-        loop = asyncio.get_running_loop()
-        loop.run_in_executor(
-            executor,
-            _blocking_summary_job,
-            placeholder.id,
-            placeholder.projectId,
-            placeholder.startTime,
-            placeholder.endTime,
-            placeholder.userIds
-        )
+        asyncio.create_task(_background_summary_task(new_summary.id, str(projectId), startTime, endTime, user_ids_str))
 
     return {
         "id": placeholder.id,
@@ -268,6 +249,7 @@ async def get_summaries(
         }
         for s in summaries
     ]
+
 
 @app.get("/projects/{projectId}/summary/{summaryId}", summary="Get a summary by it's id")
 async def get_summary_by_id(
@@ -338,14 +320,12 @@ async def query_project(
         await session.commit()
         await session.refresh(answer_placeholder)
 
-        loop = asyncio.get_running_loop()
-        loop.run_in_executor(
-            executor,
-            _blocking_qa_job,
+        # Use async task instead of executor
+        asyncio.create_task(_background_qa_task(
             answer_placeholder.id,
             answer_placeholder.projectId,
             question.strip()
-        )
+        ))
 
     return [
         {
@@ -394,24 +374,37 @@ async def get_chat_history(
     ]
 
 
-def _blocking_summary_job(summary_id: int,
-                          project_id: str,
-                          start_time: int,
-                          end_time: int,
-                          user_ids: list[str]):
-    async def _do_update():
-        summary_md = summarize_entries(project_id, start_time, end_time, user_ids)
-        if type(summary_md) is str:
-            summary_md = {"output_text": summary_md}
+async def _background_summary_task(summary_id: int, project_id: str, start_time: int, end_time: int,
+                                   user_ids: list[str]):
+    """Generate summary in background"""
+    try:
+        # Get entries from Weaviate
+        entries = wc.get_entries(project_id, start_time, end_time, user_ids)
 
+        # Generate summary using LangChain
+        summary_md = await summarize_entries(entries)
+
+        # Update database with the generated summary
         async with async_session() as session:
             stmt = (
                 update(Summary)
                 .where(Summary.id == summary_id)
                 .values(
-                    summary=(summary_md or {}).get(
-                        "output_text", "Error generating summary"
-                    ),
+                    summary=(summary_md or {}).get("output_text", "Error generating summary"),
+                    generatedAt=int(time.time() * 1000),
+                    loading=False,
+                )
+            )
+            await session.execute(stmt)
+            await session.commit()
+    except Exception as e:
+        # Handle errors by updating the summary with error state
+        async with async_session() as session:
+            stmt = (
+                update(Summary)
+                .where(Summary.id == summary_id)
+                .values(
+                    summary=f"Error generating summary: {str(e)}",
                     generatedAt=int(time.time() * 1000),
                     loading=False,
                 )
@@ -419,29 +412,38 @@ def _blocking_summary_job(summary_id: int,
             await session.execute(stmt)
             await session.commit()
 
-    asyncio.run(_do_update())
 
+async def _background_qa_task(message_id: int, project_id: str, question: str):
+    """Generate answer in background"""
+    try:
+        # Get entries from Weaviate for context
+        entries = wc.get_entries(project_id, -1, -1, [])  # Get all entries for context
 
-def _blocking_qa_job(qa_id: int,
-                     project_id: str,
-                     question: str):
-    async def _do_update():
-        answer_md = answer_question(project_id, question)
+        # Generate answer using LangChain
+        answer_result = await answer_question(question, entries)
 
-        if not answer_md or "result" not in answer_md:
-            answer_md = {"result": "Error generating answer. No content found."}
-
+        # Update database with the generated answer
         async with async_session() as session:
             stmt = (
                 update(Message)
-                .where(Message.id == qa_id)
+                .where(Message.id == message_id)
                 .values(
-                    content=answer_md["result"],
+                    content=(answer_result or {}).get("result", "Error generating answer"),
                     loading=False,
-                    timestamp=int(time.time() * 1000),
                 )
             )
             await session.execute(stmt)
             await session.commit()
-
-    asyncio.run(_do_update())
+    except Exception as e:
+        # Handle errors by updating the message with error state
+        async with async_session() as session:
+            stmt = (
+                update(Message)
+                .where(Message.id == message_id)
+                .values(
+                    content=f"Error generating answer: {str(e)}",
+                    loading=False,
+                )
+            )
+            await session.execute(stmt)
+            await session.commit()
