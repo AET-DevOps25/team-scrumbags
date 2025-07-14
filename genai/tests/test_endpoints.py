@@ -77,21 +77,20 @@ async def override_db_session(setup_database, test_session_factory):
 
 @pytest_asyncio.fixture(scope="function")
 async def client(override_db_session) -> AsyncGenerator[AsyncClient, None]:
-    """Create test client"""
-    with patch('app.main.rabbit_connection') as mock_rabbit_conn, \
-            patch('app.main.rabbit_channel') as mock_rabbit_channel, \
-            patch('app.weaviate_client.get_entries') as mock_get_entries, \
-            patch('app.langchain_provider.summarize_entries') as mock_summarize, \
-            patch('app.langchain_provider.answer_question') as mock_answer:
-        # Mock RabbitMQ
-        mock_channel = AsyncMock()
-        mock_rabbit_channel.return_value = mock_channel
-        mock_rabbit_conn.return_value = AsyncMock()
+    """Create test client with all async deps mocked as AsyncMock."""
+    # patch everything you await _directly_ as AsyncMock:
+    with patch('app.main.rabbit_connection', new_callable=AsyncMock) as mock_rabbit_conn, \
+            patch('app.main.rabbit_channel', new_callable=AsyncMock) as mock_rabbit_channel, \
+            patch('app.weaviate_client.get_entries', new_callable=AsyncMock) as mock_get_entries, \
+            patch('app.langchain_provider.summarize_entries', new_callable=AsyncMock) as mock_summarize, \
+            patch('app.langchain_provider.answer_question', new_callable=AsyncMock) as mock_answer:
+        # now define their return values (they’re awaitable):
+        mock_rabbit_conn.return_value = mock_rabbit_conn  # your code might call await rabbit_connection()
+        mock_rabbit_channel.return_value = mock_rabbit_channel
 
-        # Mock Weaviate and LangChain - make them async
-        mock_get_entries.return_value = AsyncMock(return_value=[])
-        mock_summarize.return_value = AsyncMock(return_value={"output_text": "Test summary"})
-        mock_answer.return_value = AsyncMock(return_value={"result": "Test answer"})
+        mock_get_entries.return_value = []
+        mock_summarize.return_value = {"output_text": "Test summary"}
+        mock_answer.return_value = {"result": "Test answer"}
 
         async with AsyncClient(
                 transport=ASGITransport(app=app), base_url="http://testserver"
