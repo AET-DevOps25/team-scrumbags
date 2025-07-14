@@ -210,8 +210,7 @@ services:
     image: mysql:8.0
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-test}
-    ports:
-      - "3306:3306"
+    network_mode: host
     volumes:
       - mysql_data:/var/lib/mysql/
       - ./init-mysql.sql:/docker-entrypoint-initdb.d/init.sql
