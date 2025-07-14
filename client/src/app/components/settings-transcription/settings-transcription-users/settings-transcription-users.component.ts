@@ -82,7 +82,7 @@ export class SettingsTranscriptionUsersComponent {
             'Close',
             { duration: 3000 }
           );
-          return [];
+          return EMPTY;
         })
       )
       .subscribe((speakers) => {
