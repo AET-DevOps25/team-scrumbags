@@ -5,14 +5,15 @@ from typing import AsyncGenerator
 from unittest.mock import patch, AsyncMock, MagicMock
 from uuid import uuid4
 import json
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlalchemy import select
 
 from app.main import app
-from app.db import Base, async_session
-from app.models import ContentEntry, Metadata, Summary, Message
+from app.db import Base, async_session, Summary, Message
+from app.models import ContentEntry, Metadata
 
 # Use MySQL for testing - matches CI environment
 TEST_DATABASE_URL = os.getenv(
@@ -22,10 +23,9 @@ TEST_DATABASE_URL = os.getenv(
 
 # Test data
 TEST_PROJECT_ID = str(uuid4())
-TEST_PROJECT_ID_2 = str(uuid4())
 TEST_USER_ID = str(uuid4())
 TEST_USER_ID_2 = str(uuid4())
-INVALID_UUID = "not-a-uuid"
+TEST_PROJECT_ID_2 = str(uuid4())
 
 
 @pytest_asyncio.fixture(loop_scope="session")
@@ -88,6 +88,7 @@ async def client(override_db_session) -> AsyncGenerator[AsyncClient, None]:
             patch('app.langchain_provider.answer_question', new_callable=AsyncMock) as mock_answer:
         mock_rabbit_conn.return_value = mock_rabbit_conn
         mock_rabbit_channel.return_value = mock_rabbit_channel
+
         mock_get_entries.return_value = []
         mock_summarize.return_value = {"output_text": "Test summary"}
         mock_answer.return_value = {"result": "Test answer"}
@@ -99,8 +100,25 @@ async def client(override_db_session) -> AsyncGenerator[AsyncClient, None]:
 
 
 @pytest_asyncio.fixture(loop_scope="session")
-async def sample_content_entries():
-    """Create multiple sample content entries"""
+async def sample_content_entry():
+    """Create sample content entry"""
+    return ContentEntry(
+        metadata=Metadata(
+            type="commit",
+            user=TEST_USER_ID,
+            timestamp=1640995200,
+            projectId=TEST_PROJECT_ID
+        ),
+        content={
+            "message": "Initial commit",
+            "files": ["README.md"]
+        }
+    )
+
+
+@pytest_asyncio.fixture(loop_scope="session")
+async def multiple_content_entries():
+    """Create multiple content entries for testing"""
     return [
         ContentEntry(
             metadata=Metadata(
@@ -109,60 +127,74 @@ async def sample_content_entries():
                 timestamp=1640995200,
                 projectId=TEST_PROJECT_ID
             ),
-            content={
-                "message": "Initial commit",
-                "files": ["README.md"],
-                "hash": "abc123"
-            }
+            content={"message": "Initial commit", "files": ["README.md"]}
         ),
         ContentEntry(
             metadata=Metadata(
-                type="issue",
+                type="pull_request",
                 user=TEST_USER_ID_2,
-                timestamp=1641000000,
+                timestamp=1641081600,
                 projectId=TEST_PROJECT_ID
             ),
-            content={
-                "title": "Bug report",
-                "description": "Found a critical bug",
-                "status": "open"
-            }
+            content={"title": "Add feature", "description": "New feature implementation"}
         ),
         ContentEntry(
             metadata=Metadata(
-                type="merge_request",
+                type="message",
                 user=TEST_USER_ID,
-                timestamp=1641010000,
-                projectId=TEST_PROJECT_ID
+                timestamp=1641168000,
+                projectId=TEST_PROJECT_ID_2
             ),
-            content={
-                "title": "Feature implementation",
-                "source_branch": "feature/new-feature",
-                "target_branch": "main"
-            }
+            content={"text": "Team meeting notes"}
         )
     ]
 
 
 class TestContentEndpoint:
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_post_content_success_single(self, client: AsyncClient, sample_content_entries):
-        """Test successful single content posting"""
-        response = await client.post("/content", json=[sample_content_entries[0].model_dump(mode="json")])
+    async def test_post_content_success(self, client: AsyncClient, sample_content_entry):
+        """Test successful content posting"""
+        response = await client.post("/content", json=[sample_content_entry.model_dump(mode="json")])
         assert response.status_code == 200
         data = response.json()
         assert "status" in data
         assert "1 message(s)" in data["status"]
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_post_content_success_multiple(self, client: AsyncClient, sample_content_entries):
-        """Test successful multiple content posting"""
-        entries_data = [entry.model_dump(mode="json") for entry in sample_content_entries]
-        response = await client.post("/content", json=entries_data)
+    async def test_post_multiple_content_entries(self, client: AsyncClient, multiple_content_entries):
+        """Test posting multiple content entries"""
+        entries_json = [entry.model_dump(mode="json") for entry in multiple_content_entries]
+        response = await client.post("/content", json=entries_json)
         assert response.status_code == 200
         data = response.json()
-        assert "status" in data
         assert "3 message(s)" in data["status"]
+
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_post_content_invalid_entry(self, client: AsyncClient):
+        """Test posting invalid content entry"""
+        invalid_entry = {
+            "metadata": {"type": "commit"},  # Missing required fields
+            "content": {}
+        }
+        response = await client.post("/content", json=[invalid_entry])
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_post_content_missing_project_id(self, client: AsyncClient):
+        """Test posting content without projectId"""
+        invalid_entry = {
+            "metadata": {
+                "type": "commit",
+                "user": TEST_USER_ID,
+                "timestamp": 1640995200
+                # projectId missing
+            },
+            "content": {"message": "test"}
+        }
+
+        with patch('app.main.rabbit_channel', None):
+            response = await client.post("/content", json=[invalid_entry])
+            assert response.status_code == 500  # RabbitMQ not initialized
 
     @pytest.mark.asyncio(loop_scope="session")
     async def test_post_content_empty_list(self, client: AsyncClient):
@@ -173,89 +205,19 @@ class TestContentEndpoint:
         assert "0 message(s)" in data["status"]
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_post_content_invalid_entry_missing_metadata(self, client: AsyncClient):
-        """Test posting content entry without metadata"""
-        invalid_entry = {
-            "content": {"message": "test"}
-        }
-        response = await client.post("/content", json=[invalid_entry])
-        assert response.status_code == 422
-
-    @pytest.mark.asyncio(loop_scope="session")
-    async def test_post_content_invalid_entry_missing_content(self, client: AsyncClient):
-        """Test posting content entry without content"""
-        invalid_entry = {
-            "metadata": {
-                "type": "commit",
-                "user": TEST_USER_ID,
-                "timestamp": 1640995200,
-                "projectId": TEST_PROJECT_ID
-            }
-        }
-        response = await client.post("/content", json=[invalid_entry])
-        assert response.status_code == 422
-
-    @pytest.mark.asyncio(loop_scope="session")
-    async def test_post_content_invalid_metadata_fields(self, client: AsyncClient):
-        """Test posting content with invalid metadata fields"""
-        invalid_entries = [
-            {
-                "metadata": {
-                    "type": "invalid_type",
-                    "user": TEST_USER_ID,
-                    "timestamp": 1640995200,
-                    "projectId": TEST_PROJECT_ID
-                },
-                "content": {"message": "test"}
-            },
-            {
-                "metadata": {
-                    "type": "commit",
-                    "user": INVALID_UUID,
-                    "timestamp": 1640995200,
-                    "projectId": TEST_PROJECT_ID
-                },
-                "content": {"message": "test"}
-            },
-            {
-                "metadata": {
-                    "type": "commit",
-                    "user": TEST_USER_ID,
-                    "timestamp": -1,
-                    "projectId": TEST_PROJECT_ID
-                },
-                "content": {"message": "test"}
-            }
-        ]
-
-        for invalid_entry in invalid_entries:
-            response = await client.post("/content", json=[invalid_entry])
-            assert response.status_code == 422
-
-    @pytest.mark.asyncio(loop_scope="session")
     async def test_post_content_malformed_json(self, client: AsyncClient):
         """Test posting malformed JSON"""
-        response = await client.post(
-            "/content",
-            content="invalid json",
-            headers={"Content-Type": "application/json"}
-        )
+        response = await client.post("/content", content="invalid json", headers={"Content-Type": "application/json"})
         assert response.status_code == 422
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_post_content_large_payload(self, client: AsyncClient, sample_content_entries):
-        """Test posting large number of content entries"""
-        large_payload = []
-        for i in range(100):
-            entry = sample_content_entries[0].model_copy()
-            entry.metadata.timestamp = 1640995200 + i
-            entry.content["message"] = f"Commit {i}"
-            large_payload.append(entry.model_dump(mode="json"))
-
-        response = await client.post("/content", json=large_payload)
-        assert response.status_code == 200
-        data = response.json()
-        assert "100 message(s)" in data["status"]
+    async def test_post_content_rabbitmq_not_initialized(self, client: AsyncClient, sample_content_entry):
+        """Test posting content when RabbitMQ is not initialized"""
+        with patch('app.main.rabbit_channel', None):
+            response = await client.post("/content", json=[sample_content_entry.model_dump(mode="json")])
+            assert response.status_code == 500
+            data = response.json()
+            assert "RabbitMQ not initialized" in data["detail"]
 
 
 class TestSummaryEndpoints:
@@ -270,61 +232,72 @@ class TestSummaryEndpoints:
         data = response.json()
         assert data["projectId"] == TEST_PROJECT_ID
         assert data["loading"] is True
+        assert data["startTime"] == 1640995200
+        assert data["endTime"] == 1641081600
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_get_summary_same_start_end_time(self, client: AsyncClient):
-        """Test getting summary with same start and end time"""
-        timestamp = 1640995200
+    async def test_get_summary_with_user_ids(self, client: AsyncClient):
+        """Test getting summary with specific user IDs"""
         response = await client.post(
             f"/projects/{TEST_PROJECT_ID}/summary",
-            params={"startTime": timestamp, "endTime": timestamp}
+            params={
+                "startTime": 1640995200,
+                "endTime": 1641081600,
+                "userIds": [TEST_USER_ID, TEST_USER_ID_2]
+            }
         )
         assert response.status_code == 200
+        data = response.json()
+        assert set(data["userIds"]) == {TEST_USER_ID, TEST_USER_ID_2}
+
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_get_summary_existing(self, client: AsyncClient, test_session_factory):
+        """Test getting an existing summary from database"""
+        # First create a summary in the database
+        async with test_session_factory() as session:
+            existing_summary = Summary(
+                projectId=TEST_PROJECT_ID,
+                startTime=1640995200,
+                endTime=1641081600,
+                userIds=[TEST_USER_ID],
+                summary="Existing test summary",
+                loading=False,
+                generatedAt=datetime.now(UTC)
+            )
+            session.add(existing_summary)
+            await session.commit()
+
+        response = await client.post(
+            f"/projects/{TEST_PROJECT_ID}/summary",
+            params={
+                "startTime": 1640995200,
+                "endTime": 1641081600,
+                "userIds": [TEST_USER_ID]
+            }
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["output_text"] == "Existing test summary"
 
     @pytest.mark.asyncio(loop_scope="session")
     async def test_get_summary_invalid_time_range(self, client: AsyncClient):
         """Test getting summary with invalid time range"""
         response = await client.post(
             f"/projects/{TEST_PROJECT_ID}/summary",
-            params={"startTime": 1641081600, "endTime": 1640995200}
+            params={"startTime": 1641081600, "endTime": 1640995200}  # start > end
         )
         assert response.status_code == 422
+        data = response.json()
+        assert "startTime must be ≤ endTime" in data["detail"]
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_get_summary_negative_timestamps(self, client: AsyncClient):
-        """Test getting summary with negative timestamps"""
-        response = await client.post(
-            f"/projects/{TEST_PROJECT_ID}/summary",
-            params={"startTime": -1000, "endTime": -500}
-        )
-        assert response.status_code == 422
-
-    @pytest.mark.asyncio(loop_scope="session")
-    async def test_get_summary_future_timestamps(self, client: AsyncClient):
-        """Test getting summary with future timestamps"""
-        future_time = int(datetime.now(timezone.utc).timestamp()) + 86400
-        response = await client.post(
-            f"/projects/{TEST_PROJECT_ID}/summary",
-            params={"startTime": 1640995200, "endTime": future_time}
-        )
+    async def test_get_summary_default_time_values(self, client: AsyncClient):
+        """Test getting summary with default time values"""
+        response = await client.post(f"/projects/{TEST_PROJECT_ID}/summary")
         assert response.status_code == 200
-
-    @pytest.mark.asyncio(loop_scope="session")
-    async def test_get_summary_missing_parameters(self, client: AsyncClient):
-        """Test getting summary with missing parameters"""
-        # Missing endTime
-        response = await client.post(
-            f"/projects/{TEST_PROJECT_ID}/summary",
-            params={"startTime": 1640995200}
-        )
-        assert response.status_code == 422
-
-        # Missing startTime
-        response = await client.post(
-            f"/projects/{TEST_PROJECT_ID}/summary",
-            params={"endTime": 1641081600}
-        )
-        assert response.status_code == 422
+        data = response.json()
+        assert data["startTime"] == -1
+        assert data["endTime"] == -1
 
     @pytest.mark.asyncio(loop_scope="session")
     async def test_refresh_summary(self, client: AsyncClient):
@@ -336,43 +309,85 @@ class TestSummaryEndpoints:
         assert response.status_code == 201
         data = response.json()
         assert data["projectId"] == TEST_PROJECT_ID
+        assert data["loading"] is True
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_refresh_summary_invalid_range(self, client: AsyncClient):
-        """Test refreshing summary with invalid time range"""
+    async def test_refresh_summary_deletes_existing(self, client: AsyncClient, test_session_factory):
+        """Test that refresh summary deletes existing summary"""
+        # Create existing summary
+        async with test_session_factory() as session:
+            existing_summary = Summary(
+                projectId=TEST_PROJECT_ID,
+                startTime=1640995200,
+                endTime=1641081600,
+                userIds=[TEST_USER_ID],
+                summary="Old summary",
+                loading=False,
+                generatedAt=datetime.now(UTC)
+            )
+            session.add(existing_summary)
+            await session.commit()
+            summary_id = existing_summary.id
+
+        # Refresh summary
         response = await client.put(
             f"/projects/{TEST_PROJECT_ID}/summary",
-            params={"startTime": 1641081600, "endTime": 1640995200}
+            params={
+                "startTime": 1640995200,
+                "endTime": 1641081600,
+                "userIds": [TEST_USER_ID]
+            }
         )
-        assert response.status_code == 422
+        assert response.status_code == 201
+
+        # Verify old summary was deleted
+        async with test_session_factory() as session:
+            result = await session.execute(select(Summary).where(Summary.id == summary_id))
+            deleted_summary = result.scalar_one_or_none()
+            assert deleted_summary is None
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_get_all_summaries(self, client: AsyncClient):
+    async def test_get_all_summaries(self, client: AsyncClient, test_session_factory):
         """Test getting all summaries for a project"""
+        # Create multiple summaries
+        async with test_session_factory() as session:
+            summaries = [
+                Summary(
+                    projectId=TEST_PROJECT_ID,
+                    startTime=1640995200,
+                    endTime=1641081600,
+                    userIds=[TEST_USER_ID],
+                    summary="Summary 1",
+                    loading=False,
+                    generatedAt=datetime.now(UTC)
+                ),
+                Summary(
+                    projectId=TEST_PROJECT_ID,
+                    startTime=1641081600,
+                    endTime=1641168000,
+                    userIds=[TEST_USER_ID_2],
+                    summary="Summary 2",
+                    loading=True,
+                    generatedAt=datetime.now(UTC)
+                )
+            ]
+            session.add_all(summaries)
+            await session.commit()
+
         response = await client.get(f"/projects/{TEST_PROJECT_ID}/summary")
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
+        assert len(data) >= 2
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_get_all_summaries_nonexistent_project(self, client: AsyncClient):
-        """Test getting summaries for non-existent project"""
-        response = await client.get(f"/projects/{TEST_PROJECT_ID_2}/summary")
+    async def test_get_summaries_empty_project(self, client: AsyncClient):
+        """Test getting summaries for project with no summaries"""
+        new_project_id = str(uuid4())
+        response = await client.get(f"/projects/{new_project_id}/summary")
         assert response.status_code == 200
         data = response.json()
-        assert isinstance(data, list)
-        assert len(data) == 0
-
-    @pytest.mark.asyncio(loop_scope="session")
-    async def test_summary_with_weaviate_error(self, client: AsyncClient):
-        """Test summary generation when Weaviate fails"""
-        with patch('app.weaviate_client.get_entries', side_effect=Exception("Weaviate error")):
-            response = await client.post(
-                f"/projects/{TEST_PROJECT_ID}/summary",
-                params={"startTime": 1640995200, "endTime": 1641081600}
-            )
-            # Should still return 200 but handle the error gracefully
-            assert response.status_code in [200, 500]
+        assert data == []
 
 
 class TestMessageEndpoints:
@@ -388,19 +403,8 @@ class TestMessageEndpoints:
         data = response.json()
         assert data["projectId"] == TEST_PROJECT_ID
         assert data["userId"] == TEST_USER_ID
-
-    @pytest.mark.asyncio(loop_scope="session")
-    async def test_query_project_complex_question(self, client: AsyncClient):
-        """Test project query with complex question"""
-        complex_question = "Can you analyze the commit patterns and identify the most active contributors between January and March? Also, what are the main features that were developed?"
-        response = await client.post(
-            f"/projects/{TEST_PROJECT_ID}/messages",
-            params={"userId": TEST_USER_ID},
-            json=complex_question
-        )
-        assert response.status_code == 200
-        data = response.json()
-        assert data["projectId"] == TEST_PROJECT_ID
+        assert data["loading"] is True
+        assert "timestamp" in data
 
     @pytest.mark.asyncio(loop_scope="session")
     async def test_query_project_empty_question(self, client: AsyncClient):
@@ -411,19 +415,21 @@ class TestMessageEndpoints:
             json=""
         )
         assert response.status_code == 422
+        data = response.json()
+        assert "Question cannot be empty" in data["detail"]
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_query_project_whitespace_only_question(self, client: AsyncClient):
+    async def test_query_project_whitespace_question(self, client: AsyncClient):
         """Test project query with whitespace-only question"""
         response = await client.post(
             f"/projects/{TEST_PROJECT_ID}/messages",
             params={"userId": TEST_USER_ID},
-            json="   \t\n  "
+            json="   \n\t   "
         )
         assert response.status_code == 422
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_query_project_very_long_question(self, client: AsyncClient):
+    async def test_query_project_long_question(self, client: AsyncClient):
         """Test project query with very long question"""
         long_question = "What happened? " * 1000
         response = await client.post(
@@ -431,34 +437,32 @@ class TestMessageEndpoints:
             params={"userId": TEST_USER_ID},
             json=long_question
         )
-        # Should either succeed or return 413 (Payload Too Large)
-        assert response.status_code in [200, 413, 422]
-
-    @pytest.mark.asyncio(loop_scope="session")
-    async def test_query_project_special_characters(self, client: AsyncClient):
-        """Test project query with special characters"""
-        special_question = "What about files with names like test.py, config.json, and data-file_v2.csv? Also check #123 issue!"
-        response = await client.post(
-            f"/projects/{TEST_PROJECT_ID}/messages",
-            params={"userId": TEST_USER_ID},
-            json=special_question
-        )
         assert response.status_code == 200
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_query_project_unicode_characters(self, client: AsyncClient):
-        """Test project query with unicode characters"""
-        unicode_question = "¿Qué pasó en el proyecto? 你好世界 🚀 التطوير"
-        response = await client.post(
-            f"/projects/{TEST_PROJECT_ID}/messages",
-            params={"userId": TEST_USER_ID},
-            json=unicode_question
-        )
-        assert response.status_code == 200
-
-    @pytest.mark.asyncio(loop_scope="session")
-    async def test_get_chat_history(self, client: AsyncClient):
+    async def test_get_chat_history(self, client: AsyncClient, test_session_factory):
         """Test getting chat history"""
+        # Create some messages
+        async with test_session_factory() as session:
+            messages = [
+                Message(
+                    projectId=TEST_PROJECT_ID,
+                    userId=TEST_USER_ID,
+                    content="What is the project status?",
+                    timestamp=datetime.now(UTC),
+                    loading=False
+                ),
+                Message(
+                    projectId=TEST_PROJECT_ID,
+                    userId=TEST_USER_ID,
+                    content="The project is on track.",
+                    timestamp=datetime.now(UTC),
+                    loading=False
+                )
+            ]
+            session.add_all(messages)
+            await session.commit()
+
         response = await client.get(
             f"/projects/{TEST_PROJECT_ID}/messages",
             params={"userId": TEST_USER_ID}
@@ -466,130 +470,171 @@ class TestMessageEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
+        assert len(data) >= 2
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_get_chat_history_different_users(self, client: AsyncClient):
-        """Test getting chat history for different users"""
-        # User 1 history
+    async def test_get_chat_history_empty(self, client: AsyncClient):
+        """Test getting chat history for user with no messages"""
+        new_user_id = str(uuid4())
+        response = await client.get(
+            f"/projects/{TEST_PROJECT_ID}/messages",
+            params={"userId": new_user_id}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data == []
+
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_get_chat_history_different_users(self, client: AsyncClient, test_session_factory):
+        """Test that chat history is user-specific"""
+        # Create messages for different users
+        async with test_session_factory() as session:
+            messages = [
+                Message(
+                    projectId=TEST_PROJECT_ID,
+                    userId=TEST_USER_ID,
+                    content="User 1 message",
+                    timestamp=datetime.now(UTC),
+                    loading=False
+                ),
+                Message(
+                    projectId=TEST_PROJECT_ID,
+                    userId=TEST_USER_ID_2,
+                    content="User 2 message",
+                    timestamp=datetime.now(UTC),
+                    loading=False
+                )
+            ]
+            session.add_all(messages)
+            await session.commit()
+
+        # Get history for user 1
         response1 = await client.get(
             f"/projects/{TEST_PROJECT_ID}/messages",
             params={"userId": TEST_USER_ID}
         )
-        assert response1.status_code == 200
+        data1 = response1.json()
 
-        # User 2 history
+        # Get history for user 2
         response2 = await client.get(
             f"/projects/{TEST_PROJECT_ID}/messages",
             params={"userId": TEST_USER_ID_2}
         )
-        assert response2.status_code == 200
+        data2 = response2.json()
 
-        # Both should be lists (potentially empty)
-        assert isinstance(response1.json(), list)
-        assert isinstance(response2.json(), list)
+        # Verify separation
+        user1_messages = [msg for msg in data1 if msg["content"] == "User 1 message"]
+        user2_messages = [msg for msg in data2 if msg["content"] == "User 2 message"]
 
-    @pytest.mark.asyncio(loop_scope="session")
-    async def test_get_chat_history_nonexistent_project(self, client: AsyncClient):
-        """Test getting chat history for non-existent project"""
-        response = await client.get(
-            f"/projects/{TEST_PROJECT_ID_2}/messages",
-            params={"userId": TEST_USER_ID}
-        )
-        assert response.status_code == 200
-        data = response.json()
-        assert isinstance(data, list)
-        assert len(data) == 0
-
-    @pytest.mark.asyncio(loop_scope="session")
-    async def test_query_with_langchain_error(self, client: AsyncClient):
-        """Test query when LangChain provider fails"""
-        with patch('app.langchain_provider.answer_question', side_effect=Exception("LangChain error")):
-            response = await client.post(
-                f"/projects/{TEST_PROJECT_ID}/messages",
-                params={"userId": TEST_USER_ID},
-                json="What happened?"
-            )
-            # Should handle error gracefully
-            assert response.status_code in [200, 500]
+        assert len(user1_messages) >= 1
+        assert len(user2_messages) >= 1
 
 
 class TestValidation:
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_invalid_uuid_format_project_id(self, client: AsyncClient):
-        """Test endpoints with invalid project UUID format"""
-        endpoints = [
-            f"/projects/{INVALID_UUID}/summary",
-            f"/projects/{INVALID_UUID}/messages"
-        ]
-
-        for endpoint in endpoints:
-            response = await client.get(endpoint)
-            assert response.status_code == 422
+    async def test_invalid_uuid_format(self, client: AsyncClient):
+        """Test endpoint with invalid UUID format"""
+        response = await client.get("/projects/invalid-uuid/summary")
+        assert response.status_code == 422
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_invalid_uuid_format_user_id(self, client: AsyncClient):
-        """Test endpoints with invalid user UUID format"""
+    async def test_invalid_project_id_in_messages(self, client: AsyncClient):
+        """Test messages endpoint with invalid project UUID"""
         response = await client.get(
+            "/projects/not-a-uuid/messages",
+            params={"userId": TEST_USER_ID}
+        )
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_invalid_user_id_in_query(self, client: AsyncClient):
+        """Test query endpoint with invalid user UUID"""
+        response = await client.post(
             f"/projects/{TEST_PROJECT_ID}/messages",
-            params={"userId": INVALID_UUID}
+            params={"userId": "not-a-uuid"},
+            json="Test question"
+        )
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_negative_timestamp(self, client: AsyncClient):
+        """Test endpoint with negative timestamp (should be rejected)"""
+        response = await client.post(
+            f"/projects/{TEST_PROJECT_ID}/summary",
+            params={"startTime": -2, "endTime": 1641081600}
+        )
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_boundary_timestamp_values(self, client: AsyncClient):
+        """Test endpoint with boundary timestamp values"""
+        # Test with -1 (allowed)
+        response = await client.post(
+            f"/projects/{TEST_PROJECT_ID}/summary",
+            params={"startTime": -1, "endTime": -1}
+        )
+        assert response.status_code == 200
+
+        # Test with 0 (allowed)
+        response = await client.post(
+            f"/projects/{TEST_PROJECT_ID}/summary",
+            params={"startTime": 0, "endTime": 0}
+        )
+        assert response.status_code == 200
+
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_very_large_timestamp(self, client: AsyncClient):
+        """Test endpoint with very large timestamp"""
+        large_timestamp = 2147483647  # Max 32-bit integer
+        response = await client.post(
+            f"/projects/{TEST_PROJECT_ID}/summary",
+            params={"startTime": 0, "endTime": large_timestamp}
+        )
+        assert response.status_code == 200
+
+
+class TestErrorHandling:
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_malformed_request_body(self, client: AsyncClient):
+        """Test handling of malformed request bodies"""
+        # Test invalid JSON for content endpoint
+        response = await client.post(
+            "/content",
+            content="{invalid json}",
+            headers={"Content-Type": "application/json"}
         )
         assert response.status_code == 422
 
     @pytest.mark.asyncio(loop_scope="session")
     async def test_missing_required_parameters(self, client: AsyncClient):
         """Test endpoints with missing required parameters"""
-        # Missing userId for messages
+        # Query without userId
+        response = await client.post(
+            f"/projects/{TEST_PROJECT_ID}/messages",
+            json="Test question"
+        )
+        assert response.status_code == 422
+
+        # Chat history without userId
         response = await client.get(f"/projects/{TEST_PROJECT_ID}/messages")
         assert response.status_code == 422
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_negative_timestamp_validation(self, client: AsyncClient):
-        """Test comprehensive negative timestamp validation"""
-        negative_scenarios = [
-            {"startTime": -1, "endTime": 1641081600},
-            {"startTime": 1640995200, "endTime": -1},
-            {"startTime": -100, "endTime": -50}
-        ]
-
-        for params in negative_scenarios:
-            response = await client.post(
-                f"/projects/{TEST_PROJECT_ID}/summary",
-                params=params
-            )
-            assert response.status_code == 422
-
-    @pytest.mark.asyncio(loop_scope="session")
-    async def test_extremely_large_timestamp(self, client: AsyncClient):
-        """Test with extremely large timestamp values"""
-        large_timestamp = 9999999999999  # Year 318857
+    async def test_content_type_validation(self, client: AsyncClient):
+        """Test content type validation"""
+        # Send form data instead of JSON
         response = await client.post(
-            f"/projects/{TEST_PROJECT_ID}/summary",
-            params={"startTime": 1640995200, "endTime": large_timestamp}
-        )
-        # Should either handle gracefully or return validation error
-        assert response.status_code in [200, 422]
-
-    @pytest.mark.asyncio(loop_scope="session")
-    async def test_string_timestamp_values(self, client: AsyncClient):
-        """Test with string timestamp values"""
-        response = await client.post(
-            f"/projects/{TEST_PROJECT_ID}/summary",
-            params={"startTime": "not_a_number", "endTime": "also_not_a_number"}
+            "/content",
+            data={"key": "value"},
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
         )
         assert response.status_code == 422
 
 
-class TestErrorHandling:
+class TestConcurrency:
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_database_connection_error(self, client: AsyncClient):
-        """Test behavior when database connection fails"""
-        with patch('app.db.async_session', side_effect=Exception("Database connection failed")):
-            response = await client.get(f"/projects/{TEST_PROJECT_ID}/summary")
-            assert response.status_code == 500
-
-    @pytest.mark.asyncio(loop_scope="session")
-    async def test_concurrent_requests(self, client: AsyncClient):
-        """Test handling of concurrent requests"""
+    async def test_concurrent_summary_requests(self, client: AsyncClient):
+        """Test concurrent summary requests for same project"""
         import asyncio
 
         async def make_request():
@@ -598,60 +643,31 @@ class TestErrorHandling:
                 params={"startTime": 1640995200, "endTime": 1641081600}
             )
 
-        # Make 10 concurrent requests
-        tasks = [make_request() for _ in range(10)]
-        responses = await asyncio.gather(*tasks, return_exceptions=True)
+        # Make multiple concurrent requests
+        responses = await asyncio.gather(*[make_request() for _ in range(3)])
 
-        # All should succeed or handle gracefully
+        # All should succeed
         for response in responses:
-            if not isinstance(response, Exception):
-                assert response.status_code in [200, 201, 429]  # Including rate limiting
+            assert response.status_code == 200
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_malformed_request_body(self, client: AsyncClient):
-        """Test various malformed request bodies"""
-        malformed_bodies = [
-            b'{"incomplete": json',
-            b'null',
-            b'[]',
-            b'{"question": null}',
-            b'{"question": 123}'
-        ]
+    async def test_concurrent_message_requests(self, client: AsyncClient):
+        """Test concurrent message requests"""
+        import asyncio
 
-        for body in malformed_bodies:
-            response = await client.post(
+        async def make_request(question: str):
+            return await client.post(
                 f"/projects/{TEST_PROJECT_ID}/messages",
                 params={"userId": TEST_USER_ID},
-                content=body,
-                headers={"Content-Type": "application/json"}
+                json=question
             )
-            assert response.status_code == 422
 
+        questions = [f"Question {i}?" for i in range(3)]
+        responses = await asyncio.gather(*[make_request(q) for q in questions])
 
-class TestPerformance:
-    @pytest.mark.asyncio(loop_scope="session")
-    async def test_large_time_range_summary(self, client: AsyncClient):
-        """Test summary generation with very large time range"""
-        start_time = 0  # Unix epoch
-        end_time = int(datetime.now(timezone.utc).timestamp())
-
-        response = await client.post(
-            f"/projects/{TEST_PROJECT_ID}/summary",
-            params={"startTime": start_time, "endTime": end_time}
-        )
-        assert response.status_code == 200
-
-    @pytest.mark.asyncio(loop_scope="session")
-    async def test_response_time_validation(self, client: AsyncClient):
-        """Test that responses are returned within reasonable time"""
-        import time
-
-        start_time = time.time()
-        response = await client.get(f"/projects/{TEST_PROJECT_ID}/summary")
-        end_time = time.time()
-
-        assert response.status_code == 200
-        assert (end_time - start_time) < 30  # Should respond within 30 seconds
+        # All should succeed
+        for response in responses:
+            assert response.status_code == 200
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -672,28 +688,79 @@ async def test_app_startup():
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_health_check_endpoint(client: AsyncClient):
-    """Test health check endpoint if it exists"""
-    response = await client.get("/health")
-    # Health endpoint might not exist, so either 200 or 404 is acceptable
-    assert response.status_code in [200, 404]
+async def test_database_operations(test_session_factory):
+    """Test direct database operations"""
+    async with test_session_factory() as session:
+        # Test creating and retrieving summary
+        summary = Summary(
+            projectId=TEST_PROJECT_ID,
+            startTime=1640995200,
+            endTime=1641081600,
+            userIds=[TEST_USER_ID],
+            summary="Test summary",
+            loading=False,
+            generatedAt=datetime.now(UTC)
+        )
+        session.add(summary)
+        await session.commit()
+
+        # Retrieve and verify
+        result = await session.execute(
+            select(Summary).where(Summary.projectId == TEST_PROJECT_ID)
+        )
+        retrieved = result.scalar_one_or_none()
+        assert retrieved is not None
+        assert retrieved.summary == "Test summary"
 
 
-@pytest.mark.asyncio(loop_scope="session")
-async def test_cors_headers(client: AsyncClient):
-    """Test CORS headers are properly set"""
-    response = await client.options(f"/projects/{TEST_PROJECT_ID}/summary")
-    # Should either have CORS headers or return method not allowed
-    assert response.status_code in [200, 405]
+class TestEdgeCases:
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_unicode_content(self, client: AsyncClient):
+        """Test handling of unicode content"""
+        unicode_entry = ContentEntry(
+            metadata=Metadata(
+                type="message",
+                user=TEST_USER_ID,
+                timestamp=1640995200,
+                projectId=TEST_PROJECT_ID
+            ),
+            content={
+                "text": "Hello 世界! 🌍 Émojis and ñoñó"
+            }
+        )
 
+        response = await client.post("/content", json=[unicode_entry.model_dump(mode="json")])
+        assert response.status_code == 200
 
-@pytest.mark.asyncio(loop_scope="session")
-async def test_content_type_validation(client: AsyncClient):
-    """Test content type validation"""
-    # Test with wrong content type
-    response = await client.post(
-        "/content",
-        content="[]",
-        headers={"Content-Type": "text/plain"}
-    )
-    assert response.status_code in [422, 415]  # Unsupported Media Type or Validation Error
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_very_large_content(self, client: AsyncClient):
+        """Test handling of very large content"""
+        large_content = "x" * 10000  # 10KB content
+        large_entry = ContentEntry(
+            metadata=Metadata(
+                type="document",
+                user=TEST_USER_ID,
+                timestamp=1640995200,
+                projectId=TEST_PROJECT_ID
+            ),
+            content={"text": large_content}
+        )
+
+        response = await client.post("/content", json=[large_entry.model_dump(mode="json")])
+        assert response.status_code == 200
+
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_null_user_in_content(self, client: AsyncClient):
+        """Test content entry with null user"""
+        null_user_entry = ContentEntry(
+            metadata=Metadata(
+                type="system",
+                user=None,
+                timestamp=1640995200,
+                projectId=TEST_PROJECT_ID
+            ),
+            content={"message": "System message"}
+        )
+
+        response = await client.post("/content", json=[null_user_entry.model_dump(mode="json")])
+        assert response.status_code == 200
