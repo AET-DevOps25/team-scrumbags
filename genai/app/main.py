@@ -106,7 +106,7 @@ async def post_content(
 
 
 @app.post(
-    "/project/{projectId}/summary",
+    "/projects/{projectId}/summary",
     summary="Generate or retrieve project summary",
     description="Generates an AI summary of content entries for a project within a specified time range. If a summary already exists for the same parameters, it returns the cached version. Otherwise, generates a new summary asynchronously.",
     responses={
@@ -198,7 +198,7 @@ async def generate_summary(
 
 
 @app.put(
-    "/project/{projectId}/summary",
+    "/projects/{projectId}/summary",
     summary="Regenerate project summary",
     description="Forces regeneration of a project summary by deleting any existing summary for the specified parameters and creating a new one. The summary generation happens asynchronously.",
     status_code=status.HTTP_201_CREATED,
@@ -275,7 +275,7 @@ async def refresh_summary(
 
 
 @app.get(
-    "/project/{projectId}/summary",
+    "/projects/{projectId}/summary",
     summary="Get all summaries for a project",
     description="Retrieves all existing summaries for a specific project, including their generation status and metadata.",
     responses={
@@ -311,7 +311,7 @@ async def get_summaries(
 
 
 @app.get(
-    "/project/{projectId}/summary/{summaryId}",
+    "/projects/{projectId}/summary/{summaryId}",
     summary="Get summary by ID",
     description="Retrieves a specific summary by its ID for a given project. Returns the summary content and metadata.",
     responses={
@@ -356,7 +356,7 @@ async def get_summary_by_id(
 
 
 @app.post(
-    "/project/{projectId}/messages",
+    "/projects/{projectId}/messages",
     summary="Ask a question about project content",
     description="Submits a question about project content and generates an AI-powered answer based on the project's processed content. The answer generation happens asynchronously.",
     responses={
@@ -432,7 +432,7 @@ async def query_project(
 
 
 @app.get(
-    "/project/{projectId}/messages",
+    "/projects/{projectId}/messages",
     summary="Get chat history for a user",
     description="Retrieves the complete question and answer history for a specific user within a project, ordered by timestamp.",
     responses={
