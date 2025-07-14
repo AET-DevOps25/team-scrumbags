@@ -2,11 +2,11 @@
   <div class="flex-row flex-wrap gap-4">
     <span>Timeperiod</span>
     <span>
-      {{ report().periodStart ? (report().periodStart | date:'dd.MM.yyyy') : ''
-      }} - {{ report().periodEnd ? (report().periodEnd | date:'dd.MM.yyyy') : ''
+      {{ report().startTime ? (report().startTime | date:'dd.MM.yyyy') : ''
+      }} - {{ report().endTime ? (report().endTime | date:'dd.MM.yyyy') : ''
       }}
     </span>
   </div>
 
-  <span class="flex-1 break-words">{{report().content}}</span>
+  <span class="flex-1 break-words">{{report().summary}}</span>
 </div>

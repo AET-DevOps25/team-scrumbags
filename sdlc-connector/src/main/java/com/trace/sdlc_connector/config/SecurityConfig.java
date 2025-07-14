@@ -41,6 +41,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/public/**").permitAll() // public routes
+                        .requestMatchers("projects/{projectId}/webhook/**").permitAll() // allow webhook access
                         .anyRequest().authenticated() // all others require auth
                 )
                 .oauth2ResourceServer(resourceServer -> {
