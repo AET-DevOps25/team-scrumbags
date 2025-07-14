@@ -24,19 +24,6 @@ TEST_PROJECT_ID = str(uuid4())
 TEST_USER_ID = str(uuid4())
 TEST_USER_ID_2 = str(uuid4())
 
-
-@pytest.fixture(scope="session", autouse=True)
-def event_loop():
-    """
-    Override pytest-asyncio’s default, to use one loop per session.
-    This prevents ‘Future attached to a different loop’ errors.
-    """
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    asyncio.set_event_loop(loop)
-    yield loop
-    loop.close()
-
-
 @pytest_asyncio.fixture(scope="function")
 async def test_engine():
     """Create test engine per test function"""
@@ -51,13 +38,13 @@ async def test_engine():
     await engine.dispose()
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture()
 async def test_session_factory(test_engine):
     """Create session factory per test function"""
     return async_sessionmaker(test_engine, expire_on_commit=False)
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture()
 async def setup_database(test_engine):
     """Setup test database"""
     # Create tables
@@ -71,7 +58,7 @@ async def setup_database(test_engine):
         await conn.run_sync(Base.metadata.drop_all)
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture()
 async def override_db_session(setup_database, test_session_factory):
     """Override database session for testing"""
 
@@ -87,7 +74,7 @@ async def override_db_session(setup_database, test_session_factory):
     app.dependency_overrides.clear()
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture()
 async def client(override_db_session) -> AsyncGenerator[AsyncClient, None]:
     """Create test client with all async deps mocked as AsyncMock."""
     # patch everything you await _directly_ as AsyncMock:
@@ -110,7 +97,7 @@ async def client(override_db_session) -> AsyncGenerator[AsyncClient, None]:
             yield ac
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture()
 async def sample_content_entry():
     """Create sample content entry"""
     return ContentEntry(
@@ -128,7 +115,7 @@ async def sample_content_entry():
 
 
 class TestContentEndpoint:
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio(loop_scope="session")
     async def test_post_content_success(self, client: AsyncClient, sample_content_entry):
         """Test successful content posting"""
         response = await client.post("/content", json=[sample_content_entry.model_dump(mode="json")])
@@ -137,7 +124,7 @@ class TestContentEndpoint:
         assert "status" in data
         assert "1 message(s)" in data["status"]
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio(loop_scope="session")
     async def test_post_content_invalid_entry(self, client: AsyncClient):
         """Test posting invalid content entry"""
         invalid_entry = {
@@ -149,7 +136,7 @@ class TestContentEndpoint:
 
 
 class TestSummaryEndpoints:
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio(loop_scope="session")
     async def test_get_summary_new(self, client: AsyncClient):
         """Test getting a new summary"""
         response = await client.post(
@@ -161,7 +148,7 @@ class TestSummaryEndpoints:
         assert data["projectId"] == TEST_PROJECT_ID
         assert data["loading"] is True
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio(loop_scope="session")
     async def test_get_summary_invalid_time_range(self, client: AsyncClient):
         """Test getting summary with invalid time range"""
         response = await client.post(
@@ -170,7 +157,7 @@ class TestSummaryEndpoints:
         )
         assert response.status_code == 422
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio(loop_scope="session")
     async def test_refresh_summary(self, client: AsyncClient):
         """Test refreshing an existing summary"""
         response = await client.put(
@@ -181,7 +168,7 @@ class TestSummaryEndpoints:
         data = response.json()
         assert data["projectId"] == TEST_PROJECT_ID
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio(loop_scope="session")
     async def test_get_all_summaries(self, client: AsyncClient):
         """Test getting all summaries for a project"""
         response = await client.get(f"/projects/{TEST_PROJECT_ID}/summary")
@@ -191,7 +178,7 @@ class TestSummaryEndpoints:
 
 
 class TestMessageEndpoints:
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio(loop_scope="session")
     async def test_query_project_success(self, client: AsyncClient):
         """Test successful project query"""
         response = await client.post(
@@ -204,7 +191,7 @@ class TestMessageEndpoints:
         assert data["projectId"] == TEST_PROJECT_ID
         assert data["userId"] == TEST_USER_ID
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio(loop_scope="session")
     async def test_query_project_empty_question(self, client: AsyncClient):
         """Test project query with empty question"""
         response = await client.post(
@@ -214,7 +201,7 @@ class TestMessageEndpoints:
         )
         assert response.status_code == 422
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio(loop_scope="session")
     async def test_get_chat_history(self, client: AsyncClient):
         """Test getting chat history"""
         response = await client.get(
@@ -227,13 +214,13 @@ class TestMessageEndpoints:
 
 
 class TestValidation:
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio(loop_scope="session")
     async def test_invalid_uuid_format(self, client: AsyncClient):
         """Test endpoint with invalid UUID format"""
         response = await client.get("/projects/invalid-uuid/summary")
         assert response.status_code == 422
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio(loop_scope="session")
     async def test_negative_timestamp(self, client: AsyncClient):
         """Test endpoint with negative timestamp"""
         response = await client.post(
@@ -243,7 +230,7 @@ class TestValidation:
         assert response.status_code == 422
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_app_startup():
     """Test that the app can be created without errors"""
     with patch('app.main.init_db') as mock_init_db, \
