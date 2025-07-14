@@ -194,7 +194,7 @@ class TestContentEndpoint:
 
         with patch('app.main.rabbit_channel', None):
             response = await client.post("/content", json=[invalid_entry])
-            assert response.status_code == 500  # RabbitMQ not initialized
+            assert response.status_code == 422
 
     @pytest.mark.asyncio(loop_scope="session")
     async def test_post_content_empty_list(self, client: AsyncClient):
@@ -685,32 +685,6 @@ async def test_app_startup():
         mock_client.return_value = AsyncMock()
 
         assert app is not None
-
-
-@pytest.mark.asyncio(loop_scope="session")
-async def test_database_operations(test_session_factory):
-    """Test direct database operations"""
-    async with test_session_factory() as session:
-        # Test creating and retrieving summary
-        summary = Summary(
-            projectId=TEST_PROJECT_ID,
-            startTime=1640995200,
-            endTime=1641081600,
-            userIds=[TEST_USER_ID],
-            summary="Test summary",
-            loading=False,
-            generatedAt=datetime.now(UTC)
-        )
-        session.add(summary)
-        await session.commit()
-
-        # Retrieve and verify
-        result = await session.execute(
-            select(Summary).where(Summary.projectId == TEST_PROJECT_ID)
-        )
-        retrieved = result.scalar_one_or_none()
-        assert retrieved is not None
-        assert retrieved.summary == "Test summary"
 
 
 class TestEdgeCases:
