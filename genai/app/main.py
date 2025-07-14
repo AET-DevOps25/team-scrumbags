@@ -1,6 +1,7 @@
 import asyncio
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from typing import List
 
@@ -44,8 +45,14 @@ async def lifespan(app: FastAPI):
     task.cancel()
     wc.client.close()
 
+app = FastAPI(
+    title="Content Processing and Q&A API",
+    description="API for processing content entries, generating summaries, and answering questions about project data using AI",
+    version="1.0.0",
+    lifespan=lifespan
+)
 
-app = FastAPI(lifespan=lifespan)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -54,13 +61,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 @app.post(
     "/content",
-    summary="Post content to the queue for processing"
+    summary="Submit content entries for processing",
+    description="Publishes a list of content entries to the processing queue. Each entry must include projectId and timestamp metadata.",
+    responses={
+        200: {"description": "Content entries successfully queued for processing"},
+        422: {"description": "Validation error - missing required fields"},
+        500: {"description": "Internal server error - RabbitMQ not available"}
+    },
+    tags=["Content Processing"]
 )
 async def post_content(
-        entries: List[ContentEntry] = Body(..., description="List of content entries to be processed")
+        entries: List[ContentEntry] = Body(
+            ...,
+            description="List of content entries to be processed",
+            examples=[[{
+                "content": "Sample content text",
+                "metadata": {
+                    "projectId": "123e4567-e89b-12d3-a456-426614174000",
+                    "timestamp": 1640995200
+                }
+            }]]
+        )
 ):
     if rabbit_channel is None:
         raise HTTPException(status_code=500, detail="RabbitMQ not initialized")
@@ -85,12 +108,27 @@ async def post_content(
     return {"status": f"Published {len(entries)} message(s) to queue."}
 
 
-@app.post("/projects/{projectId}/summary", summary="Get a summary of content entries")
+@app.post(
+    "/projects/{projectId}/summary",
+    summary="Generate or retrieve project summary",
+    description="Generates an AI summary of content entries for a project within a specified time range. If a summary already exists for the same parameters, it returns the cached version. Otherwise, generates a new summary asynchronously.",
+    responses={
+        200: {"description": "Summary generated or retrieved successfully"},
+        422: {"description": "Invalid time range or parameters"},
+        500: {"description": "Internal server error"}
+    },
+    tags=["Summaries"]
+)
 async def generate_summary(
-        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)"),
-        startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp (>=-1)"),
-        endTime: int = Query(-1, ge=-1, description="End   UNIX timestamp (>=-1)"),
-        userIds: List[UUID4] = Query([], description="Optional list of user UUIDs to make the LLM focus on")
+        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)",
+                                examples=["123e4567-e89b-12d3-a456-426614174000"]),
+        startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp. Use -1 for no start limit",
+                               examples=[1640995200]),
+        endTime: int = Query(-1, ge=-1, description="End UNIX timestamp. Use -1 for no end limit",
+                            examples=[1641081600]),
+        userIds: List[UUID4] = Query([],
+                                     description="Optional list of user UUIDs to focus the summary on specific users",
+                                     examples=[["456e7890-e12f-34a5-b678-526614174111"]])
 ):
     if startTime > endTime:
         raise HTTPException(
@@ -146,7 +184,7 @@ async def generate_summary(
         await session.commit()
         await session.refresh(placeholder)
 
-        asyncio.create_task(_background_summary_task(new_summary.id, str(projectId), startTime, endTime, user_ids_str))
+        asyncio.create_task(_background_summary_task(placeholder.id, str(projectId), startTime, endTime, input_user_ids))
 
     return JSONResponse(
         status_code=202 if placeholder.loading else 200,
@@ -163,13 +201,28 @@ async def generate_summary(
     )
 
 
-@app.put("/projects/{projectId}/summary", summary="Regenerate and overwrite summary for given time frame",
-         status_code=status.HTTP_201_CREATED)
+@app.put(
+    "/projects/{projectId}/summary",
+    summary="Regenerate project summary",
+    description="Forces regeneration of a project summary by deleting any existing summary for the specified parameters and creating a new one. The summary generation happens asynchronously.",
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        201: {"description": "Summary regeneration initiated successfully"},
+        422: {"description": "Invalid time range or parameters"},
+        500: {"description": "Internal server error"}
+    },
+    tags=["Summaries"]
+)
 async def refresh_summary(
-        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)"),
-        startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp (>=1)"),
-        endTime: int = Query(-1, ge=-1, description="End UNIX timestamp (>=1"),
-        userIds: List[UUID4] = Query([], description="Optional list of user UUIDs to make the LLM focus on")
+        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)",
+                                examples=["123e4567-e89b-12d3-a456-426614174000"]),
+        startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp. Use -1 for no start limit",
+                               examples=[1640995200]),
+        endTime: int = Query(-1, ge=-1, description="End UNIX timestamp. Use -1 for no end limit",
+                            examples=[1641081600]),
+        userIds: List[UUID4] = Query([],
+                                     description="Optional list of user UUIDs to focus the summary on specific users",
+                                     examples=[["456e7890-e12f-34a5-b678-526614174111"]])
 ):
     if startTime > endTime:
         raise HTTPException(
@@ -212,7 +265,7 @@ async def refresh_summary(
         await session.commit()
         await session.refresh(placeholder)
 
-        asyncio.create_task(_background_summary_task(new_summary.id, str(projectId), startTime, endTime, user_ids_str))
+        asyncio.create_task(_background_summary_task(placeholder.id, str(projectId), startTime, endTime, input_user_ids))
 
     return {
         "id": placeholder.id,
@@ -226,9 +279,20 @@ async def refresh_summary(
     }
 
 
-@app.get("/projects/{projectId}/summary", summary="Get all summaries for a project")
+@app.get(
+    "/projects/{projectId}/summary",
+    summary="Get all summaries for a project",
+    description="Retrieves all existing summaries for a specific project, including their generation status and metadata.",
+    responses={
+        200: {"description": "List of summaries retrieved successfully"},
+        404: {"description": "Project not found or no summaries exist"},
+        500: {"description": "Internal server error"}
+    },
+    tags=["Summaries"]
+)
 async def get_summaries(
-        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)")
+        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)",
+                                examples=["123e4567-e89b-12d3-a456-426614174000"])
 ):
     async with async_session() as session:
         result = await session.execute(
@@ -251,10 +315,21 @@ async def get_summaries(
     ]
 
 
-@app.get("/projects/{projectId}/summary/{summaryId}", summary="Get a summary by it's id")
+@app.get(
+    "/projects/{projectId}/summary/{summaryId}",
+    summary="Get summary by ID",
+    description="Retrieves a specific summary by its ID for a given project. Returns the summary content and metadata.",
+    responses={
+        200: {"description": "Summary retrieved successfully"},
+        404: {"description": "Summary not found for the specified project"},
+        500: {"description": "Internal server error"}
+    },
+    tags=["Summaries"]
+)
 async def get_summary_by_id(
-        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)"),
-        summaryId: int = Path(..., description="Summary ID")
+        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)",
+                                examples=["123e4567-e89b-12d3-a456-426614174000"]),
+        summaryId: int = Path(..., description="Summary ID", examples=[1])
 ):
     async with async_session() as session:
         result = await session.execute(
@@ -285,11 +360,24 @@ async def get_summary_by_id(
     )
 
 
-@app.post("/projects/{projectId}/messages", summary="Query the project for answers")
+@app.post(
+    "/projects/{projectId}/messages",
+    summary="Ask a question about project content",
+    description="Submits a question about project content and generates an AI-powered answer based on the project's processed content. The answer generation happens asynchronously.",
+    responses={
+        200: {"description": "Question submitted successfully, answer generation in progress"},
+        422: {"description": "Invalid question format or empty question"},
+        500: {"description": "Internal server error"}
+    },
+    tags=["Q&A"]
+)
 async def query_project(
-        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)"),
-        userId: UUID4 = Query(..., description="User UUID (must be UUID4)"),
-        question: str = Body(..., description="Question to ask about the project content")
+        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)",
+                                examples=["123e4567-e89b-12d3-a456-426614174000"]),
+        userId: UUID4 = Query(..., description="User UUID who is asking the question (must be UUID4)",
+                              examples=["456e7890-e12f-34a5-b678-526614174111"]),
+        question: str = Body(..., description="Question to ask about the project content",
+                            examples=["What is the main focus of this project?"])
 ):
     if not question or len(question.strip()) == 0:
         raise HTTPException(
@@ -349,10 +437,22 @@ async def query_project(
     ]
 
 
-@app.get("/projects/{projectId}/messages", summary="Get Q&A history for a user")
+@app.get(
+    "/projects/{projectId}/messages",
+    summary="Get chat history for a user",
+    description="Retrieves the complete question and answer history for a specific user within a project, ordered by timestamp.",
+    responses={
+        200: {"description": "Chat history retrieved successfully"},
+        404: {"description": "No messages found for this user/project combination"},
+        500: {"description": "Internal server error"}
+    },
+    tags=["Q&A"]
+)
 async def get_chat_history(
-        projectId: UUID4 = Path(..., description="Optional Project UUID"),
-        userId: UUID4 = Query(..., description="User UUID (must be UUID4)")
+        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)",
+                                examples=["123e4567-e89b-12d3-a456-426614174000"]),
+        userId: UUID4 = Query(..., description="User UUID whose chat history to retrieve (must be UUID4)",
+                              examples=["456e7890-e12f-34a5-b678-526614174111"])
 ):
     async with async_session() as session:
         query = select(Message).where(
