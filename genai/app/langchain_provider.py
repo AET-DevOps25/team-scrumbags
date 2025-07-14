@@ -66,12 +66,12 @@ else:
     )
 
 
-def summarize_entries(projectId: str, start: int, end: int, userIds: list[str]):
+async def summarize_entries(projectId: str, start: int, end: int, userIds: list[str]):
     # raw content strings
     contents = wc.get_entries(projectId, start, end)
 
     if not contents:
-        return "No content found for the given parameters. Error generating summary."
+        return {"output_text": "No content found for the given parameters. Error generating summary."}
 
     prompt = PromptTemplate(
         template="""You are a summarizer of source control information (pull requests, commits, branches, etc.),
@@ -119,14 +119,14 @@ def summarize_entries(projectId: str, start: int, end: int, userIds: list[str]):
                                  document_variable_name="input_documents")
 
     joined = ", ".join(userIds)
-    summary = chain.invoke({"input_documents": docs, "users": joined})
+    summary = await chain.ainvoke({"input_documents": docs, "users": joined})
     return summary
 
 
-def answer_question(projectId: str, question: str):
+async def answer_question(projectId: str, question: str):
     contents = wc.get_entries(projectId, -1, -1)
     if not contents or len(contents) == 0:
-        return "No entries found for the given parameters."
+        return {"result": "No entries found for the given parameters."}
 
     # LangChain Documents
     docs = [Document(id=str(obj.uuid),
@@ -152,7 +152,7 @@ def answer_question(projectId: str, question: str):
         retriever=retriever,
         return_source_documents=True
     )
-    response = qa_chain.invoke(question)
+    response = await qa_chain.ainvoke(question)
 
     # Remove ID from source_documents if present to avoid null values in JSON response
     for doc in response["source_documents"]:
