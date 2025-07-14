@@ -1,0 +1,54 @@
+{{- if .Values.genai.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: genai
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: {{ .Values.genai.replicas }}
+  selector:
+    matchLabels:
+      app: genai
+  template:
+    metadata:
+      labels:
+        app: genai
+    spec:
+      containers:
+        - name: genai
+          image: {{ .Values.genai.image }}
+          ports:
+            - containerPort: {{ .Values.genai.port }}
+          env:
+            - name: SERVER_PORT
+              value: "{{ .Values.genai.port }}"
+            - name: DEBUG
+              value: "true"
+          envFrom:
+            - configMapRef:
+                name: trace-config
+            - secretRef:
+                name: trace-secrets
+      initContainers:
+        - name: wait-for-mysql
+          image: busybox:1.35
+          command: ['sh', '-c', 'until nc -z mysql-service {{ .Values.mysql.port }}; do sleep 1; done']
+        - name: wait-for-weaviate
+          image: busybox:1.35
+          command: ['sh', '-c', 'until nc -z weaviate-service {{ .Values.weaviate.port }}; do sleep 1; done']
+        - name: wait-for-rabbitmq
+          image: busybox:1.35
+          command: ['sh', '-c', 'until nc -z rabbitmq-service {{ .Values.rabbitmq.port }}; do sleep 1; done']
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: genai-service
+  namespace: {{ .Values.global.namespace }}
+spec:
+  selector:
+    app: genai
+  ports:
+    - port: {{ .Values.genai.port }}
+      targetPort: {{ .Values.genai.port }}
+{{- end }}

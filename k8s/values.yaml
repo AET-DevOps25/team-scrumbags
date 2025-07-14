@@ -1,0 +1,102 @@
+# Global configuration
+global:
+  namespace: trace-app
+  imageRegistry: ""
+  imagePullPolicy: IfNotPresent
+
+# Environment variables
+environment:
+  debug: false
+  keycloakRealm: trace
+  keycloakClient: trace-api
+  keycloakAdminUsername: admin
+  keycloakAdminPassword: admin
+  postgresDbUser: user
+  postgresDbPassword: test
+  mysqlRootPassword: test
+  sdlcTokenSecret: meinsecret
+  sdlcMode: forward
+  useWhisperx: false
+  useCloud: true
+  transcriptionTimeout: 300000
+
+# Ingress configuration
+ingress:
+  enabled: false
+  host: trace.local
+
+# Service configurations
+client:
+  enabled: true
+  image: trace/client:latest
+  port: 80
+  nodePort: 4200
+  replicas: 1
+
+projectManagement:
+  enabled: true
+  image: trace/project-management:latest
+  port: 8080
+  replicas: 1
+
+sdlc:
+  enabled: true
+  image: trace/sdlc-connector:latest
+  port: 8081
+  replicas: 1
+
+communication:
+  enabled: true
+  image: trace/comms-connector:latest
+  port: 8082
+  replicas: 1
+
+transcription:
+  enabled: true
+  image: trace/transcription:latest
+  port: 8083
+  replicas: 1
+
+genai:
+  enabled: true
+  image: trace/genai:latest
+  port: 4242
+  replicas: 1
+
+# External services
+postgresql:
+  enabled: true
+  image: postgres:latest
+  port: 5432
+  storageSize: 10Gi
+
+mysql:
+  enabled: true
+  image: mysql:8.0
+  port: 3306
+  storageSize: 10Gi
+
+keycloak:
+  enabled: true
+  image: quay.io/keycloak/keycloak:26.2.5
+  port: 7999
+  replicas: 1
+
+ollama:
+  enabled: false
+  image: ollama/ollama:latest
+  port: 11434
+  storageSize: 20Gi
+
+rabbitmq:
+  enabled: true
+  image: rabbitmq:management
+  port: 5672
+  managementPort: 15672
+  storageSize: 5Gi
+
+weaviate:
+  enabled: true
+  image: cr.weaviate.io/semitechnologies/weaviate:1.31.2
+  port: 6969
+  storageSize: 10Gi
