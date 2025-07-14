@@ -24,7 +24,7 @@ TEST_PROJECT_ID = str(uuid4())
 TEST_USER_ID = str(uuid4())
 TEST_USER_ID_2 = str(uuid4())
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(loop_scope="session")
 async def test_engine():
     """Create test engine per test function"""
     engine = create_async_engine(
@@ -38,13 +38,13 @@ async def test_engine():
     await engine.dispose()
 
 
-@pytest_asyncio.fixture()
+@pytest_asyncio.fixture(loop_scope="session")
 async def test_session_factory(test_engine):
     """Create session factory per test function"""
     return async_sessionmaker(test_engine, expire_on_commit=False)
 
 
-@pytest_asyncio.fixture()
+@pytest_asyncio.fixture(loop_scope="session")
 async def setup_database(test_engine):
     """Setup test database"""
     # Create tables
@@ -58,7 +58,7 @@ async def setup_database(test_engine):
         await conn.run_sync(Base.metadata.drop_all)
 
 
-@pytest_asyncio.fixture()
+@pytest_asyncio.fixture(loop_scope="session")
 async def override_db_session(setup_database, test_session_factory):
     """Override database session for testing"""
 
@@ -74,7 +74,7 @@ async def override_db_session(setup_database, test_session_factory):
     app.dependency_overrides.clear()
 
 
-@pytest_asyncio.fixture()
+@pytest_asyncio.fixture(loop_scope="session")
 async def client(override_db_session) -> AsyncGenerator[AsyncClient, None]:
     """Create test client with all async deps mocked as AsyncMock."""
     # patch everything you await _directly_ as AsyncMock:
@@ -97,7 +97,7 @@ async def client(override_db_session) -> AsyncGenerator[AsyncClient, None]:
             yield ac
 
 
-@pytest_asyncio.fixture()
+@pytest_asyncio.fixture(loop_scope="session")
 async def sample_content_entry():
     """Create sample content entry"""
     return ContentEntry(
