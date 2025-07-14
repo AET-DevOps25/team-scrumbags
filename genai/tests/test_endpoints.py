@@ -16,22 +16,24 @@ from app.main import app
 from app.db import Base, Summary, Message, async_session
 from app.models import ContentEntry, Metadata
 
-
 # Use MySQL for testing - matches CI environment
 TEST_DATABASE_URL = os.getenv(
     "MYSQL_URL",
     "mysql+asyncmy://user:password@127.0.0.1:3306/summaries"
 )
 
-# Test data
+# Test data - convert to strings for JSON serialization
 TEST_PROJECT_ID = str(uuid4())
 TEST_USER_ID = str(uuid4())
 TEST_USER_ID_2 = str(uuid4())
 
+# Configure pytest-asyncio to use function scope
+pytestmark = pytest.mark.asyncio(scope="function")
 
-@pytest_asyncio.fixture(scope="function")
+
+@pytest_asyncio.fixture(scope="session")
 async def test_engine():
-    """Create test engine per test function"""
+    """Create test engine for session"""
     engine = create_async_engine(
         TEST_DATABASE_URL,
         echo=False,
@@ -43,15 +45,15 @@ async def test_engine():
     await engine.dispose()
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="session")
 async def test_session_factory(test_engine):
-    """Create session factory per test function"""
+    """Create session factory for session"""
     return async_sessionmaker(test_engine, expire_on_commit=False)
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", autouse=True)
 async def setup_database(test_engine):
-    """Setup test database"""
+    """Setup test database for each test"""
     # Create tables
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -63,23 +65,23 @@ async def setup_database(test_engine):
         await conn.run_sync(Base.metadata.drop_all)
 
 
-@pytest_asyncio.fixture
-async def override_db_session(setup_database, test_session_factory):
+@pytest_asyncio.fixture(scope="function")
+async def override_db_session(test_session_factory):
     """Override database session for testing"""
 
     async def get_test_db():
-        async with test_session_factory() as session:
-            try:
-                yield session
-            finally:
-                await session.close()
+        session = test_session_factory()
+        try:
+            yield session
+        finally:
+            await session.close()
 
     app.dependency_overrides[async_session] = get_test_db
     yield
     app.dependency_overrides.clear()
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def client(override_db_session) -> AsyncGenerator[AsyncClient, None]:
     """Create test client"""
     with patch('app.main.rabbit_connection') as mock_rabbit_conn, \
@@ -105,13 +107,13 @@ async def client(override_db_session) -> AsyncGenerator[AsyncClient, None]:
 
 @pytest_asyncio.fixture
 async def sample_content_entry():
-    """Create sample content entry"""
+    """Create sample content entry with string UUIDs"""
     return ContentEntry(
         metadata=Metadata(
             type="commit",
-            user=TEST_USER_ID,
+            user=TEST_USER_ID,  # Already a string
             timestamp=1640995200,
-            projectId=TEST_PROJECT_ID
+            projectId=TEST_PROJECT_ID  # Already a string
         ),
         content={
             "message": "Initial commit",
