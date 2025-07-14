@@ -61,25 +61,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-summary = "Submit content entries for processing",
-description = "Publishes a list of content entries to the processing queue. Each entry must include projectId and timestamp metadata.",
-responses = {
-    200: {"description": "Content entries successfully queued for processing"},
-    422: {"description": "Validation error - missing required fields"},
-    500: {"description": "Internal server error - RabbitMQ not available"}
-},
-tags = ["Content Processing"]
+@app.post(
+    "/content",
+    summary="Submit content entries for processing",
+    description="Publishes a list of content entries to the processing queue. Each entry must include projectId and timestamp metadata.",
+    responses={
+        200: {"description": "Content entries successfully queued for processing"},
+        422: {"description": "Validation error - missing required fields"},
+        500: {"description": "Internal server error - RabbitMQ not available"}
+    },
+    tags=["Content Processing"]
+)
 async def post_content(
         entries: List[ContentEntry] = Body(
             ...,
             description="List of content entries to be processed",
-            example=[{
+            examples=[[{
                 "content": "Sample content text",
                 "metadata": {
                     "projectId": "123e4567-e89b-12d3-a456-426614174000",
                     "timestamp": 1640995200
                 }
-            }]
+            }]]
         )
 ):
     if rabbit_channel is None:
@@ -118,13 +121,14 @@ async def post_content(
 )
 async def generate_summary(
         projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)",
-                                example="123e4567-e89b-12d3-a456-426614174000"),
+                                examples=["123e4567-e89b-12d3-a456-426614174000"]),
         startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp. Use -1 for no start limit",
-                               example=1640995200),
-        endTime: int = Query(-1, ge=-1, description="End UNIX timestamp. Use -1 for no end limit", example=1641081600),
+                               examples=[1640995200]),
+        endTime: int = Query(-1, ge=-1, description="End UNIX timestamp. Use -1 for no end limit",
+                            examples=[1641081600]),
         userIds: List[UUID4] = Query([],
                                      description="Optional list of user UUIDs to focus the summary on specific users",
-                                     example=["456e7890-e12f-34a5-b678-526614174111"])
+                                     examples=[["456e7890-e12f-34a5-b678-526614174111"]])
 ):
     if startTime > endTime:
         raise HTTPException(
@@ -211,13 +215,14 @@ async def generate_summary(
 )
 async def refresh_summary(
         projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)",
-                                example="123e4567-e89b-12d3-a456-426614174000"),
+                                examples=["123e4567-e89b-12d3-a456-426614174000"]),
         startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp. Use -1 for no start limit",
-                               example=1640995200),
-        endTime: int = Query(-1, ge=-1, description="End UNIX timestamp. Use -1 for no end limit", example=1641081600),
+                               examples=[1640995200]),
+        endTime: int = Query(-1, ge=-1, description="End UNIX timestamp. Use -1 for no end limit",
+                            examples=[1641081600]),
         userIds: List[UUID4] = Query([],
                                      description="Optional list of user UUIDs to focus the summary on specific users",
-                                     example=["456e7890-e12f-34a5-b678-526614174111"])
+                                     examples=[["456e7890-e12f-34a5-b678-526614174111"]])
 ):
     if startTime > endTime:
         raise HTTPException(
@@ -287,7 +292,7 @@ async def refresh_summary(
 )
 async def get_summaries(
         projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)",
-                                example="123e4567-e89b-12d3-a456-426614174000")
+                                examples=["123e4567-e89b-12d3-a456-426614174000"])
 ):
     async with async_session() as session:
         result = await session.execute(
@@ -323,8 +328,8 @@ async def get_summaries(
 )
 async def get_summary_by_id(
         projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)",
-                                example="123e4567-e89b-12d3-a456-426614174000"),
-        summaryId: int = Path(..., description="Summary ID", example=1)
+                                examples=["123e4567-e89b-12d3-a456-426614174000"]),
+        summaryId: int = Path(..., description="Summary ID", examples=[1])
 ):
     async with async_session() as session:
         result = await session.execute(
@@ -368,10 +373,11 @@ async def get_summary_by_id(
 )
 async def query_project(
         projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)",
-                                example="123e4567-e89b-12d3-a456-426614174000"),
+                                examples=["123e4567-e89b-12d3-a456-426614174000"]),
         userId: UUID4 = Query(..., description="User UUID who is asking the question (must be UUID4)",
-                              example="456e7890-e12f-34a5-b678-526614174111"),
-        question: str = Body(..., description="Question to ask about the project content", example="What is the main focus of this project?")
+                              examples=["456e7890-e12f-34a5-b678-526614174111"]),
+        question: str = Body(..., description="Question to ask about the project content",
+                            examples=["What is the main focus of this project?"])
 ):
     if not question or len(question.strip()) == 0:
         raise HTTPException(
@@ -444,9 +450,9 @@ async def query_project(
 )
 async def get_chat_history(
         projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)",
-                                example="123e4567-e89b-12d3-a456-426614174000"),
+                                examples=["123e4567-e89b-12d3-a456-426614174000"]),
         userId: UUID4 = Query(..., description="User UUID whose chat history to retrieve (must be UUID4)",
-                              example="456e7890-e12f-34a5-b678-526614174111")
+                              examples=["456e7890-e12f-34a5-b678-526614174111"])
 ):
     async with async_session() as session:
         query = select(Message).where(
