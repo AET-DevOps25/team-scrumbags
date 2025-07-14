@@ -23,24 +23,34 @@ TEST_DATABASE_URL = os.getenv(
     "mysql+asyncmy://user:password@127.0.0.1:3306/summaries"
 )
 
-# Create test engine with different pool settings to avoid conflicts
-test_engine = create_async_engine(
-    TEST_DATABASE_URL,
-    echo=False,
-    pool_pre_ping=True,
-    pool_recycle=300,
-    pool_reset_on_return='rollback'
-)
-test_async_session = async_sessionmaker(test_engine, expire_on_commit=False)
-
 # Test data
 TEST_PROJECT_ID = str(uuid4())
 TEST_USER_ID = str(uuid4())
 TEST_USER_ID_2 = str(uuid4())
 
 
-@pytest_asyncio.fixture(scope="function", autouse=True)
-async def setup_database():
+@pytest_asyncio.fixture(scope="function")
+async def test_engine():
+    """Create test engine per test function"""
+    engine = create_async_engine(
+        TEST_DATABASE_URL,
+        echo=False,
+        pool_pre_ping=True,
+        pool_recycle=300,
+        pool_reset_on_return='rollback'
+    )
+    yield engine
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def test_session_factory(test_engine):
+    """Create session factory per test function"""
+    return async_sessionmaker(test_engine, expire_on_commit=False)
+
+
+@pytest_asyncio.fixture(scope="function")
+async def setup_database(test_engine):
     """Setup test database"""
     # Create tables
     async with test_engine.begin() as conn:
@@ -49,19 +59,20 @@ async def setup_database():
     yield
 
     # Clean up data after test
-    async with test_async_session() as session:
-        await session.execute(delete(Message))
-        await session.execute(delete(Summary))
-        await session.commit()
+    async with test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
 
 
 @pytest_asyncio.fixture
-async def override_db_session(setup_database):
+async def override_db_session(setup_database, test_session_factory):
     """Override database session for testing"""
 
     async def get_test_db():
-        async with test_async_session() as session:
-            yield session
+        async with test_session_factory() as session:
+            try:
+                yield session
+            finally:
+                await session.close()
 
     app.dependency_overrides[async_session] = get_test_db
     yield
