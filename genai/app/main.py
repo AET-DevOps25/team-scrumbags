@@ -20,7 +20,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import UUID4
 from sqlalchemy import select, update
-from fastapi.openapi.utils import get_openapi
 
 load_dotenv()
 
@@ -46,8 +45,14 @@ async def lifespan(app: FastAPI):
     task.cancel()
     wc.client.close()
 
+app = FastAPI(
+    title="Content Processing and Q&A API",
+    description="API for processing content entries, generating summaries, and answering questions about project data using AI",
+    version="1.0.0",
+    lifespan=lifespan
+)
 
-app = FastAPI(lifespan=lifespan)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -56,95 +61,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-def custom_openapi():
-    if app.openapi_schema:
-        return app.openapi_schema
-
-    openapi_schema = get_openapi(
-        title="GenAI Content Processing API",
-        version="1.0.0",
-        description="""
-        A FastAPI application for processing content entries, generating summaries, and answering questions using AI.
-
-        ## Features
-
-        * **Content Processing**: Submit content entries to a queue for asynchronous processing
-        * **Summary Generation**: Generate AI-powered summaries of content for specific time periods
-        * **Q&A System**: Ask questions about project content and get AI-generated answers
-        * **Chat History**: Retrieve conversation history for users
-
-        ## Usage
-
-        1. Post content entries using `/content` endpoint
-        2. Generate summaries using `/projects/{projectId}/summary` endpoints
-        3. Query content using `/projects/{projectId}/messages` endpoints
-        """,
-        routes=app.routes,
-        servers=[
-            {"url": "http://localhost:8000", "description": "Development server"},
-            {"url": "https://api.example.com", "description": "Production server"}
-        ]
-    )
-
-    # Add tags metadata
-    openapi_schema["tags"] = [
-        {
-            "name": "Content",
-            "description": "Operations for submitting and processing content entries"
-        },
-        {
-            "name": "Summaries",
-            "description": "Operations for generating and managing content summaries"
-        },
-        {
-            "name": "Messages",
-            "description": "Operations for Q&A and chat functionality"
-        }
-    ]
-
-    app.openapi_schema = openapi_schema
-    return app.openapi_schema
-
-
-app.openapi = custom_openapi
-
-
-@app.post(
-    "/content",
-    summary="Submit content entries for processing",
-    description="Submit a list of content entries to the RabbitMQ queue for asynchronous processing",
-    response_description="Confirmation of successful submission",
-    tags=["Content"],
-    responses={
-        200: {
-            "description": "Content successfully submitted to queue",
-            "content": {
-                "application/json": {
-                    "example": {"status": "Published 3 message(s) to queue."}
-                }
-            }
-        },
-        422: {
-            "description": "Validation error - missing projectId or timestamp",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Each entry must have a projectId and timestamp."}
-                }
-            }
-        },
-        500: {
-            "description": "RabbitMQ connection error",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "RabbitMQ not initialized"}
-                }
-            }
-        }
-    }
-)
+summary = "Submit content entries for processing",
+description = "Publishes a list of content entries to the processing queue. Each entry must include projectId and timestamp metadata.",
+responses = {
+    200: {"description": "Content entries successfully queued for processing"},
+    422: {"description": "Validation error - missing required fields"},
+    500: {"description": "Internal server error - RabbitMQ not available"}
+},
+tags = ["Content Processing"]
 async def post_content(
-        entries: List[ContentEntry] = Body(..., description="List of content entries to be processed")
+        entries: List[ContentEntry] = Body(
+            ...,
+            description="List of content entries to be processed",
+            example=[{
+                "content": "Sample content text",
+                "metadata": {
+                    "projectId": "123e4567-e89b-12d3-a456-426614174000",
+                    "timestamp": 1640995200
+                }
+            }]
+        )
 ):
     if rabbit_channel is None:
         raise HTTPException(status_code=500, detail="RabbitMQ not initialized")
@@ -170,61 +106,25 @@ async def post_content(
 
 
 @app.post(
-    "/projects/{projectId}/summary",
-    summary="Generate content summary",
-    description="Generate an AI-powered summary of content entries for a specific project and time period",
-    response_description="Summary object with generation status",
-    tags=["Summaries"],
+    "/project/{projectId}/summary",
+    summary="Generate or retrieve project summary",
+    description="Generates an AI summary of content entries for a project within a specified time range. If a summary already exists for the same parameters, it returns the cached version. Otherwise, generates a new summary asynchronously.",
     responses={
-        200: {
-            "description": "Existing summary found and returned",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "id": 1,
-                        "projectId": "123e4567-e89b-12d3-a456-426614174000",
-                        "startTime": 1640995200000,
-                        "endTime": 1641081600000,
-                        "userIds": [],
-                        "generatedAt": 1641081600000,
-                        "loading": False,
-                        "summary": "Project summary content..."
-                    }
-                }
-            }
-        },
-        202: {
-            "description": "New summary generation started",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "id": 2,
-                        "projectId": "123e4567-e89b-12d3-a456-426614174000",
-                        "startTime": 1640995200000,
-                        "endTime": 1641081600000,
-                        "userIds": [],
-                        "generatedAt": 1641081600000,
-                        "loading": True,
-                        "summary": ""
-                    }
-                }
-            }
-        },
-        422: {
-            "description": "Invalid time range",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "startTime must be ≤ endTime"}
-                }
-            }
-        }
-    }
+        200: {"description": "Summary generated or retrieved successfully"},
+        422: {"description": "Invalid time range or parameters"},
+        500: {"description": "Internal server error"}
+    },
+    tags=["Summaries"]
 )
 async def generate_summary(
-        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)"),
-        startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp (>=-1)"),
-        endTime: int = Query(-1, ge=-1, description="End UNIX timestamp (>=-1)"),
-        userIds: List[UUID4] = Query([], description="Optional list of user UUIDs to make the LLM focus on")
+        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)",
+                                example="123e4567-e89b-12d3-a456-426614174000"),
+        startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp. Use -1 for no start limit",
+                               example=1640995200),
+        endTime: int = Query(-1, ge=-1, description="End UNIX timestamp. Use -1 for no end limit", example=1641081600),
+        userIds: List[UUID4] = Query([],
+                                     description="Optional list of user UUIDs to focus the summary on specific users",
+                                     example=["456e7890-e12f-34a5-b678-526614174111"])
 ):
     if startTime > endTime:
         raise HTTPException(
@@ -298,37 +198,26 @@ async def generate_summary(
 
 
 @app.put(
-    "/projects/{projectId}/summary",
-    summary="Regenerate content summary",
-    description="Force regeneration of summary by deleting existing one and creating new",
-    response_description="New summary object with loading status",
-    tags=["Summaries"],
+    "/project/{projectId}/summary",
+    summary="Regenerate project summary",
+    description="Forces regeneration of a project summary by deleting any existing summary for the specified parameters and creating a new one. The summary generation happens asynchronously.",
     status_code=status.HTTP_201_CREATED,
     responses={
-        201: {
-            "description": "Summary regeneration started",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "id": 3,
-                        "projectId": "123e4567-e89b-12d3-a456-426614174000",
-                        "startTime": 1640995200000,
-                        "endTime": 1641081600000,
-                        "userIds": [],
-                        "generatedAt": 1641081600000,
-                        "loading": True,
-                        "summary": ""
-                    }
-                }
-            }
-        }
-    }
+        201: {"description": "Summary regeneration initiated successfully"},
+        422: {"description": "Invalid time range or parameters"},
+        500: {"description": "Internal server error"}
+    },
+    tags=["Summaries"]
 )
 async def refresh_summary(
-        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)"),
-        startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp (>=1)"),
-        endTime: int = Query(-1, ge=-1, description="End UNIX timestamp (>=1"),
-        userIds: List[UUID4] = Query([], description="Optional list of user UUIDs to make the LLM focus on")
+        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)",
+                                example="123e4567-e89b-12d3-a456-426614174000"),
+        startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp. Use -1 for no start limit",
+                               example=1640995200),
+        endTime: int = Query(-1, ge=-1, description="End UNIX timestamp. Use -1 for no end limit", example=1641081600),
+        userIds: List[UUID4] = Query([],
+                                     description="Optional list of user UUIDs to focus the summary on specific users",
+                                     example=["456e7890-e12f-34a5-b678-526614174111"])
 ):
     if startTime > endTime:
         raise HTTPException(
@@ -386,35 +275,19 @@ async def refresh_summary(
 
 
 @app.get(
-    "/projects/{projectId}/summary",
-    summary="Get all project summaries",
-    description="Retrieve all summaries generated for a specific project",
-    response_description="List of all summaries for the project",
-    tags=["Summaries"],
+    "/project/{projectId}/summary",
+    summary="Get all summaries for a project",
+    description="Retrieves all existing summaries for a specific project, including their generation status and metadata.",
     responses={
-        200: {
-            "description": "List of summaries",
-            "content": {
-                "application/json": {
-                    "example": [
-                        {
-                            "id": 1,
-                            "projectId": "123e4567-e89b-12d3-a456-426614174000",
-                            "startTime": 1640995200000,
-                            "endTime": 1641081600000,
-                            "userIds": [],
-                            "generatedAt": 1641081600000,
-                            "loading": False,
-                            "summary": "Project summary content..."
-                        }
-                    ]
-                }
-            }
-        }
-    }
+        200: {"description": "List of summaries retrieved successfully"},
+        404: {"description": "Project not found or no summaries exist"},
+        500: {"description": "Internal server error"}
+    },
+    tags=["Summaries"]
 )
 async def get_summaries(
-        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)")
+        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)",
+                                example="123e4567-e89b-12d3-a456-426614174000")
 ):
     async with async_session() as session:
         result = await session.execute(
@@ -438,31 +311,20 @@ async def get_summaries(
 
 
 @app.get(
-    "/projects/{projectId}/summary/{summaryId}",
-    summary="Get specific summary by ID",
-    description="Retrieve a specific summary by its ID within a project",
-    response_description="Summary object or loading status",
-    tags=["Summaries"],
+    "/project/{projectId}/summary/{summaryId}",
+    summary="Get summary by ID",
+    description="Retrieves a specific summary by its ID for a given project. Returns the summary content and metadata.",
     responses={
-        200: {
-            "description": "Summary found and completed",
-        },
-        202: {
-            "description": "Summary found but still generating",
-        },
-        404: {
-            "description": "Summary not found",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Summary with ID 1 not found for project 123e4567-e89b-12d3-a456-426614174000."}
-                }
-            }
-        }
-    }
+        200: {"description": "Summary retrieved successfully"},
+        404: {"description": "Summary not found for the specified project"},
+        500: {"description": "Internal server error"}
+    },
+    tags=["Summaries"]
 )
 async def get_summary_by_id(
-        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)"),
-        summaryId: int = Path(..., description="Summary ID")
+        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)",
+                                example="123e4567-e89b-12d3-a456-426614174000"),
+        summaryId: int = Path(..., description="Summary ID", example=1)
 ):
     async with async_session() as session:
         result = await session.execute(
@@ -494,53 +356,22 @@ async def get_summary_by_id(
 
 
 @app.post(
-    "/projects/{projectId}/messages",
-    summary="Ask question about project",
-    description="Submit a question about project content and receive an AI-generated answer",
-    response_description="Question and answer message objects",
-    tags=["Messages"],
+    "/project/{projectId}/messages",
+    summary="Ask a question about project content",
+    description="Submits a question about project content and generates an AI-powered answer based on the project's processed content. The answer generation happens asynchronously.",
     responses={
-        200: {
-            "description": "Question submitted and answer generation started",
-            "content": {
-                "application/json": {
-                    "example": [
-                        {
-                            "id": 1,
-                            "userId": "123e4567-e89b-12d3-a456-426614174000",
-                            "isGenerated": False,
-                            "projectId": "123e4567-e89b-12d3-a456-426614174000",
-                            "timestamp": 1641081600000,
-                            "content": "What is this project about?",
-                            "loading": False
-                        },
-                        {
-                            "id": 2,
-                            "userId": "123e4567-e89b-12d3-a456-426614174000",
-                            "isGenerated": True,
-                            "projectId": "123e4567-e89b-12d3-a456-426614174000",
-                            "timestamp": 1641081601000,
-                            "content": "",
-                            "loading": True
-                        }
-                    ]
-                }
-            }
-        },
-        422: {
-            "description": "Empty question",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Question cannot be empty."}
-                }
-            }
-        }
-    }
+        200: {"description": "Question submitted successfully, answer generation in progress"},
+        422: {"description": "Invalid question format or empty question"},
+        500: {"description": "Internal server error"}
+    },
+    tags=["Q&A"]
 )
 async def query_project(
-        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)"),
-        userId: UUID4 = Query(..., description="User UUID (must be UUID4)"),
-        question: str = Body(..., description="Question to ask about the project content")
+        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)",
+                                example="123e4567-e89b-12d3-a456-426614174000"),
+        userId: UUID4 = Query(..., description="User UUID who is asking the question (must be UUID4)",
+                              example="456e7890-e12f-34a5-b678-526614174111"),
+        question: str = Body(..., description="Question to ask about the project content", example="What is the main focus of this project?")
 ):
     if not question or len(question.strip()) == 0:
         raise HTTPException(
@@ -601,44 +432,21 @@ async def query_project(
 
 
 @app.get(
-    "/projects/{projectId}/messages",
-    summary="Get chat history",
-    description="Retrieve the complete Q&A history for a user within a project",
-    response_description="List of messages (questions and answers) ordered by timestamp",
-    tags=["Messages"],
+    "/project/{projectId}/messages",
+    summary="Get chat history for a user",
+    description="Retrieves the complete question and answer history for a specific user within a project, ordered by timestamp.",
     responses={
-        200: {
-            "description": "Chat history retrieved successfully",
-            "content": {
-                "application/json": {
-                    "example": [
-                        {
-                            "id": 1,
-                            "userId": "123e4567-e89b-12d3-a456-426614174000",
-                            "isGenerated": False,
-                            "projectId": "123e4567-e89b-12d3-a456-426614174000",
-                            "timestamp": 1641081600000,
-                            "content": "What is this project about?",
-                            "loading": False
-                        },
-                        {
-                            "id": 2,
-                            "userId": "123e4567-e89b-12d3-a456-426614174000",
-                            "isGenerated": True,
-                            "projectId": "123e4567-e89b-12d3-a456-426614174000",
-                            "timestamp": 1641081601000,
-                            "content": "This project focuses on...",
-                            "loading": False
-                        }
-                    ]
-                }
-            }
-        }
-    }
+        200: {"description": "Chat history retrieved successfully"},
+        404: {"description": "No messages found for this user/project combination"},
+        500: {"description": "Internal server error"}
+    },
+    tags=["Q&A"]
 )
 async def get_chat_history(
-        projectId: UUID4 = Path(..., description="Optional Project UUID"),
-        userId: UUID4 = Query(..., description="User UUID (must be UUID4)")
+        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)",
+                                example="123e4567-e89b-12d3-a456-426614174000"),
+        userId: UUID4 = Query(..., description="User UUID whose chat history to retrieve (must be UUID4)",
+                              example="456e7890-e12f-34a5-b678-526614174111")
 ):
     async with async_session() as session:
         query = select(Message).where(
