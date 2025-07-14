@@ -368,6 +368,8 @@ def _blocking_summary_job(summary_id: int,
                           user_ids: list[str]):
     async def _do_update():
         summary_md = summarize_entries(project_id, start_time, end_time, user_ids)
+        if type(summary_md) is str:
+            summary_md = {"output_text": summary_md}
 
         async with async_session() as session:
             stmt = (
