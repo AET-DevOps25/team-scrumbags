@@ -124,7 +124,7 @@ public class SpeakerService {
 
             return speakerRepository.save(speaker);
         } finally {
-            boolean deleted = tmp.deleteOnExit();
+            boolean deleted = tmp.delete();
             if (!deleted) {
                 logger.warn("Temporary file {} could not be deleted", tmp.getAbsolutePath());
             }
