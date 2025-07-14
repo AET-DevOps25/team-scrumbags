@@ -75,7 +75,7 @@ export class ReportOverviewView {
   }
 
   onSubmit() {
-    this.generateReport();
+    this.generateReport(this.periodStart(), this.periodEnd(), this.userIds());
   }
 
   onCancel() {
@@ -84,14 +84,12 @@ export class ReportOverviewView {
     this.userIds.set([]);
   }
 
-  private generateReport() {
+  private generateReport(periodStart: Date | null, periodEnd: Date | null, userIds?: string[]) {
     const projectId = this.projectService.selectedProjectId();
-    const periodStart = this.periodStart();
-    const periodEnd = this.periodEnd();
 
     if (projectId) {
       this.reportService
-        .generateReport(projectId, periodStart, periodEnd, this.userIds())
+        .generateReport(projectId, periodStart, periodEnd, userIds)
         .subscribe();
     }
   }
