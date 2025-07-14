@@ -23,7 +23,7 @@ from sqlalchemy import select, update
 
 load_dotenv()
 
-RABBIT_URL = (f"{os.getenv('RABBITMQ_URL', 'amqp://guest:guest@rabbitmq/')}")
+RABBIT_URL = f"{os.getenv('RABBITMQ_URL', 'amqp://guest:guest@rabbitmq/')}"
 QUEUE_NAME = "content_queue"
 
 rabbit_connection: RobustConnection | None = None
@@ -478,8 +478,6 @@ async def _background_summary_task(summary_id: int, project_id: str, start_time:
                                    user_ids: list[str]):
     """Generate summary in background"""
     try:
-        # Get entries from Weaviate
-        entries = wc.get_entries(project_id, start_time, end_time)
 
         # Generate summary using LangChain
         summary_md = await summarize_entries(project_id, start_time, end_time, user_ids)
