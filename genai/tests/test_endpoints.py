@@ -8,13 +8,14 @@ from typing import AsyncGenerator
 from unittest.mock import patch, AsyncMock, MagicMock
 from uuid import uuid4
 
-from httpx import AsyncClient
+from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy import select, delete
 
 from app.main import app
 from app.db import Base, Summary, Message, async_session
 from app.models import ContentEntry, Metadata
+
 
 # Use MySQL for testing - matches CI environment
 TEST_DATABASE_URL = os.getenv(
