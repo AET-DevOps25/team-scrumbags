@@ -1,19 +1,15 @@
-import asyncio
-import json
 import os
 import pytest
 import pytest_asyncio
-from datetime import datetime, UTC
 from typing import AsyncGenerator
 from unittest.mock import patch, AsyncMock, MagicMock
 from uuid import uuid4
 
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from sqlalchemy import select, delete
 
 from app.main import app
-from app.db import Base, Summary, Message, async_session
+from app.db import Base, async_session
 from app.models import ContentEntry, Metadata
 
 
@@ -124,7 +120,7 @@ class TestContentEndpoint:
     @pytest.mark.asyncio
     async def test_post_content_success(self, client: AsyncClient, sample_content_entry):
         """Test successful content posting"""
-        response = await client.post("/content", json=[sample_content_entry.model_dump()])
+        response = await client.post("/content", json=[sample_content_entry.model_dump(mode="json")])
         assert response.status_code == 200
         data = response.json()
         assert "status" in data
