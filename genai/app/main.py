@@ -78,11 +78,11 @@ async def post_content(
     return {"status": f"Published {len(entries)} message(s) to queue."}
 
 
-@app.post("/project/{projectId}/summary", summary="Get a summary of content entries")
+@app.post("/projects/{projectId}/summary", summary="Get a summary of content entries")
 async def get_summary(
         projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)"),
         startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp (>=-1)"),
-        endTime: int = Query(-1, ge=-1, description="End   UNIX timestamp (>=-1)"),
+        endTime: int = Query(-1, ge=-1, description="End UNIX timestamp (>=-1)"),
         userIds: List[UUID4] = Query([], description="Optional list of user UUIDs to make the LLM focus on")
 ):
     if startTime > endTime:
@@ -160,7 +160,7 @@ async def get_summary(
     }
 
 
-@app.put("/project/{projectId}/summary", summary="Regenerate and overwrite summary for given time frame",
+@app.put("/projects/{projectId}/summary", summary="Regenerate and overwrite summary for given time frame",
          status_code=status.HTTP_201_CREATED)
 async def refresh_summary(
         projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)"),
@@ -232,7 +232,7 @@ async def refresh_summary(
     }
 
 
-@app.get("/project/{projectId}/summary", summary="Get all summaries for a project")
+@app.get("/projects/{projectId}/summary", summary="Get all summaries for a project")
 async def get_summaries(
         projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)")
 ):
@@ -257,7 +257,7 @@ async def get_summaries(
     ]
 
 
-@app.post("/project/{projectId}/messages", summary="Query the project for answers")
+@app.post("/projects/{projectId}/messages", summary="Query the project for answers")
 async def query_project(
         projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)"),
         userId: UUID4 = Query(..., description="User UUID (must be UUID4)"),
@@ -309,7 +309,7 @@ async def query_project(
     }
 
 
-@app.get("/project/{projectId}/messages", summary="Get Q&A history for a user")
+@app.get("/projects/{projectId}/messages", summary="Get Q&A history for a user")
 async def get_chat_history(
         projectId: UUID4 = Path(..., description="Optional Project UUID"),
         userId: UUID4 = Query(..., description="User UUID (must be UUID4)")

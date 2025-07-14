@@ -1,0 +1,56 @@
+@if (isLoading()){
+  <div class="flex flex-row items-center justify-center">
+    <mat-progress-spinner
+      diameter="24"
+      mode="indeterminate"
+    ></mat-progress-spinner>
+  </div>
+} @else {
+  @if (projectsUser().length > 0) {
+  <mat-action-list>
+    @for (item of userVoiceSamples(); let i = $index; track item.user.id) {
+      <div
+        mat-list-item
+        class="flex flex-row items-center justify-between w-full my-1"
+      >
+          <div class="flex flex-col">
+            <span>{{ item.user.username }}</span>
+            <div class="flex items-center">
+            @if (item.fileName) {
+                <span class="text-(--mat-sys-secondary)">{{ item.fileName }}</span>
+              } @else {
+                <span class="text-(--mat-sys-secondary) italic">No voice sample</span>
+              }
+            </div>
+          </div>
+          <div class="flex flex-row items-center space-x-2">
+            @if (isUploading() === item.user.id) {
+              <mat-progress-spinner
+                diameter="24"
+                mode="indeterminate"
+              ></mat-progress-spinner>
+            } @else {
+              <button mat-stroked-button (click)="fileInput.click()">
+                <mat-icon>upload_file</mat-icon>
+                <span>{{
+                    item.fileName ? 'Change File' : 'Upload File'
+                  }}</span>
+              </button>
+              <input
+                type="file"
+                hidden
+                #fileInput
+                (change)="onFileSelected($event, item.user)"
+                accept="audio/*,video/*"
+              />
+            }</div>
+      </div>
+      @if (i < projectsUser().length - 1) {
+        <mat-divider></mat-divider>
+      }
+    }
+  </mat-action-list>
+  } @else {
+    <div>No users in this project.</div>
+  }
+}

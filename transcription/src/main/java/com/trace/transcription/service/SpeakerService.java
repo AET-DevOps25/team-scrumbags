@@ -75,7 +75,7 @@ public class SpeakerService {
                 String extension = FilenameUtils.getExtension(file.getOriginalFilename());
 
                 // create and set entity
-                SpeakerEntity speaker = new SpeakerEntity(userId, userName, projectId, file.getBytes(), extension);
+                SpeakerEntity speaker = new SpeakerEntity(userId, userName, projectId, file.getBytes(), extension, file.getOriginalFilename());
 
                 toSave.add(speaker);
             }
@@ -101,6 +101,36 @@ public class SpeakerService {
         return sb.toString();
     }
 
+    public SpeakerEntity saveSpeaker(UUID projectId, String userId, String userName, MultipartFile speakingSample) throws IOException, InterruptedException {
+        File tmp = File.createTempFile("durationcheck-", speakingSample.getOriginalFilename());
+
+        try {
+            try (InputStream in = speakingSample.getInputStream()) {
+                Files.copy(in, tmp.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
+
+            Duration d = getDurationWithFFprobe(tmp);
+
+            //check if duration is more than 15 seconds
+            if (d.isZero() || d.toMillis() < 15000) {
+                logger.warn("Speaker {} has zero or too short duration ({}), skipping", userId, d);
+                return null;
+            }
+
+            String extension = FilenameUtils.getExtension(speakingSample.getOriginalFilename());
+
+            // create and set entity
+            SpeakerEntity speaker = new SpeakerEntity(userId, userName, projectId, speakingSample.getBytes(), extension, speakingSample.getOriginalFilename());
+
+            return speakerRepository.save(speaker);
+        } finally {
+            boolean deleted = tmp.delete();
+            if (!deleted) {
+                logger.warn("Temporary file {} could not be deleted", tmp.getAbsolutePath());
+            }
+        }
+    }
+
     public SpeakerEntity getSpeakerById(UUID projectId, String userId) {
         return speakerRepository.findByProjectIdAndUserId(projectId, userId);
     }
@@ -117,29 +147,27 @@ public class SpeakerService {
         }
     }
 
-    public boolean updateSpeaker(
+    public SpeakerEntity updateSpeaker(
             UUID projectId,
             String userId,
             String userName,
             MultipartFile speakingSample) throws IOException {
         SpeakerEntity speaker = getSpeakerById(projectId, userId);
         if (speaker == null) {
-            logger.warn("Speaker with ID {} not found in project {}", userId, projectId);
-            return false;
+            return null;
         }
 
         if (userName != null && !userName.isEmpty()) {
             speaker.setUserName(userName);
         }
+
         if (speakingSample != null && !speakingSample.isEmpty()) {
-            String extension = FilenameUtils.getExtension(speakingSample.getOriginalFilename());
             speaker.setSpeakingSample(speakingSample.getBytes());
-            speaker.setSampleExtension(extension);
+            speaker.setSampleExtension(FilenameUtils.getExtension(speakingSample.getOriginalFilename()));
+            speaker.setOriginalFileName(speakingSample.getOriginalFilename());
         }
 
-        speakerRepository.save(speaker);
-        logger.info("Updated speaker with ID: {}", userId);
-        return true;
+        return speakerRepository.save(speaker);
     }
 
     //get all speaking samples for project and return all files as zip

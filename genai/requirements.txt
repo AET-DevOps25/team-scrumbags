@@ -12,3 +12,8 @@ transformers
 sqlalchemy
 aiomysql
 asyncmy
+pytest
+pytest-asyncio
+pytest-cov
+aiosqlite
+flake8
