@@ -22,14 +22,17 @@ public class SpeakerEntity {
 
     private String sampleExtension;
 
+    private String originalFileName;
+
     public SpeakerEntity() {}
 
-    public SpeakerEntity(String userId, String userName, UUID projectId, byte[] bytes, String extension) {
+    public SpeakerEntity(String userId, String userName, UUID projectId, byte[] bytes, String extension, String originalFileName) {
         this.userId = userId;
         this.userName = userName;
         this.projectId = projectId;
         this.speakingSample = bytes;
         this.sampleExtension = extension;
+        this.originalFileName = originalFileName;
     }
 
     public String getUserId() {
@@ -70,5 +73,13 @@ public class SpeakerEntity {
 
     public void setSampleExtension(String sampleExtension) {
         this.sampleExtension = sampleExtension;
+    }
+
+    public String getOriginalFileName() {
+        return originalFileName;
+    }
+
+    public void setOriginalFileName(String originalFileName) {
+        this.originalFileName = originalFileName;
     }
 }

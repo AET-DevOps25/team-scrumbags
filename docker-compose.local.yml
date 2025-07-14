@@ -96,7 +96,7 @@ services:
         USE_WHISPERX: ${USE_WHISPERX:-false}
     network_mode: host
     depends_on:
-      mysql-db: 
+      mysql-db:
         condition: service_healthy
     environment:
       - DEBUG=true
@@ -109,6 +109,7 @@ services:
       - TRANSCRIPTION_TIMEOUT=${TRANSCRIPTION_TIMEOUT:-300000}
       - GENAI_URL=http://localhost:4242
       - SERVER_PORT=8083
+      - USE_WHISPERX=${USE_WHISPERX:-false}
     restart: unless-stopped
 
   genai:
@@ -117,7 +118,7 @@ services:
       dockerfile: Dockerfile
     network_mode: host
     depends_on:
-      mysql-db: 
+      mysql-db:
         condition: service_healthy
     environment:
       - DEBUG=true

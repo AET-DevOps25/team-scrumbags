@@ -1,26 +1,31 @@
 package com.trace.transcription;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.trace.transcription.model.SpeakerEntity;
 import com.trace.transcription.repository.SpeakerRepository;
+import com.trace.transcription.service.SpeakerService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
-import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.util.*;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -33,25 +38,71 @@ public class SpeakerControllerTest {
     @Autowired
     private SpeakerRepository speakerRepository;
 
-    // Test GET /projects/{projectId}/all-speakers when no speakers exist
+    @MockitoBean
+    private SpeakerService speakerService;
+
+    // Test GET /projects/{projectId}/speakers when no speakers exist
     @Test
     public void testGetAllSpeakers_NoContent() throws Exception {
         UUID projectId = UUID.randomUUID();
+        when(speakerService.getSpeakersByProjectId(projectId)).thenReturn(Collections.emptyList());
         mockMvc.perform(get("/projects/{projectId}/speakers", projectId))
                 .andExpect(status().isNoContent());
     }
 
-    // Test GET /projects/{projectId}/all-speakers when speakers exist
+    // Test GET /projects/{projectId}/speakers when speakers exist
     @Test
-    public void testGetAllSpeakers_WithData() throws Exception {
+    void testGetAllSpeakers() throws Exception {
         UUID projectId = UUID.randomUUID();
-        // Insert a speaker into H2
-        speakerRepository.save(new SpeakerEntity("id1", "Alice", projectId, "abc".getBytes(), "wav"));
+        SpeakerEntity speaker = new SpeakerEntity("user1", "User One", projectId, new byte[0], "wav", "sample.wav");
+        when(speakerService.getSpeakersByProjectId(projectId)).thenReturn(Collections.singletonList(speaker));
 
         mockMvc.perform(get("/projects/{projectId}/speakers", projectId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].userId").value("id1"))
-                .andExpect(jsonPath("$[0].userName").value("Alice"));
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].userId", is("user1")));
+    }
+
+    // Test GET /projects/{projectId}/speakers with multiple speakers
+    @Test
+    void testGetAllSpeakers_MultipleSpeakers() throws Exception {
+        UUID projectId = UUID.randomUUID();
+        List<SpeakerEntity> speakers = Arrays.asList(
+                new SpeakerEntity("user1", "User One", projectId, new byte[0], "wav", "sample1.wav"),
+                new SpeakerEntity("user2", "User Two", projectId, new byte[0], "mp3", "sample2.mp3"),
+                new SpeakerEntity("user3", "User Three", projectId, new byte[0], "wav", "sample3.wav")
+        );
+        when(speakerService.getSpeakersByProjectId(projectId)).thenReturn(speakers);
+
+        mockMvc.perform(get("/projects/{projectId}/speakers", projectId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(3)))
+                .andExpect(jsonPath("$[0].userId", is("user1")))
+                .andExpect(jsonPath("$[1].userId", is("user2")))
+                .andExpect(jsonPath("$[2].userId", is("user3")));
+    }
+
+    // Test POST /projects/{projectId}/speakers with valid data
+    @Test
+    void testSaveSpeakers_Success() throws Exception {
+        UUID projectId = UUID.randomUUID();
+        MockMultipartFile sample1 = new MockMultipartFile(
+                "speakingSamples", "file1.wav", "audio/wav", "audio data 1".getBytes());
+        MockMultipartFile sample2 = new MockMultipartFile(
+                "speakingSamples", "file2.wav", "audio/wav", "audio data 2".getBytes());
+
+        String jsonResponse = "[{\"userId\":\"id1\",\"userName\":\"Name1\"},{\"userId\":\"id2\",\"userName\":\"Name2\"}]";
+        when(speakerService.saveSpeakers(eq(projectId), anyList(), anyList(), anyList()))
+                .thenReturn(jsonResponse);
+
+        mockMvc.perform(multipart("/projects/{projectId}/speakers", projectId)
+                        .file(sample1)
+                        .file(sample2)
+                        .param("userIds", "id1", "id2")
+                        .param("userNames", "Name1", "Name2"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(content().json(jsonResponse));
     }
 
     // Test POST /projects/{projectId}/speakers with mismatched parameter lists
@@ -63,103 +114,266 @@ public class SpeakerControllerTest {
         // Intentionally mismatched sizes: 2 IDs, but only 1 name
         mockMvc.perform(multipart("/projects/{projectId}/speakers", projectId)
                         .file(sample1)
-                        .param("speakerIds", "id1", "id2")
-                        .param("speakerNames", "Name1"))
+                        .param("userIds", "id1", "id2")
+                        .param("userNames", "Name1"))
                 .andExpect(status().isBadRequest());
     }
 
-    // Test DELETE /projects/{projectId}/speakers/{speakerId} for existing and non-existing
+    // Test POST /projects/{projectId}/speakers with no files
     @Test
-    public void testDeleteSpeaker() throws Exception {
+    void testSaveSpeakers_NoFiles() throws Exception {
         UUID projectId = UUID.randomUUID();
-        // Insert a speaker and then delete it
-        speakerRepository.save(new SpeakerEntity("idDel", "Bob", projectId, "test".getBytes(), "mp3"));
 
-        // Delete existing speaker
-        mockMvc.perform(delete("/projects/{projectId}/speakers/{speakerId}", projectId, "idDel"))
+        mockMvc.perform(multipart("/projects/{projectId}/speakers", projectId)
+                        .param("userIds", "id1")
+                        .param("userNames", "Name1"))
+                .andExpect(status().isBadRequest());
+    }
+
+    // Test POST /projects/{projectId}/speakers when service returns null (validation failure)
+    @Test
+    void testSaveSpeakers_ValidationFailure() throws Exception {
+        UUID projectId = UUID.randomUUID();
+        MockMultipartFile sample1 = new MockMultipartFile(
+                "speakingSamples", "file1.wav", "audio/wav", "short audio".getBytes());
+
+        when(speakerService.saveSpeakers(eq(projectId), anyList(), anyList(), anyList()))
+                .thenReturn(null);
+
+        mockMvc.perform(multipart("/projects/{projectId}/speakers", projectId)
+                        .file(sample1)
+                        .param("userIds", "id1")
+                        .param("userNames", "Name1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("Could not save speaker. The audio sample might be too short.")));
+    }
+
+    // Test POST /projects/{projectId}/speakers/{userId} for single speaker creation
+    @Test
+    void testSaveSingleSpeaker_Success() throws Exception {
+        UUID projectId = UUID.randomUUID();
+        String userId = "user1";
+        MockMultipartFile sample = new MockMultipartFile(
+                "speakingSample", "sample.wav", "audio/wav", "audio data".getBytes());
+
+        SpeakerEntity savedSpeaker = new SpeakerEntity(userId, "User One", projectId, sample.getBytes(), "wav", "sample.wav");
+        when(speakerService.saveSpeaker(eq(projectId), eq(userId), eq("User One"), any()))
+                .thenReturn(savedSpeaker);
+
+        mockMvc.perform(multipart("/projects/{projectId}/speakers/{userId}", projectId, userId)
+                        .file(sample)
+                        .param("userName", "User One"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.userId", is(userId)))
+                .andExpect(jsonPath("$.userName", is("User One")));
+    }
+
+    // Test POST /projects/{projectId}/speakers/{userId} with validation failure
+    @Test
+    void testSaveSingleSpeaker_ValidationFailure() throws Exception {
+        UUID projectId = UUID.randomUUID();
+        String userId = "user1";
+        MockMultipartFile sample = new MockMultipartFile(
+                "speakingSample", "sample.wav", "audio/wav", "short".getBytes());
+
+        when(speakerService.saveSpeaker(eq(projectId), eq(userId), eq("User One"), any()))
+                .thenReturn(null);
+
+        mockMvc.perform(multipart("/projects/{projectId}/speakers/{userId}", projectId, userId)
+                        .file(sample)
+                        .param("userName", "User One"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("Could not save speaker. The audio sample might be too short.")));
+    }
+
+    // Test POST /projects/{projectId}/speakers/{userId} with I/O exception
+    @Test
+    void testSaveSingleSpeaker_IOError() throws Exception {
+        UUID projectId = UUID.randomUUID();
+        String userId = "user1";
+        MockMultipartFile sample = new MockMultipartFile(
+                "speakingSample", "sample.wav", "audio/wav", "audio data".getBytes());
+
+        when(speakerService.saveSpeaker(eq(projectId), eq(userId), eq("User One"), any()))
+                .thenThrow(new IOException("File processing error"));
+
+        mockMvc.perform(multipart("/projects/{projectId}/speakers/{userId}", projectId, userId)
+                        .file(sample)
+                        .param("userName", "User One"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string(containsString("Error saving speaker: File processing error")));
+    }
+
+    // Test DELETE /projects/{projectId}/speakers/{userId} for existing speaker
+    @Test
+    public void testDeleteSpeaker_Success() throws Exception {
+        UUID projectId = UUID.randomUUID();
+        String userId = "idDel";
+
+        when(speakerService.deleteSpeaker(projectId, userId)).thenReturn(true);
+        mockMvc.perform(delete("/projects/{projectId}/speakers/{userId}", projectId, userId))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("deleted successfully")));
+    }
 
-        // Attempt to delete a non-existent speaker
-        mockMvc.perform(delete("/projects/{projectId}/speakers/{speakerId}", projectId, "noSuchId"))
+    // Test DELETE /projects/{projectId}/speakers/{userId} for non-existing speaker
+    @Test
+    public void testDeleteSpeaker_NotFound() throws Exception {
+        UUID projectId = UUID.randomUUID();
+        String userId = "noSuchId";
+
+        when(speakerService.deleteSpeaker(projectId, userId)).thenReturn(false);
+        mockMvc.perform(delete("/projects/{projectId}/speakers/{userId}", projectId, userId))
                 .andExpect(status().isNotFound())
                 .andExpect(content().string(containsString("not found")));
     }
 
-    // Test PUT /projects/{projectId}/speakers/{speakerId} to update name or sample
+    // Test PUT /projects/{projectId}/speakers/{userId} to update name and sample
     @Test
-    public void testUpdateSpeaker() throws Exception {
+    void testUpdateSpeaker_Success() throws Exception {
         UUID projectId = UUID.randomUUID();
+        String userId = "user1";
+        String newUserName = "Updated User One";
+        MockMultipartFile sampleFile = new MockMultipartFile(
+                "speakingSample", "sample.wav", "audio/wav", "test audio data".getBytes());
 
-        // Insert a speaker to update
-        speakerRepository.save(new SpeakerEntity("idUpd", "Charlie", projectId, "orig".getBytes(), "txt"));
+        SpeakerEntity updatedSpeaker = new SpeakerEntity(userId, newUserName, projectId, sampleFile.getBytes(), "wav", sampleFile.getOriginalFilename());
 
-        // Update only the name
-        mockMvc.perform(multipart("/projects/{projectId}/speakers/{speakerId}", projectId, "idUpd")
+        when(speakerService.updateSpeaker(eq(projectId), eq(userId), eq(newUserName), any()))
+                .thenReturn(updatedSpeaker);
+
+        mockMvc.perform(MockMvcRequestBuilders.multipart("/projects/{projectId}/speakers/{userId}", projectId, userId)
+                        .file(sampleFile)
+                        .param("userName", newUserName)
                         .with(request -> {
                             request.setMethod("PUT");
                             return request;
-                        })
-                        .param("speakerName", "Charles"))
+                        }))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("updated successfully")));
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.userId", is(userId)))
+                .andExpect(jsonPath("$.userName", is(newUserName)));
+    }
 
-        // Update only the speaking sample
-        MockMultipartFile newSample = new MockMultipartFile(
-                "speakingSample", "new.wav", "audio/wav", "newaudio".getBytes());
+    // Test PUT /projects/{projectId}/speakers/{userId} to update only name
+    @Test
+    void testUpdateSpeaker_NameOnly() throws Exception {
+        UUID projectId = UUID.randomUUID();
+        String userId = "user1";
+        String newUserName = "Updated User One";
 
-        // Build multipart request and set method to PUT
-        MockMultipartHttpServletRequestBuilder builder = multipart("/projects/{projectId}/speakers/{speakerId}", projectId, "idUpd");
-        builder.with(request -> {
-            request.setMethod("PUT");
-            return request;
-        });
+        SpeakerEntity updatedSpeaker = new SpeakerEntity(userId, newUserName, projectId, new byte[0], "wav", "original.wav");
 
-        mockMvc.perform(builder.file(newSample))
+        when(speakerService.updateSpeaker(eq(projectId), eq(userId), eq(newUserName), isNull()))
+                .thenReturn(updatedSpeaker);
+
+        mockMvc.perform(MockMvcRequestBuilders.multipart("/projects/{projectId}/speakers/{userId}", projectId, userId)
+                        .param("userName", newUserName)
+                        .with(request -> {
+                            request.setMethod("PUT");
+                            return request;
+                        }))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("updated successfully")));
+                .andExpect(jsonPath("$.userId", is(userId)))
+                .andExpect(jsonPath("$.userName", is(newUserName)));
+    }
+
+    // Test PUT /projects/{projectId}/speakers/{userId} to update only sample
+    @Test
+    void testUpdateSpeaker_SampleOnly() throws Exception {
+        UUID projectId = UUID.randomUUID();
+        String userId = "user1";
+        MockMultipartFile sampleFile = new MockMultipartFile(
+                "speakingSample", "newsample.wav", "audio/wav", "new audio data".getBytes());
+
+        SpeakerEntity updatedSpeaker = new SpeakerEntity(userId, "Original Name", projectId, sampleFile.getBytes(), "wav", sampleFile.getOriginalFilename());
+
+        when(speakerService.updateSpeaker(eq(projectId), eq(userId), isNull(), any()))
+                .thenReturn(updatedSpeaker);
+
+        mockMvc.perform(MockMvcRequestBuilders.multipart("/projects/{projectId}/speakers/{userId}", projectId, userId)
+                        .file(sampleFile)
+                        .with(request -> {
+                            request.setMethod("PUT");
+                            return request;
+                        }))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId", is(userId)));
     }
 
     // Test PUT for a non-existent speaker
     @Test
-    public void testUpdateSpeaker_NotFound() throws Exception {
+    void testUpdateSpeakerNotFound() throws Exception {
         UUID projectId = UUID.randomUUID();
-        mockMvc.perform(multipart("/projects/{projectId}/speakers/{speakerId}", projectId, "missingId")
-                        .with(request -> { request.setMethod("PUT"); return request; })
-                        .param("speakerName", "NoName"))
+        String userId = "nonexistent-user";
+        String newUserName = "Updated User";
+
+        when(speakerService.updateSpeaker(eq(projectId), eq(userId), eq(newUserName), any()))
+                .thenReturn(null);
+
+        mockMvc.perform(MockMvcRequestBuilders.multipart("/projects/{projectId}/speakers/{userId}", projectId, userId)
+                        .param("userName", newUserName)
+                        .with(request -> {
+                            request.setMethod("PUT");
+                            return request;
+                        }))
                 .andExpect(status().isNotFound());
+    }
+
+    // Test PUT with I/O exception
+    @Test
+    void testUpdateSpeaker_IOError() throws Exception {
+        UUID projectId = UUID.randomUUID();
+        String userId = "user1";
+        MockMultipartFile sampleFile = new MockMultipartFile(
+                "speakingSample", "sample.wav", "audio/wav", "audio data".getBytes());
+
+        when(speakerService.updateSpeaker(eq(projectId), eq(userId), isNull(), any()))
+                .thenThrow(new IOException("File processing error"));
+
+        mockMvc.perform(MockMvcRequestBuilders.multipart("/projects/{projectId}/speakers/{userId}", projectId, userId)
+                        .file(sampleFile)
+                        .with(request -> {
+                            request.setMethod("PUT");
+                            return request;
+                        }))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string(containsString("Error updating speaker")));
     }
 
     // Test GET /projects/{projectId}/samples when no speakers exist
     @Test
     public void testStreamAllSamples_NoSpeakers() throws Exception {
         UUID projectId = UUID.randomUUID();
+        when(speakerService.getSpeakersByProjectId(projectId)).thenReturn(Collections.emptyList());
+
         mockMvc.perform(get("/projects/{projectId}/samples", projectId))
+                .andExpect(status().isOk());
+    }
+
+    // Test invalid project ID format
+    @Test
+    void testInvalidProjectIdFormat() throws Exception {
+        mockMvc.perform(get("/projects/{projectId}/speakers", "invalid-uuid"))
+                .andExpect(status().isBadRequest());
+    }
+
+    // Test empty user ID in path
+    @Test
+    void testEmptyUserId() throws Exception {
+        UUID projectId = UUID.randomUUID();
+        mockMvc.perform(get("/projects/{projectId}/speakers/{userId}", projectId, ""))
                 .andExpect(status().isNotFound());
     }
 
-    // Test GET /projects/{projectId}/samples with actual speakers (returns ZIP)
+    // Test special characters in user ID
     @Test
-    public void testStreamAllSamples_WithSpeakers() throws Exception {
+    void testSpecialCharactersInUserId() throws Exception {
         UUID projectId = UUID.randomUUID();
-        // Insert speakers with sample data
-        speakerRepository.save(new SpeakerEntity("idA", "Ann", projectId, "hello".getBytes(), "txt"));
-        speakerRepository.save(new SpeakerEntity("idB", "Ben", projectId, "world".getBytes(), "txt"));
+        String userId = "user@#$%";
+        when(speakerService.getSpeakerById(projectId, userId)).thenReturn(null);
 
-        MvcResult result = mockMvc.perform(get("/projects/{projectId}/samples", projectId))
-                .andExpect(status().isOk())
-                .andReturn();
-
-        byte[] zipBytes = result.getResponse().getContentAsByteArray();
-        // Unzip and verify entries
-        ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(zipBytes));
-        ZipEntry entry;
-        Set<String> fileNames = new HashSet<>();
-        while ((entry = zis.getNextEntry()) != null) {
-            fileNames.add(entry.getName());
-        }
-        // Expect files named "idA.txt" and "idB.txt" in the ZIP
-        assert fileNames.contains("idA.txt");
-        assert fileNames.contains("idB.txt");
+        mockMvc.perform(get("/projects/{projectId}/speakers/{userId}", projectId, userId))
+                .andExpect(status().isBadRequest());
     }
 }
