@@ -5,7 +5,7 @@ from typing import AsyncGenerator
 from unittest.mock import patch, AsyncMock, MagicMock
 from uuid import uuid4
 import json
-aimport time
+import time
 
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
