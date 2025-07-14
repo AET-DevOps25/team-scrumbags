@@ -1,3 +1,4 @@
+import asyncio
 import os
 import uuid
 from datetime import datetime, timezone
@@ -76,8 +77,14 @@ def init_collection():
     )
     print(f"Collection {COLLECTION_NAME} created successfully")
 
-
 async def store_entry_async(entry: dict):
+    """Store a content entry in Weaviate"""
+    try:
+        await asyncio.to_thread(store_entry, entry)  # if store_entry is blocking
+    except Exception as e:
+        print(e)
+
+def store_entry(entry: dict):
     """Store a content entry in Weaviate"""
     try:
         client = get_client()
