@@ -2,7 +2,7 @@ import asyncio
 import os
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import asynccontextmanager
-from datetime import datetime, UTC
+import time
 from typing import List
 
 import aio_pika
@@ -126,7 +126,7 @@ async def generate_summary(
                 "startTime": existing_summary.startTime,
                 "endTime": existing_summary.endTime,
                 "userIds": existing_summary.userIds,
-                "generatedAt": existing_summary.generatedAt.isoformat(),
+                "generatedAt": existing_summary.generatedAt,
                 "output_text": existing_summary.summary,
             }
             return summary
@@ -140,8 +140,8 @@ async def generate_summary(
             endTime=endTime,
             userIds=input_user_ids,
             loading=True,
-            generatedAt=datetime.now(UTC),
-            summary=""
+            generatedAt=int(time.time() * 1000),
+            summary="",
         )
         session.add(placeholder)
         await session.commit()
@@ -155,7 +155,7 @@ async def generate_summary(
             placeholder.projectId,
             placeholder.startTime,
             placeholder.endTime,
-            placeholder.userIds
+            placeholder.userIds,
         )
 
     return JSONResponse(
@@ -166,7 +166,7 @@ async def generate_summary(
             "startTime": placeholder.startTime,
             "endTime": placeholder.endTime,
             "userIds": placeholder.userIds,
-            "generatedAt": placeholder.generatedAt.isoformat(),
+            "generatedAt": placeholder.generatedAt,
             "loading": placeholder.loading,
             "summary": "",
         },
@@ -215,8 +215,8 @@ async def refresh_summary(
             endTime=endTime,
             userIds=input_user_ids,
             loading=True,
-            generatedAt=datetime.now(UTC),
-            summary=""
+            generatedAt=int(time.time() * 1000),
+            summary="",
         )
         session.add(placeholder)
         await session.commit()
@@ -262,7 +262,7 @@ async def get_summaries(
             "startTime": s.startTime,
             "endTime": s.endTime,
             "userIds": s.userIds,
-            "generatedAt": s.generatedAt.isoformat(),
+            "generatedAt": s.generatedAt,
             "loading": s.loading,
             "summary": s.summary,
         }
@@ -296,7 +296,7 @@ async def get_summary_by_id(
             "startTime": summary.startTime,
             "endTime": summary.endTime,
             "userIds": summary.userIds,
-            "generatedAt": summary.generatedAt.isoformat(),
+            "generatedAt": summary.generatedAt,
             "loading": summary.loading,
             "summary": summary.summary,
         },
@@ -317,18 +317,20 @@ async def query_project(
     async with async_session() as session:
         question_obj = Message(
             userId=str(userId),
+            isGenerated=False,
             projectId=str(projectId),
             content=question.strip(),
-            timestamp=datetime.now(UTC),
-            loading=False
+            timestamp=int(time.time() * 1000),  # Store as milliseconds
+            loading=False,
         )
 
         answer_placeholder = Message(
             userId=str(userId),
+            isGenerated=True,
             projectId=str(projectId),
-            timestamp=datetime.now(UTC),
+            timestamp=(int(time.time() * 1000) + 1000),  # Store as milliseconds + 1 second,
             content="",
-            loading=True
+            loading=True,
         )
 
         session.add(question_obj)
@@ -345,14 +347,26 @@ async def query_project(
             question.strip()
         )
 
-    return {
-        "id": answer_placeholder.id,
-        "userId": answer_placeholder.userId,
-        "projectId": answer_placeholder.projectId,
-        "timestamp": answer_placeholder.timestamp.isoformat(),
-        "content": answer_placeholder.content,
-        "loading": answer_placeholder.loading
-    }
+    return [
+        {
+            "id": question_obj.id,
+            "userId": question_obj.userId,
+            "isGenerated": question_obj.isGenerated,
+            "projectId": question_obj.projectId,
+            "timestamp": question_obj.timestamp,
+            "content": question_obj.content,
+            "loading": question_obj.loading,
+        },
+        {
+            "id": answer_placeholder.id,
+            "userId": answer_placeholder.userId,
+            "isGenerated": answer_placeholder.isGenerated,
+            "projectId": answer_placeholder.projectId,
+            "timestamp": answer_placeholder.timestamp,
+            "content": answer_placeholder.content,
+            "loading": answer_placeholder.loading,
+        },
+    ]
 
 
 @app.get("/projects/{projectId}/messages", summary="Get Q&A history for a user")
@@ -370,10 +384,11 @@ async def get_chat_history(
         {
             "id": entry.id,
             "userId": entry.userId,
+            "isGenerated": entry.isGenerated,
             "projectId": entry.projectId,
-            "timestamp": entry.timestamp.isoformat(),
+            "timestamp": entry.timestamp,
             "content": entry.content,
-            "loading": entry.loading
+            "loading": entry.loading,
         }
         for entry in history
     ]
@@ -394,9 +409,11 @@ def _blocking_summary_job(summary_id: int,
                 update(Summary)
                 .where(Summary.id == summary_id)
                 .values(
-                    summary=(summary_md or {}).get("output_text", "Error generating summary"),
-                    generatedAt=datetime.now(UTC),
-                    loading=False
+                    summary=(summary_md or {}).get(
+                        "output_text", "Error generating summary"
+                    ),
+                    generatedAt=int(time.time() * 1000),
+                    loading=False,
                 )
             )
             await session.execute(stmt)
@@ -421,7 +438,7 @@ def _blocking_qa_job(qa_id: int,
                 .values(
                     content=answer_md["result"],
                     loading=False,
-                    timestamp=datetime.now(UTC)
+                    timestamp=int(time.time() * 1000),
                 )
             )
             await session.execute(stmt)

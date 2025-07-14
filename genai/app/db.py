@@ -1,7 +1,7 @@
 import os
 
 from dotenv import load_dotenv
-from sqlalchemy import Column, String, Text, Integer, DateTime, UniqueConstraint, JSON, Computed, Boolean
+from sqlalchemy import Column, String, Text, Integer, BigInteger, UniqueConstraint, JSON, Computed, Boolean
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 
@@ -21,9 +21,9 @@ class Summary(Base):
     __tablename__ = "summaries"
     id = Column(Integer, primary_key=True, index=True)
     projectId = Column(String(length=36), index=True)
-    startTime = Column(Integer, index=True)
-    endTime = Column(Integer, index=True)
-    generatedAt = Column(DateTime)
+    startTime = Column(BigInteger, index=True)
+    endTime = Column(BigInteger, index=True)
+    generatedAt = Column(BigInteger)
     summary = Column(Text)
     userIds = Column(JSON, nullable=False, default=list)
     loading = Column(Boolean, nullable=False)
@@ -45,8 +45,9 @@ class Message(Base):
     id = Column(Integer, primary_key=True, index=True)
     projectId = Column(String(length=36), index=True)
     userId = Column(String(length=36), index=True)
+    isGenerated = Column(Boolean, nullable=False, default=False)
     content = Column(Text)
-    timestamp = Column(DateTime, index=True)
+    timestamp = Column(BigInteger, index=True)
     loading = Column(Boolean, nullable=False)
 
 
