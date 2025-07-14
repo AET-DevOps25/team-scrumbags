@@ -479,10 +479,10 @@ async def _background_summary_task(summary_id: int, project_id: str, start_time:
     """Generate summary in background"""
     try:
         # Get entries from Weaviate
-        entries = wc.get_entries(project_id, start_time, end_time, user_ids)
+        entries = wc.get_entries(project_id, start_time, end_time)
 
         # Generate summary using LangChain
-        summary_md = await summarize_entries(entries)
+        summary_md = await summarize_entries(project_id, start_time, end_time, user_ids)
 
         # Update database with the generated summary
         async with async_session() as session:
@@ -516,11 +516,9 @@ async def _background_summary_task(summary_id: int, project_id: str, start_time:
 async def _background_qa_task(message_id: int, project_id: str, question: str):
     """Generate answer in background"""
     try:
-        # Get entries from Weaviate for context
-        entries = wc.get_entries(project_id, -1, -1, [])  # Get all entries for context
 
         # Generate answer using LangChain
-        answer_result = await answer_question(question, entries)
+        answer_result = await answer_question(project_id, question)
 
         # Update database with the generated answer
         async with async_session() as session:
