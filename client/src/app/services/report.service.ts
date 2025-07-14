@@ -40,7 +40,6 @@ export class ReportService {
       .generateReport(projectId, periodStart, periodEnd, userIds)
       .pipe(
         tap((report) => {
-          console.log('Generated report:', report);
           if (!report.name || report.name === '') {
             report.name = 'Report ' + report.id;
           }
