@@ -128,7 +128,7 @@ async def post_content(
 
 
 @app.post(
-    "/project/{projectId}/summary",
+    "/projects/{projectId}/summary",
     summary="Generate or retrieve project summary",
     description="Generates an AI summary of content entries for a project within a specified time range. If a summary already exists for the same parameters, it returns the cached version. Otherwise, generates a new summary asynchronously.",
     response_model=SummaryResponse,
@@ -221,7 +221,7 @@ async def get_summary(
 
 
 @app.put(
-    "/project/{projectId}/summary",
+    "/projects/{projectId}/summary",
     summary="Regenerate project summary",
     description="Forces regeneration of a project summary by deleting any existing summary for the specified parameters and creating a new one. The summary generation happens asynchronously.",
     response_model=SummaryResponse,
@@ -304,7 +304,7 @@ async def refresh_summary(
 
 
 @app.get(
-    "/project/{projectId}/summary",
+    "/projects/{projectId}/summary",
     summary="Get all summaries for a project",
     description="Retrieves all existing summaries for a specific project, including their generation status and metadata.",
     response_model=List[SummaryResponse],
@@ -340,7 +340,7 @@ async def get_summaries(
 
 
 @app.post(
-    "/project/{projectId}/messages",
+    "/projects/{projectId}/messages",
     summary="Ask a question about project content",
     description="Submits a question about project content and generates an AI-powered answer based on the project's processed content. The answer generation happens asynchronously.",
     response_model=MessageResponse,
@@ -404,7 +404,7 @@ async def query_project(
 
 
 @app.get(
-    "/project/{projectId}/messages",
+    "/projects/{projectId}/messages",
     summary="Get chat history for a user",
     description="Retrieves the complete question and answer history for a specific user within a project, ordered by timestamp.",
     response_model=List[MessageResponse],
