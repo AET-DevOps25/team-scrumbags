@@ -1,6 +1,7 @@
 import asyncio
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from typing import List
 
@@ -146,7 +147,7 @@ async def generate_summary(
         await session.commit()
         await session.refresh(placeholder)
 
-        asyncio.create_task(_background_summary_task(new_summary.id, str(projectId), startTime, endTime, user_ids_str))
+        asyncio.create_task(_background_summary_task(placeholder.id, str(projectId), startTime, endTime, input_user_ids))
 
     return JSONResponse(
         status_code=202 if placeholder.loading else 200,
@@ -212,7 +213,7 @@ async def refresh_summary(
         await session.commit()
         await session.refresh(placeholder)
 
-        asyncio.create_task(_background_summary_task(new_summary.id, str(projectId), startTime, endTime, user_ids_str))
+        asyncio.create_task(_background_summary_task(placeholder.id, str(projectId), startTime, endTime, input_user_ids))
 
     return {
         "id": placeholder.id,
