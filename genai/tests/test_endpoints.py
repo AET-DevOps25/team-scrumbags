@@ -85,7 +85,9 @@ async def client(override_db_session) -> AsyncGenerator[AsyncClient, None]:
         mock_summarize.return_value = {"output_text": "Test summary"}
         mock_answer.return_value = {"result": "Test answer"}
 
-        async with AsyncClient(app=app, base_url="http://testserver") as ac:
+        async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://testserver"
+        ) as ac:
             yield ac
 
 
