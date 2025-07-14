@@ -88,10 +88,10 @@ async def client(override_db_session) -> AsyncGenerator[AsyncClient, None]:
         mock_rabbit_channel.return_value = mock_channel
         mock_rabbit_conn.return_value = AsyncMock()
 
-        # Mock Weaviate and LangChain
-        mock_get_entries.return_value = []
-        mock_summarize.return_value = {"output_text": "Test summary"}
-        mock_answer.return_value = {"result": "Test answer"}
+        # Mock Weaviate and LangChain - make them async
+        mock_get_entries.return_value = AsyncMock(return_value=[])
+        mock_summarize.return_value = AsyncMock(return_value={"output_text": "Test summary"})
+        mock_answer.return_value = AsyncMock(return_value={"result": "Test answer"})
 
         async with AsyncClient(
                 transport=ASGITransport(app=app), base_url="http://testserver"
@@ -240,8 +240,9 @@ async def test_app_startup():
             patch('app.main.connect_robust') as mock_connect, \
             patch('app.langchain_provider.get_embeddings') as mock_embeddings, \
             patch('app.weaviate_client.get_client') as mock_client:
-        mock_init_db.return_value = None
-        mock_init_collection.return_value = None
+        # Make async functions return AsyncMock
+        mock_init_db.return_value = AsyncMock()
+        mock_init_collection.return_value = AsyncMock()
         mock_connect.return_value = AsyncMock()
         mock_embeddings.return_value = AsyncMock()
         mock_client.return_value = AsyncMock()
