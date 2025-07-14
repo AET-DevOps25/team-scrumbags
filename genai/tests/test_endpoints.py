@@ -5,7 +5,7 @@ from typing import AsyncGenerator
 from unittest.mock import patch, AsyncMock, MagicMock
 from uuid import uuid4
 import json
-from datetime import datetime, UTC
+aimport time
 
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
@@ -192,9 +192,8 @@ class TestContentEndpoint:
             "content": {"message": "test"}
         }
 
-        with patch('app.main.rabbit_channel', None):
-            response = await client.post("/content", json=[invalid_entry])
-            assert response.status_code == 422
+        response = await client.post("/content", json=[invalid_entry])
+        assert response.status_code == 422
 
     @pytest.mark.asyncio(loop_scope="session")
     async def test_post_content_empty_list(self, client: AsyncClient):
@@ -228,7 +227,7 @@ class TestSummaryEndpoints:
             f"/projects/{TEST_PROJECT_ID}/summary",
             params={"startTime": 1640995200, "endTime": 1641081600}
         )
-        assert response.status_code == 200
+        assert response.status_code == 202  # Should be 202 for loading
         data = response.json()
         assert data["projectId"] == TEST_PROJECT_ID
         assert data["loading"] is True
@@ -246,7 +245,7 @@ class TestSummaryEndpoints:
                 "userIds": [TEST_USER_ID, TEST_USER_ID_2]
             }
         )
-        assert response.status_code == 200
+        assert response.status_code == 202
         data = response.json()
         assert set(data["userIds"]) == {TEST_USER_ID, TEST_USER_ID_2}
 
@@ -262,7 +261,7 @@ class TestSummaryEndpoints:
                 userIds=[TEST_USER_ID],
                 summary="Existing test summary",
                 loading=False,
-                generatedAt=datetime.now(UTC)
+                generatedAt=int(time.time() * 1000)
             )
             session.add(existing_summary)
             await session.commit()
@@ -277,7 +276,7 @@ class TestSummaryEndpoints:
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["output_text"] == "Existing test summary"
+        assert data["summary"] == "Existing test summary"
 
     @pytest.mark.asyncio(loop_scope="session")
     async def test_get_summary_invalid_time_range(self, client: AsyncClient):
@@ -294,7 +293,7 @@ class TestSummaryEndpoints:
     async def test_get_summary_default_time_values(self, client: AsyncClient):
         """Test getting summary with default time values"""
         response = await client.post(f"/projects/{TEST_PROJECT_ID}/summary")
-        assert response.status_code == 200
+        assert response.status_code == 202
         data = response.json()
         assert data["startTime"] == -1
         assert data["endTime"] == -1
@@ -323,7 +322,7 @@ class TestSummaryEndpoints:
                 userIds=[TEST_USER_ID],
                 summary="Old summary",
                 loading=False,
-                generatedAt=datetime.now(UTC)
+                generatedAt=int(time.time() * 1000)
             )
             session.add(existing_summary)
             await session.commit()
@@ -359,7 +358,7 @@ class TestSummaryEndpoints:
                     userIds=[TEST_USER_ID],
                     summary="Summary 1",
                     loading=False,
-                    generatedAt=datetime.now(UTC)
+                    generatedAt=int(time.time() * 1000)
                 ),
                 Summary(
                     projectId=TEST_PROJECT_ID,
@@ -368,7 +367,7 @@ class TestSummaryEndpoints:
                     userIds=[TEST_USER_ID_2],
                     summary="Summary 2",
                     loading=True,
-                    generatedAt=datetime.now(UTC)
+                    generatedAt=int(time.time() * 1000)
                 )
             ]
             session.add_all(summaries)
@@ -389,6 +388,38 @@ class TestSummaryEndpoints:
         data = response.json()
         assert data == []
 
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_get_summary_by_id(self, client: AsyncClient, test_session_factory):
+        """Test getting a summary by its ID"""
+        # Create a summary
+        async with test_session_factory() as session:
+            summary = Summary(
+                projectId=TEST_PROJECT_ID,
+                startTime=1640995200,
+                endTime=1641081600,
+                userIds=[TEST_USER_ID],
+                summary="Test summary",
+                loading=False,
+                generatedAt=int(time.time() * 1000)
+            )
+            session.add(summary)
+            await session.commit()
+            summary_id = summary.id
+
+        response = await client.get(f"/projects/{TEST_PROJECT_ID}/summary/{summary_id}")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["summary"] == "Test summary"
+        assert data["id"] == summary_id
+
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_get_summary_by_id_not_found(self, client: AsyncClient):
+        """Test getting a non-existent summary by ID"""
+        response = await client.get(f"/projects/{TEST_PROJECT_ID}/summary/99999")
+        assert response.status_code == 404
+        data = response.json()
+        assert "not found" in data["detail"]
+
 
 class TestMessageEndpoints:
     @pytest.mark.asyncio(loop_scope="session")
@@ -401,10 +432,15 @@ class TestMessageEndpoints:
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["projectId"] == TEST_PROJECT_ID
-        assert data["userId"] == TEST_USER_ID
-        assert data["loading"] is True
-        assert "timestamp" in data
+        assert isinstance(data, list)
+        assert len(data) == 2  # question and answer
+
+        question, answer = data
+        assert question["projectId"] == TEST_PROJECT_ID
+        assert question["userId"] == TEST_USER_ID
+        assert question["isGenerated"] is False
+        assert answer["isGenerated"] is True
+        assert answer["loading"] is True
 
     @pytest.mark.asyncio(loop_scope="session")
     async def test_query_project_empty_question(self, client: AsyncClient):
@@ -448,15 +484,17 @@ class TestMessageEndpoints:
                 Message(
                     projectId=TEST_PROJECT_ID,
                     userId=TEST_USER_ID,
+                    isGenerated=False,
                     content="What is the project status?",
-                    timestamp=datetime.now(UTC),
+                    timestamp=int(time.time() * 1000),
                     loading=False
                 ),
                 Message(
                     projectId=TEST_PROJECT_ID,
                     userId=TEST_USER_ID,
+                    isGenerated=True,
                     content="The project is on track.",
-                    timestamp=datetime.now(UTC),
+                    timestamp=int(time.time() * 1000),
                     loading=False
                 )
             ]
@@ -493,15 +531,17 @@ class TestMessageEndpoints:
                 Message(
                     projectId=TEST_PROJECT_ID,
                     userId=TEST_USER_ID,
+                    isGenerated=False,
                     content="User 1 message",
-                    timestamp=datetime.now(UTC),
+                    timestamp=int(time.time() * 1000),
                     loading=False
                 ),
                 Message(
                     projectId=TEST_PROJECT_ID,
                     userId=TEST_USER_ID_2,
+                    isGenerated=False,
                     content="User 2 message",
-                    timestamp=datetime.now(UTC),
+                    timestamp=int(time.time() * 1000),
                     loading=False
                 )
             ]
@@ -573,14 +613,14 @@ class TestValidation:
             f"/projects/{TEST_PROJECT_ID}/summary",
             params={"startTime": -1, "endTime": -1}
         )
-        assert response.status_code == 200
+        assert response.status_code == 202
 
         # Test with 0 (allowed)
         response = await client.post(
             f"/projects/{TEST_PROJECT_ID}/summary",
             params={"startTime": 0, "endTime": 0}
         )
-        assert response.status_code == 200
+        assert response.status_code == 202
 
     @pytest.mark.asyncio(loop_scope="session")
     async def test_very_large_timestamp(self, client: AsyncClient):
@@ -590,7 +630,7 @@ class TestValidation:
             f"/projects/{TEST_PROJECT_ID}/summary",
             params={"startTime": 0, "endTime": large_timestamp}
         )
-        assert response.status_code == 200
+        assert response.status_code == 202
 
 
 class TestErrorHandling:
@@ -648,7 +688,7 @@ class TestConcurrency:
 
         # All should succeed
         for response in responses:
-            assert response.status_code == 200
+            assert response.status_code in [200, 202]
 
     @pytest.mark.asyncio(loop_scope="session")
     async def test_concurrent_message_requests(self, client: AsyncClient):
