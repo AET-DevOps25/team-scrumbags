@@ -9,6 +9,7 @@ import aio_pika
 from aio_pika import connect_robust, RobustChannel, RobustConnection
 from fastapi import FastAPI, Query, Body, HTTPException, Path
 from fastapi import status
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import UUID4
 from sqlalchemy import select, update
 
@@ -46,6 +47,13 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.post(
@@ -79,7 +87,7 @@ async def post_content(
 
 
 @app.post("/project/{projectId}/summary", summary="Get a summary of content entries")
-async def get_summary(
+async def generate_summary(
         projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)"),
         startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp (>=-1)"),
         endTime: int = Query(-1, ge=-1, description="End   UNIX timestamp (>=-1)"),
@@ -255,6 +263,28 @@ async def get_summaries(
         }
         for s in summaries
     ]
+
+@app.get("/project/{projectId}/summary/{summaryId}", summary="Get a summary by it's id")
+async def get_summary_by_id(
+        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)"),
+        summaryId: int = Path(..., description="Summary ID")
+):
+    async with async_session() as session:
+        result = await session.execute(
+            select(Summary).where(Summary.projectId == str(projectId) and Summary.id == summaryId)
+        )
+        summary = result.scalar_one()
+
+    return {
+            "id": summary.id,
+            "projectId": summary.projectId,
+            "startTime": summary.startTime,
+            "endTime": summary.endTime,
+            "userIds": summary.userIds,
+            "generatedAt": summary.generatedAt.isoformat(),
+            "loading": summary.loading,
+            "summary": summary.summary,
+        }
 
 
 @app.post("/project/{projectId}/messages", summary="Query the project for answers")

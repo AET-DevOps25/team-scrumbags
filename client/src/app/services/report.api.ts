@@ -12,10 +12,22 @@ import { handleError } from './api-utils';
 export class ReportApi {
   private http = inject(HttpClient);
 
-  getReportsMetadata(projectId: string): Observable<Report[]> {
+  getReports(projectId: string): Observable<Report[]> {
     return this.http
-      .get<Report[]>(`${environment.genAiUrl}/projects/${projectId}/summary`)
+      .get<Report[]>(`${environment.genAiUrl}/project/${projectId}/summary`)
       .pipe(catchError(handleError('Error fetching reports metadata')));
+  }
+
+  getReportbyId(projectId: string, reportId: string): Observable<Report> {
+    return this.http
+      .get<Report>(
+        `${environment.genAiUrl}/project/${projectId}/summary/${reportId}`
+      )
+      .pipe(
+        catchError(
+          handleError(`Error fetching report metadata for id ${reportId}`)
+        )
+      );
   }
 
   generateReport(
@@ -24,7 +36,7 @@ export class ReportApi {
     periodEnd: Date | null,
     userIds?: string[]
   ): Observable<Report> {
-    const url = `${environment.genAiUrl}/projects/${projectId}/summary`;
+    const url = `${environment.genAiUrl}/project/${projectId}/summary`;
     const params = new URLSearchParams();
     if (periodStart) {
       params.append('startTime', periodStart.toISOString());
@@ -37,15 +49,7 @@ export class ReportApi {
     }
 
     return this.http
-      .get<Report>(`${url}?${params.toString()}`)
+      .post<Report>(`${url}?${params.toString()}`, {})
       .pipe(catchError(handleError('Error generating report')));
-  }
-
-  getReportContent(projectId: string, reportId: string): Observable<Report> {
-    return this.http
-      .get<Report>(
-        `${environment.genAiUrl}/projects/${projectId}/reports/${reportId}/content`
-      )
-      .pipe(catchError(handleError('Error fetching report content')));
   }
 }
