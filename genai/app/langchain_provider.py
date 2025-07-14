@@ -71,7 +71,7 @@ def summarize_entries(projectId: str, start: int, end: int, userIds: list[str]):
     contents = wc.get_entries(projectId, start, end)
 
     if not contents:
-        return "No entries found for the given parameters."
+        return "No content found for the given parameters. Error generating summary."
 
     prompt = PromptTemplate(
         template="""You are a summarizer of source control information (pull requests, commits, branches, etc.),
