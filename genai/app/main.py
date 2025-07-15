@@ -541,6 +541,7 @@ async def _background_summary_task(summary_id: int, project_id: str, start_time:
             await session.commit()
     except Exception as e:
         # Handle errors by updating the summary with error state
+        print(f"Error generating summary: {e}")
         async with async_session() as session:
             stmt = (
                 update(Summary)
