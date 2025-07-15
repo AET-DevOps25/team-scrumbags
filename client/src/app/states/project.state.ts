@@ -106,7 +106,7 @@ export class ProjectState {
     this.updateProject(id, { messages: messageMap });
   }
 
-  addMessages(id: string, messages: Message[]) {
+  updateMessages(id: string, messages: Message[]) {
     const project = this.allProjects().get(id);
     if (!project) {
       return;

@@ -68,6 +68,9 @@ export class ReportService {
         return;
       }
 
+      if (!report.name || report.name === '') {
+        report.name = 'Report ' + report.id;
+      }
       this.projectState.updateReport(projectId, report);
     });
   }

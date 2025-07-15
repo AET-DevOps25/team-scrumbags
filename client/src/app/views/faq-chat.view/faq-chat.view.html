@@ -18,8 +18,8 @@
         ></mat-progress-spinner>
         } @else {
         <div class="mt-1 break-words">{{ msg.content }}</div>
+        <span class="text-xs">{{ msg.timestamp | date:'shortTime' }}</span>
         }
-        <span class="text-xs">{{ msg.timestamp | date:'HH:mm:ss.SSS' }}</span>
       </div>
     </div>
     } } @else if(!isLoading()) {

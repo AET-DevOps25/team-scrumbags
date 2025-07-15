@@ -473,6 +473,50 @@ async def get_chat_history(
         for entry in history
     ]
 
+@app.get(
+    "/projects/{projectId}/messages/{messageId}",
+    summary="Get chat history for a user",
+    description="Retrieves the message by ID for a specific user within a project. Returns the message content and metadata.",
+    responses={
+        200: {"description": "Message retrieved successfully"},
+        404: {"description": "No messages found for this user/project/messageId combination"},
+        500: {"description": "Internal server error"}
+    },
+    tags=["Q&A"]
+)
+async def get_message_by_id(
+        projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)",
+                                examples=["123e4567-e89b-12d3-a456-426614174000"]),
+        userId: UUID4 = Query(..., description="User UUID whose chat history to retrieve (must be UUID4)",
+                              examples=["456e7890-e12f-34a5-b678-526614174111"]),
+        messageId: int = Path(..., description="Message ID", examples=[1])
+):
+    async with async_session() as session:
+        query = select(Message).where(
+            (Message.id == messageId) & (Message.projectId == str(projectId)) & (Message.userId == str(userId))
+        )
+        result = await session.execute(query)
+        message = result.scalar_one_or_none()
+
+    if not message:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Message with ID {messageId} not found for user {userId} in project {projectId}.",
+        )
+
+    return JSONResponse(
+        status_code=202 if message.loading else 200,
+        content= {
+            "id": message.id,
+            "userId": message.userId,
+            "isGenerated": message.isGenerated,
+            "projectId": message.projectId,
+            "timestamp": message.timestamp,
+            "content": message.content,
+            "loading": message.loading,
+        }
+    )
+
 
 async def _background_summary_task(summary_id: int, project_id: str, start_time: int, end_time: int,
                                    user_ids: list[str]):
