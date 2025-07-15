@@ -5,8 +5,8 @@
       class="mb-2 flex {{ msg.isGenerated ? 'justify-start' : 'justify-end' }}"
     >
       <div
-        class="rounded px-4 py-2 
-        bg-(--mat-sys-primary-container) text-(--mat-sys-on-primary-container) 
+        class="rounded px-4 py-2
+        bg-(--mat-sys-primary-container) text-(--mat-sys-on-primary-container)
         w-fit max-w-9/10
         {{ msg.isGenerated ? 'text-left': 'text-right'}}"
       >
@@ -17,7 +17,9 @@
           color="primary"
         ></mat-progress-spinner>
         } @else {
-        <div class="mt-1 break-words">{{ msg.content }}</div>
+        <div class="mt-1 break-words">
+          <markdown lineNumbers>{{ msg.content }}</markdown>
+        </div>
         <span class="text-xs">{{ msg.timestamp | date:'shortTime' }}</span>
         }
       </div>

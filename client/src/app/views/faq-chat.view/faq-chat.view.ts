@@ -20,6 +20,7 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
+import {MarkdownComponent} from 'ngx-markdown';
 
 @Component({
   selector: 'app-faq-chat',
@@ -31,6 +32,7 @@ import { MatIcon } from '@angular/material/icon';
     MatIcon,
     MatProgressSpinnerModule,
     DatePipe,
+    MarkdownComponent,
   ],
   templateUrl: './faq-chat.view.html',
   styleUrl: './faq-chat.view.scss',
