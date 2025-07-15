@@ -8,10 +8,11 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { catchError, finalize, tap } from 'rxjs';
 import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
+import { MatFormFieldModule } from '@angular/material/form-field';
 
 @Component({
   selector: 'app-meeting-notes-upload',
-  imports: [CommonModule, MatDialogModule, FormsModule, MatInputModule, MatButtonModule],
+  imports: [CommonModule, MatDialogModule, FormsModule, MatFormFieldModule, MatInputModule, MatButtonModule],
   templateUrl: './meeting-notes-upload.component.html',
   styleUrl: './meeting-notes-upload.component.scss',
 })

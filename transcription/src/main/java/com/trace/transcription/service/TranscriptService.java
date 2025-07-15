@@ -1,6 +1,5 @@
 package com.trace.transcription.service;
 
-import com.trace.transcription.controller.SpeakerController;
 import com.trace.transcription.dto.TranscriptInput;
 import com.trace.transcription.model.SpeakerEntity;
 import com.trace.transcription.model.TranscriptEntity;
@@ -196,7 +195,7 @@ public class TranscriptService {
     public void streamAllAudios(UUID projectId, HttpServletResponse response) {
         List<TranscriptEntity> transcripts = transcriptRepository.findAllByProjectId(projectId);
         if (transcripts.isEmpty()) {
-            SpeakerController.logger.warn("No transcripts found for project {}", projectId);
+            logger.warn("No transcripts found for project {}", projectId);
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
             return;
         }
@@ -234,7 +233,7 @@ public class TranscriptService {
             // Finish writing the ZIP (optional: zos.finish() is called by close())
             zos.finish();
         } catch (IOException e) {
-            SpeakerController.logger.error("Error creating ZIP file for project {}: {}", projectId, e.getMessage(), e);
+            logger.error("Error creating ZIP file for project {}: {}", projectId, e.getMessage(), e);
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
     }

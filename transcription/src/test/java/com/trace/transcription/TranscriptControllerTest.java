@@ -4,12 +4,14 @@ package com.trace.transcription;
 import com.trace.transcription.controller.TranscriptController;
 import com.trace.transcription.model.TranscriptEntity;
 import com.trace.transcription.dto.TranscriptSegment;
-import com.trace.transcription.dto.LoadingResponse;
 import com.trace.transcription.repository.TranscriptRepository;
 import com.trace.transcription.service.TranscriptService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -30,7 +32,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 
-@WebMvcTest(controllers = TranscriptController.class)
+@SpringBootTest
+@AutoConfigureMockMvc
 public class TranscriptControllerTest {
 
     @Autowired
@@ -81,6 +84,7 @@ public class TranscriptControllerTest {
                 .thenAnswer(invocation -> {
                     TranscriptEntity e = new TranscriptEntity();
                     e.setId(transcriptId);
+                    e.setIsLoading(true);
                     return e;
                 });
 
@@ -89,7 +93,7 @@ public class TranscriptControllerTest {
                         .param("speakerAmount", "2"))
                 .andExpect(status().isAccepted())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.transcriptId").value(transcriptId.toString()))
+                .andExpect(jsonPath("$.id").value(transcriptId.toString()))
                 .andExpect(jsonPath("$.loading").value(true));
     }
 

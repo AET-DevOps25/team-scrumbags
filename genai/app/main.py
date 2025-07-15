@@ -278,7 +278,6 @@ async def refresh_summary(
         "summary": placeholder.summary,
     }
 
-
 @app.get(
     "/projects/{projectId}/summary",
     summary="Get all summaries for a project",

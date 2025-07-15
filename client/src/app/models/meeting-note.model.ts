@@ -1,6 +1,6 @@
 export interface MeetingNote {
   id: string;
   name: string;
-  isLoading: boolean;
+  loading: boolean;
   // content: string;
 }

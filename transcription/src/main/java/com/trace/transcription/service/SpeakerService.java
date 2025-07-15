@@ -175,11 +175,23 @@ public class SpeakerService {
         List<SpeakerEntity> speakers = speakerRepository.findAllByProjectId(projectId);
         if (speakers.isEmpty()) {
             logger.warn("No speakers found for project {}", projectId);
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            response.setStatus(HttpServletResponse.SC_OK);
+            response.setContentType("application/zip");
+            response.setHeader(
+                    HttpHeaders.CONTENT_DISPOSITION,
+                    "attachment; filename=\"speaking-samples.zip\""
+            );
+            // Return empty ZIP for consistency
+            try (ZipOutputStream zos = new ZipOutputStream(response.getOutputStream())) {
+                zos.finish();
+            } catch (IOException e) {
+                logger.error("Error creating empty ZIP file for project {}: {}", projectId, e.getMessage(), e);
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            }
             return;
         }
 
-        // 2. Prepare response headers for a ZIP download:
+        // Set headers before writing content
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType("application/zip");
         response.setHeader(
@@ -187,29 +199,23 @@ public class SpeakerService {
                 "attachment; filename=\"speaking-samples.zip\""
         );
 
-        // 3. Stream the ZIP directly to the response output stream:
+        // Stream the ZIP directly to the response output stream
         try (ZipOutputStream zos = new ZipOutputStream(response.getOutputStream())) {
             byte[] buffer = new byte[8192];
 
             for (SpeakerEntity m : speakers) {
-                // Build a predictable, ordered filename:
                 String filename = m.getUserId() + "." + m.getSampleExtension();
-
-                // Add a new ZIP entry
                 zos.putNextEntry(new ZipEntry(filename));
 
-                // Write the byte[] LOB in chunks
                 try (ByteArrayInputStream in = new ByteArrayInputStream(m.getSpeakingSample())) {
                     int len;
                     while ((len = in.read(buffer)) != -1) {
                         zos.write(buffer, 0, len);
                     }
                 }
-
                 zos.closeEntry();
             }
 
-            // Finish writing the ZIP (optional: zos.finish() is called by close())
             zos.finish();
         } catch (IOException e) {
             logger.error("Error creating ZIP file for project {}: {}", projectId, e.getMessage(), e);

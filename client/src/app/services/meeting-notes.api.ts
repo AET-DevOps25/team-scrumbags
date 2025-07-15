@@ -17,7 +17,7 @@ export class MeetingNotesApi {
       .get<MeetingNote[]>(
         `${environment.meetingNotesUrl}/projects/${projectId}/transcripts`
       )
-      .pipe(catchError(handleError('Error fetching project list')));
+      .pipe(catchError(handleError('Error fetching transcription list')));
   }
 
   getMeetingNote(projectId: string, noteId: string): Observable<MeetingNote> {
