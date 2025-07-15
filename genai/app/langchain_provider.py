@@ -7,8 +7,6 @@ from langchain.chains.summarize import load_summarize_chain
 from langchain.prompts import PromptTemplate
 from langchain.schema import Document
 from langchain_nomic import NomicEmbeddings
-# from langchain.chains.combine_documents import create_stuff_documents_chain
-# from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import OllamaLLM, ChatOllama
 from langchain_weaviate.vectorstores import WeaviateVectorStore
 from pydantic import SecretStr
@@ -18,14 +16,21 @@ from app import weaviate_client as wc
 load_dotenv()
 
 OLLAMA_CLOUD_URL = os.getenv("OLLAMA_CLOUD_URL", "https://gpu.aet.cit.tum.de/ollama")
-OLLAMA_LOCAL_URL = os.getenv("OLLAMA_LOCAL_URL", "http://ollama:11434")  # Default local Ollama URL
+OLLAMA_LOCAL_URL = os.getenv("OLLAMA_LOCAL_URL", "http://ollama:11434")
 NOMIC_API_KEY = os.getenv("NOMIC_API_KEY", None)
 
-embeddings = NomicEmbeddings(
-    model="nomic-embed-text-v1.5",
-    dimensionality=256,
-    nomic_api_key=NOMIC_API_KEY
-)
+# Initialize embeddings lazily
+_embeddings = None
+
+def get_embeddings():
+    global _embeddings
+    if _embeddings is None:
+        _embeddings = NomicEmbeddings(
+            model="nomic-embed-text-v1.5",
+            dimensionality=256,
+            nomic_api_key=NOMIC_API_KEY
+        )
+    return _embeddings
 
 
 def is_reachable(url: str) -> bool:
@@ -47,7 +52,7 @@ def is_local():
 
 if is_local():
     llm = OllamaLLM(model="llama3.2",
-                    base_url=os.getenv("OLLAMA_LOCAL_URL", "http://ollama:11434"),  # Default Ollama API URL
+                    base_url=os.getenv("OLLAMA_LOCAL_URL", "http://ollama:11434"),
                     temperature=0.1)
 else:
     TOKEN = SecretStr(os.getenv("OPEN_WEBUI_BEARER"))
@@ -61,12 +66,12 @@ else:
     )
 
 
-def summarize_entries(projectId: str, start: int, end: int, userIds: list[str]):
+async def summarize_entries(projectId: str, start: int, end: int, userIds: list[str]):
     # raw content strings
     contents = wc.get_entries(projectId, start, end)
 
     if not contents:
-        return "No entries found for the given parameters."
+        return {"output_text": "No content found for the given parameters. Error generating summary."}
 
     prompt = PromptTemplate(
         template="""You are a summarizer of source control information (pull requests, commits, branches, etc.),
@@ -100,10 +105,6 @@ def summarize_entries(projectId: str, start: int, end: int, userIds: list[str]):
         input_variables=["input_documents", "users"],
     )
 
-    # prompt = ChatPromptTemplate.from_messages([ # alternative using ChatPromptTemplate
-    #    ("system", "Write a concise summary of the following text:\n\n{context}")
-    # ])
-
     # LangChain Documents
     docs = [Document(id=str(obj.uuid),
                      metadata={
@@ -117,17 +118,15 @@ def summarize_entries(projectId: str, start: int, end: int, userIds: list[str]):
     chain = load_summarize_chain(llm, chain_type="stuff", verbose=True, prompt=prompt,
                                  document_variable_name="input_documents")
 
-    # chain = create_stuff_documents_chain(llm, prompt) # alternative using create_stuff_documents_chain
-
     joined = ", ".join(userIds)
-    summary = chain.invoke({"input_documents": docs, "users": joined})
+    summary = await chain.ainvoke({"input_documents": docs, "users": joined})
     return summary
 
 
-def answer_question(projectId: str, question: str):
+async def answer_question(projectId: str, question: str):
     contents = wc.get_entries(projectId, -1, -1)
     if not contents or len(contents) == 0:
-        return "No entries found for the given parameters."
+        return {"result": "No entries found for the given parameters."}
 
     # LangChain Documents
     docs = [Document(id=str(obj.uuid),
@@ -141,7 +140,7 @@ def answer_question(projectId: str, question: str):
 
     vectorstore = WeaviateVectorStore.from_documents(
         documents=docs,
-        embedding=embeddings,
+        embedding=get_embeddings(),
         client=wc.client,
         collection_name=wc.COLLECTION_NAME,
     )
@@ -153,7 +152,7 @@ def answer_question(projectId: str, question: str):
         retriever=retriever,
         return_source_documents=True
     )
-    response = qa_chain.invoke(question)
+    response = await qa_chain.ainvoke(question)
 
     # Remove ID from source_documents if present to avoid null values in JSON response
     for doc in response["source_documents"]:

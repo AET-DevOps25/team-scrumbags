@@ -1,9 +1,11 @@
 export interface Report {
   id: string;
+  projectId: string;
   name: string;
-  periodStart: Date;
-  periodEnd: Date;
+  startTime: Date;
+  endTime: Date;
   userIds: string[];
-  content: string;
-  generating: boolean;
+  generatedAt: Date;
+  loading: boolean;
+  summary: string;
 }

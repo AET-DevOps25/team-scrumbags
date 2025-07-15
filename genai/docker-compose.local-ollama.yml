@@ -99,7 +99,7 @@ services:
       MYSQL_USER: ${MYSQL_USER:-user}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
     ports:
-      - "6699:6699"
+      - "3306:3306"
     volumes:
       - genai_db_data:/var/lib/mysql
     healthcheck:
