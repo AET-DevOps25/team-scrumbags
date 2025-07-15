@@ -2,7 +2,6 @@ import { inject, Injectable } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 import { Report } from '../models/report.model';
 import { ProjectState } from '../states/project.state';
-import { Report } from '../models/report.model';
 import { ReportApi } from './report.api';
 
 @Injectable({

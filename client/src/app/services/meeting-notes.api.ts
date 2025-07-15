@@ -28,14 +28,6 @@ export class MeetingNotesApi {
       .pipe(catchError(handleError('Error fetching meeting note')));
   }
 
-  getMeetingNote(projectId: string, noteId: string): Observable<MeetingNote> {
-    return this.http
-      .get<MeetingNote>(
-        `${environment.meetingNotesUrl}/projects/${projectId}/transcripts/${noteId}`
-      )
-      .pipe(catchError(handleError('Error fetching meeting note')));
-  }
-
   uploadMeetingNoteFile(
     projectId: string,
     speakerAmount: number,
