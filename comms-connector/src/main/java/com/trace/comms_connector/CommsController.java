@@ -151,14 +151,13 @@ public class CommsController {
     public ResponseEntity<?> getAllMessagesFromChannel(
         @PathVariable UUID projectId,
         @PathVariable Platform platform,
-        @RequestParam(required = false) String channelId,
-        @RequestParam(required = false) String lastMessageId
+        @RequestParam(required = false) String channelId
     ) {
         if (channelId == null) {
-            return ResponseEntity.badRequest().body("Communication platform server ID must be specified!"); 
+            return ResponseEntity.badRequest().body("Communication channel ID must be specified!"); 
         }
 
-        String messageJsonList = commsService.getAllMessagesFromChannel(projectId, platform, channelId, lastMessageId);
+        String messageJsonList = commsService.getAllMessagesFromChannel(projectId, platform, channelId);
 
         return ResponseEntity.ok(messageJsonList);
     }

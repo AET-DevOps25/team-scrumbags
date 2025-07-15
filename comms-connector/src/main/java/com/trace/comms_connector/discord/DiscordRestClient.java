@@ -1,7 +1,6 @@
 package com.trace.comms_connector.discord;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -71,7 +70,7 @@ public class DiscordRestClient {
             .uri(uriBuilder -> uriBuilder
                 .path("/channels/" + channelId + "/messages")
                 .queryParam("limit", 100)
-                .queryParamIfPresent("after", Optional.ofNullable(lastMessageId))
+                .queryParam("after", lastMessageId)
                 .build())
             .header("Authorization", token)
             .retrieve()

@@ -45,6 +45,10 @@ public class CommsService {
         @NonNull Platform platform,
         @Nullable String lastMessageId
     ) {
+        if (lastMessageId == null) {
+            lastMessageId = "0"; // Default to 0 if no last message ID is provided
+        }
+        
         ConnectionEntity connectionEntity = new ConnectionEntity(projectId, platformChannelId, platform, lastMessageId);
         connectionEntity = connectionRepo.save(connectionEntity);
         return connectionEntity;
@@ -162,35 +166,47 @@ public class CommsService {
     }
 
     // Used for testing getting the messages from a Discord channel
-    public String getAllMessagesFromChannel(UUID projectId, Platform platform, String channelId, String lastMessageId) {
-        List<DiscordMessage> messages = discordClient.getChannelMessages(
-            channelId,
-            lastMessageId,
-            projectId);
+    public String getAllMessagesFromChannel(UUID projectId, Platform platform, String channelId) {
+        List<DiscordMessage> messageBatch = new ArrayList<>();
+        List<DiscordMessage> allMessages = new ArrayList<>();
+        
+        String lastMessageId = "0"; // Start from the beginning
 
-        if (!messages.isEmpty() && messages != null) {
-            List<String> jsonMessages = messages.stream()
-                .map(msg -> {
-                    UUID userId = getUserIdByProjectIdAndPlatformDetails(
-                        projectId, platform, msg.getAuthor().getIdentifier());
-                    return msg.getJsonString(userId, projectId);
-                })
-                .toList();
+        do {
+            messageBatch = discordClient.getChannelMessages(
+                channelId,
+                lastMessageId,
+                projectId);
 
-            String messageJsonArray = "";
-            
-            // Convert to a single string of a JSON array
-            ObjectMapper mapper = new ObjectMapper();
-            try {
-                messageJsonArray = mapper.writeValueAsString(jsonMessages);
-            } catch (Exception e) {}
+            saveConnection(projectId, channelId, platform, messageBatch.get(0).getId());
 
-            // Send to the gen AI microservice
-            //commsClient.sendMessageListToGenAi(messageJsonArray);
+            allMessages.addAll(messageBatch);
+        } while (!messageBatch.isEmpty());
 
-            return messageJsonArray;
-        } else {
-            return "";
+        if (allMessages.isEmpty()) {
+            return "[]"; // Return empty JSON array if no messages found
         }
+        
+        // Convert to a list of JSON strings
+        List<String> jsonMessages = allMessages.stream()
+            .map(msg -> {
+                UUID userId = getUserIdByProjectIdAndPlatformDetails(
+                    projectId, platform, msg.getAuthor().getIdentifier());
+                return msg.getJsonString(userId, projectId);
+            })
+            .toList();
+
+        String messageJsonArray = "";
+        
+        // Convert to a single string of a JSON array
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            messageJsonArray = mapper.writeValueAsString(jsonMessages);
+        } catch (Exception e) { return "";}
+
+        // Send to the gen AI microservice
+        commsClient.sendMessageListToGenAi(messageJsonArray);
+
+        return messageJsonArray;
     }
 }

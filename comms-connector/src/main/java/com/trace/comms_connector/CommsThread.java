@@ -2,6 +2,7 @@ package com.trace.comms_connector;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -52,34 +53,36 @@ public class CommsThread extends Thread {
             logger.info("Pulling messages...");
 
             for (ConnectionEntity connection : connections) {
-                if (interrupted()) {
-                    return;
-                }
+                List<? extends CommsMessage> messageBatch = new ArrayList<>();
+                List<? extends CommsMessage> allMessages = new ArrayList<>();
 
-                List<? extends CommsMessage> messages = null;
-
-                switch (connection.getPlatform()) {
-                    case DISCORD:
-                        messages = discordClient.getChannelMessages(
-                            connection.getPlatformChannelId(),
-                            connection.getLastMessageId(),
-                            connection.getProjectId());
-                        break;
-                }
-
-                if (messages != null && !messages.isEmpty()) {
-                    String messageJsonArray = msgConverter.convertListToJsonArray(
-                        messages, connection.getProjectId(), connection.getPlatform());
-
-                    commsClient.sendMessageListToGenAi(messageJsonArray);
+                do {
+                    // Get next batch of messages from the channel
+                    switch (connection.getPlatform()) {
+                        case DISCORD:
+                            messageBatch = discordClient.getChannelMessages(
+                                connection.getPlatformChannelId(),
+                                connection.getLastMessageId(),
+                                connection.getProjectId());
+                            break;
+                    }
 
                     // Update last message ID
                     commsService.saveConnection(
                         connection.getProjectId(),
                         connection.getPlatformChannelId(),
                         connection.getPlatform(),
-                        messages.get(0).getId()
+                        messageBatch.get(0).getId()
                     );
+
+                    allMessages.addAll(messageBatch);
+                } while (!interrupted() && !messageBatch.isEmpty());
+
+                if (!allMessages.isEmpty()) {
+                    String messageJsonArray = msgConverter.convertListToJsonArray(
+                        allMessages, connection.getProjectId(), connection.getPlatform());
+
+                    commsClient.sendMessageListToGenAi(messageJsonArray);
                 }
             }
 
