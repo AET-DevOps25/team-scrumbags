@@ -1,7 +1,4 @@
-import { Component, effect, inject, input, signal } from '@angular/core';
-import { ProjectService } from '../../../services/project.service';
-import { ReportService } from '../../../services/report.service';
-import { finalize } from 'rxjs';
+import { Component, input } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { Report } from '../../../models/report.model';
 
