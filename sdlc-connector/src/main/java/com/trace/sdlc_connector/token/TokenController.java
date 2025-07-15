@@ -35,7 +35,7 @@ public class TokenController {
 
     @GetMapping("projects/{projectId}/token/{tokenId}")
     public ResponseEntity<?> getToken(@PathVariable UUID projectId, @PathVariable UUID tokenId) {
-        TokenEntity token = service.getTokenById(tokenId);
+        TokenEntity token = service.getTokenById(projectId, tokenId);
         if (token == null) {
             return ResponseEntity.notFound().build();
         }

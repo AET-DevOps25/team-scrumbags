@@ -28,10 +28,30 @@ export class ChatApi {
       );
   }
 
+  getChatMessageById(
+    projectId: string,
+    messageId: string,
+    userId: string
+  ): Observable<Message> {
+    return this.http
+      .get<Message>(
+        `${environment.genAiUrl}/projects/${projectId}/messages/${messageId}?userId=${userId}`
+      )
+      .pipe(
+        map((msg) => {
+          msg.timestamp = new Date(msg.timestamp);
+          return msg;
+        }),
+        catchError(
+          handleError(`Error fetching chat message with ID ${messageId}`)
+        )
+      );
+  }
+
   sendMessage(
     projectId: string,
-    userId: string,
-    message: string
+    message: string,
+    userId: string
   ): Observable<Message[]> {
     return this.http
       .post<Message[]>(
