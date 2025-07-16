@@ -11,3 +11,49 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 .mat-mdc-icon-button {
     line-height: normal;
 }
+
+markdown {
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold mb-2 mt-4;
+  }
+
+  h1 { @apply text-2xl; }
+  h2 { @apply text-xl; }
+  h3 { @apply text-lg; }
+
+  ul, ol {
+    @apply ml-4 mb-2;
+  }
+
+  ul {
+    @apply list-disc;
+  }
+
+  ol {
+    @apply list-decimal;
+  }
+
+  li {
+    @apply mb-1;
+  }
+
+  code {
+    @apply bg-gray-100 px-1 rounded text-sm font-mono;
+  }
+
+  pre {
+    @apply bg-gray-100 p-4 rounded overflow-x-auto mb-4;
+
+    code {
+      @apply bg-transparent p-0;
+    }
+  }
+
+  blockquote {
+    @apply border-l-4 border-gray-300 pl-4 italic mb-4;
+  }
+
+  p {
+    @apply mb-2;
+  }
+}

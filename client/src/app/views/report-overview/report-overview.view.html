@@ -39,12 +39,11 @@
     #addReportMenu="matMenu"
     class="p-4"
     xPosition="before"
-    (closed)="onCancel()"
   >
     <form
       matMenuContent
       class="flex flex-col gap-4"
-      (ngSubmit)="onSubmit(); addReportMenu.closed.emit()"
+      (ngSubmit)="onSubmit()"
     >
       <mat-form-field appearance="outline">
         <mat-label>Start Date</mat-label>
@@ -89,7 +88,7 @@
         <button
           matButton="outlined"
           type="button"
-          (click)="onCancel(); addReportMenu.closed.emit()"
+          (click)="onCancel()"
         >
           Cancel
         </button>

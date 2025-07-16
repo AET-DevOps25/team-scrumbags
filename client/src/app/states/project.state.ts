@@ -64,17 +64,22 @@ export class ProjectState {
   }
 
   setMeetingNotes(id: string, meetingNotes: MeetingNote[]) {
-    this.updateProject(id, { meetingNotes: meetingNotes });
+    const meetingNotesMap = new Map(
+      meetingNotes.map((meetingNote) => [meetingNote.id, meetingNote])
+    );
+
+    this.updateProject(id, { meetingNotes: meetingNotesMap });
   }
 
-  addMeetingNote(id: string, meetingNote: MeetingNote) {
+  updateMeetingNote(id: string, meetingNote: MeetingNote) {
     const project = this.allProjects().get(id);
     if (!project) {
       return;
     }
 
-    let meetingNotes = project.meetingNotes || [];
-    meetingNotes = [...meetingNotes, meetingNote];
+    const meetingNotes = project.meetingNotes || new Map<string, Report>();
+    meetingNotes.set(meetingNote.id, meetingNote);
+
     this.updateProject(id, { meetingNotes: meetingNotes });
   }
 
@@ -101,7 +106,7 @@ export class ProjectState {
     this.updateProject(id, { messages: messageMap });
   }
 
-  addMessages(id: string, messages: Message[]) {
+  updateMessages(id: string, messages: Message[]) {
     const project = this.allProjects().get(id);
     if (!project) {
       return;

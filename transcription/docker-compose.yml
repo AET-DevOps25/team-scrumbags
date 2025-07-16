@@ -4,13 +4,13 @@ services:
     image: mysql:8.0
     restart: always
     environment:
-      MYSQL_URL: jdbc:mysql://transcription-db:3306/${MYSQL_DATABASE}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_URL: jdbc:mysql://transcription-db:3306/${MYSQL_DATABASE:-transcription-db}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-test}
+      MYSQL_USER: ${MYSQL_USER:-root}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-test}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-transcription-db}
     ports:
-      - "9966:3306"
+      - "3306:3306"
     volumes:
         - db_data:/var/lib/mysql
     healthcheck:

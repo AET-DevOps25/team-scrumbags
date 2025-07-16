@@ -1,20 +1,40 @@
-<div mat-dialog-title class="!pt-0 !h-auto" >
+<div mat-dialog-title class="!pt-0 !h-auto">
   <h2 class="text-xl font-semibold">Upload File</h2>
 </div>
 
-<div mat-dialog-content class="!pt-1">
-    <input
-      type="file"
-      (change)="onFileSelected($event)"
-      accept=".pdf,.txt,.md,.mp3,.wav,.m4a"
-      class="block w-full text-sm rounded-lg cursor-pointer 
-      border border-(--mat-sys-outline-variant)
-      file:bg-(--mat-sys-primary) file:text-(--mat-sys-on-primary) file:font-semibold file:py-2 file:px-4 file:border-0 file:rounded file:mr-4 hover:file:text-(--mat-sys-on-primary-hover) hover:file:bg-(--mat-sys-primary-hover)"
-      [disabled]="isSubmitting()"
-    />
-  @if (selectedFile()) {
-    <span class="mt-2 text-xs text-(--mat-sys-on-surface-variant)">Selected: {{ selectedFile()?.name }}</span>
-  }
+<div mat-dialog-content class="!py-2">
+  <div class="flex flex-col gap-2">
+    <mat-form-field appearance="outline" class="w-full">
+      <mat-label>Speaker Amount</mat-label>
+      <input
+        matInput
+        type="number"
+        [value]="speakerAmount()"
+        [(ngModel)]="speakerAmount"
+        min="1"
+        step="1"
+        placeholder="Enter speaker amount"
+      />
+    </mat-form-field>
+    <div>
+      <input
+        type="file"
+        (change)="onFileSelected($event)"
+        accept=".mp3, .wav, .m4a, .flac, .aac, .ogg, .mp4, .mov, opus"
+        class="block w-full text-sm rounded-lg cursor-pointer border border-(--mat-sys-outline-variant) file:bg-(--mat-sys-primary) file:text-(--mat-sys-on-primary) file:font-semibold file:py-2 file:px-4 file:border-0 file:rounded file:mr-4 hover:file:text-(--mat-sys-on-primary-hover) hover:file:bg-(--mat-sys-primary-hover)"
+        [disabled]="isSubmitting()"
+      />
+      @if (selectedFile()) {
+      <span class="mt-2 text-xs text-(--mat-sys-on-surface-variant)"
+        >Selected: {{ selectedFile()?.name }}</span
+      >
+      } @else {
+      <span class="mt-2 text-xs text-(--mat-sys-on-surface-variant)"
+        >Allowed file types are: .mp3, .wav, .m4a, .flac, .aac, .ogg, .mp4,
+        .mov, opus</span
+      >}
+    </div>
+  </div>
 </div>
 
 <div mat-dialog-actions class="flex justify-end gap-2">
@@ -25,7 +45,7 @@
     mat-raised-button
     color="primary"
     (click)="onSubmit()"
-    [disabled]="!selectedFile() || isSubmitting()"
+    [disabled]="!selectedFile() || speakerAmount() < 1 || isSubmitting()"
   >
     @if (isSubmitting()) { Uploading... } @else { Upload File }
   </button>

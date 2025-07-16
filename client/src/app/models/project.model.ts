@@ -10,7 +10,7 @@ export interface Project {
   description: string;
 
   users: User[];
-  meetingNotes: MeetingNote[];
+  meetingNotes: Map<string, MeetingNote>;
   reports: Map<string, Report>;
   messages: Map<string, Message>;
 }
