@@ -1,6 +1,6 @@
 # Global configuration
 global:
-  namespace: trace
+  namespace: team-scrumbags
   imageRegistry: ghcr.io/aet-devops25/team-scrumbags
   imagePullPolicy: IfNotPresent
 
@@ -31,73 +31,73 @@ client:
   enabled: true
   image: ghcr.io/aet-devops25/team-scrumbags/client:latest
   port: 80
-  nodePort: 4200
+  nodePort: 30000
   replicas: 1
 
 projectManagement:
   enabled: true
   image: ghcr.io/aet-devops25/team-scrumbags/project-management:latest
-  port: 8080
+  port: 30001
   replicas: 1
 
 sdlc:
   enabled: true
   image: ghcr.io/aet-devops25/team-scrumbags/sdlc-connector:latest
-  port: 8081
+  port: 30002
   replicas: 1
 
 communication:
   enabled: true
   image: ghcr.io/aet-devops25/team-scrumbags/comms-connector:latest
-  port: 8082
+  port: 30003
   replicas: 1
 
 transcription:
   enabled: true
   image: ghcr.io/aet-devops25/team-scrumbags/transcription:latest
-  port: 8083
+  port: 30004
   replicas: 1
 
 genai:
   enabled: true
   image: ghcr.io/aet-devops25/team-scrumbags/genai:latest
-  port: 4242
+  port: 30005
   replicas: 1
 
 # External services
 postgresql:
   enabled: true
   image: postgres:latest
-  port: 5432
+  port: 30006
   storageSize: 10Gi
 
 mysql:
   enabled: true
   image: mysql:8.0
-  port: 3306
+  port: 30007
   storageSize: 10Gi
 
 keycloak:
   enabled: true
   image: quay.io/keycloak/keycloak:26.2.5
-  port: 7999
+  port: 30008
   replicas: 1
 
 ollama:
   enabled: false
   image: ollama/ollama:latest
-  port: 11434
+  port: 30009
   storageSize: 20Gi
 
 rabbitmq:
   enabled: true
   image: rabbitmq:management
-  port: 5672
+  port: 30010
   managementPort: 15672
   storageSize: 5Gi
 
 weaviate:
   enabled: true
   image: cr.weaviate.io/semitechnologies/weaviate:1.31.2
-  port: 6969
+  port: 30011
   storageSize: 10Gi
