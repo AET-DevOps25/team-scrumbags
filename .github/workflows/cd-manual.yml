@@ -20,23 +20,11 @@ jobs:
           echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
           chmod 600 ~/.kube/config
 
-      - name: Test Kubernetes connection
-        run: kubectl cluster-info
-
-#      - name: Deploy with Helm
-#        run: |
-#          helm -n team-scrumbags upgrade trace ./k8s \
-#            --set secrets.assemblyAiKey="${{ secrets.ASSEMBLYAI_API_KEY }}" \
-#            --set secrets.projectDbUser="${{ secrets.PROJECT_DB_USER }}" \
-#            --set secrets.projectDbPassword="${{ secrets.PROJECT_DB_PASSWORD }}" \
-#            --set secrets.keycloakAdminUsername="${{ secrets.KEYCLOAK_ADMIN_USERNAME }}" \
-#            --set secrets.keycloakAdminPassword="${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}" \
-#            --set secrets.sdlcTokenSecret="${{ secrets.SDLC_TOKEN_SECRET }}" \
-#            --set secrets.postgresDbUser="${{ secrets.POSTGRES_DB_USER }}" \
-#            --set secrets.postgresDbPassword="${{ secrets.POSTGRES_DB_PASSWORD }}" \
-#            --set secrets.mysqlRootPassword="${{ secrets.MYSQL_ROOT_PASSWORD }}" \
-#            --set secrets.commDiscordSecret="${{ secrets.COMM_DISCORD_SECRET }}" \
-#            --set secrets.commDiscordBotId="${{ secrets.COMM_DISCORD_BOT_ID }}" \
-#            --set secrets.hfToken="${{ secrets.HF_TOKEN }}" \
-#            --set secrets.nomicApiKey="${{ secrets.NOMIC_API_KEY }}" \
-#            --set secrets.openWebuiBearer="${{ secrets.OPEN_WEBUI_BEARER }}"
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install -n team-scrumbags trace ./k8s  \
+            --set secrets.assemblyAiKey="${{ secrets.ASSEMBLYAI_API_KEY }}" \
+            --set secrets.commDiscordSecret="${{ secrets.COMM_DISCORD_SECRET }}" \
+            --set secrets.hfToken="${{ secrets.HF_TOKEN }}" \
+            --set secrets.nomicApiKey="${{ secrets.NOMIC_API_KEY }}" \
+            --set secrets.openWebuiBearer="${{ secrets.OPEN_WEBUI_BEARER }}"
