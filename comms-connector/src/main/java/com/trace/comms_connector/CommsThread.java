@@ -29,7 +29,7 @@ public class CommsThread extends Thread {
         while (true) {
             Instant before = Instant.now();
 
-            List<ConnectionEntity> connections = commsService.getAllConnections();
+            List<ConnectionEntity> connections = CommsThread.commsService.getAllConnections();
 
             logger.info("Pulling messages...");
 
@@ -40,7 +40,7 @@ public class CommsThread extends Thread {
                     String msgs = "[]";
 
                     do {
-                        msgs = commsService.getMessageBatchFromChannel(
+                        msgs = CommsThread.commsService.getMessageBatchFromChannel(
                             connection.getProjectId(),
                             connection.getPlatform(),
                             connection.getPlatformChannelId(),
@@ -90,7 +90,7 @@ public class CommsThread extends Thread {
 
     public void stopThread() throws RuntimeException {
         synchronized (CommsThread.class) {
-            if (!alive) {
+            if (!CommsThread.alive) {
                 logger.warn("Comms thread is not running, cannot stop!");
                 throw new RuntimeException("Comms thread is not running, cannot stop!");
             }
@@ -101,7 +101,7 @@ public class CommsThread extends Thread {
 
     public void startThread() throws RuntimeException {
         synchronized (CommsThread.class) {
-            if (alive) {
+            if (CommsThread.alive) {
                 logger.warn("Comms thread already running, not starting again!");
                 throw new RuntimeException("Comms thread already running, not starting again!");
             }
