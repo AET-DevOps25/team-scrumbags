@@ -6,21 +6,17 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
-import org.springframework.stereotype.Component;
 
 import com.trace.comms_connector.connection.ConnectionEntity;
 
-import jakarta.annotation.PreDestroy;
 import lombok.NoArgsConstructor;
 
-@Component
 @NoArgsConstructor
 public class CommsThread extends Thread {
-    @Autowired
-    private CommsService commsService;
+    private static CommsService commsService;
+
+    private static boolean alive = false;
+    private static CommsThread instance;
 
     private Logger logger = LoggerFactory.getLogger(CommsThread.class);
 
@@ -38,10 +34,6 @@ public class CommsThread extends Thread {
             logger.info("Pulling messages...");
 
             for (int i = 0; i < connections.size(); i++) {
-                if (interrupted()) {
-                    return;
-                }
-            
                 ConnectionEntity connection = connections.get(i);
 
                 try {
@@ -71,6 +63,7 @@ public class CommsThread extends Thread {
                     } catch (Exception e) {
                         logger.error("An error has occured in the comms thread: " + e.getMessage());
                         logger.info("Stopping the comms thread...");
+                        CommsThread.alive = false;
                         return;
                     }
                 }
@@ -89,37 +82,48 @@ public class CommsThread extends Thread {
                 // TODO: possibly allow custom waiting time instead of default 1 day
                 sleep(timeToSleep);
             } catch (InterruptedException e) {
+                CommsThread.alive = false;
                 return;
             }
         }
     }
 
-    public void cancel() {
-        if (!isAlive()) {
-            logger.warn("Comms thread is not running, cannot stop!");
-            return;
+    public void stopThread() throws RuntimeException {
+        synchronized (CommsThread.class) {
+            if (!alive) {
+                logger.warn("Comms thread is not running, cannot stop!");
+                throw new RuntimeException("Comms thread is not running, cannot stop!");
+            }
+            logger.info("Comms thread stopping...");
+            CommsThread.instance.interrupt();
         }
-        logger.info("Comms thread stopping...");
-        interrupt();
     }
 
-    public void startThread() {
-        if (isAlive()) {
-            logger.warn("Comms thread already running, not starting again!");
-            return;
+    public void startThread() throws RuntimeException {
+        synchronized (CommsThread.class) {
+            if (alive) {
+                logger.warn("Comms thread already running, not starting again!");
+                throw new RuntimeException("Comms thread already running, not starting again!");
+            }
+            logger.info("Comms thread starting...");
+            CommsThread.alive = true;
+            CommsThread.instance = this;
+            CommsThread.instance.start();
         }
-        setName("CommsThread");
-        logger.info("Comms thread starting...");
-        start();
     }
 
-    @EventListener(ApplicationReadyEvent.class)
-    public void runCommsThreadOnStartup() {
-        startThread();
+    public static CommsThread getInstance() {
+        synchronized (CommsThread.class) {
+            if (!alive) {
+                CommsThread.instance = new CommsThread();
+            }
+            return CommsThread.instance;
+        }
     }
 
-    @PreDestroy
-    public void stopCommsThreadOnDestroy() {
-        cancel();
+    public static void setCommsService(CommsService service) {
+        synchronized (CommsThread.class) {
+            CommsThread.commsService = service;
+        }
     }
 }

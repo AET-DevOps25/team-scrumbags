@@ -166,4 +166,34 @@ public class CommsController {
 
         return ResponseEntity.ok(messageJsonList);
     }
+
+    @Operation(
+        summary = "Start the comms thread",
+        description = "Starts the thread that pulls messages from external communication platforms " +
+            "and sends these to the gen AI microservice every 24 hours."
+    )
+    @PostMapping("/comms/thread")
+    public ResponseEntity<?> startCommsThread() {
+        try {
+            CommsThread.getInstance().startThread();
+            return ResponseEntity.ok("Comms thread is starting.");
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(400).body(e.getMessage());
+        }
+    }
+
+    @Operation(
+        summary = "Stop the comms thread",
+        description = "Stops the thread that pulls messages from external communication platforms " +
+            "and sends these to the gen AI microservice."
+    )
+    @DeleteMapping("/comms/thread")
+    public ResponseEntity<?> stopCommsThread() {
+        try {
+            CommsThread.getInstance().stopThread();
+            return ResponseEntity.ok("Comms thread is stopping.");
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(400).body(e.getMessage());
+        }
+    }
 }
