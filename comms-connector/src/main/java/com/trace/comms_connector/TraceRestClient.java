@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 @Component
-public final class CommsRestClient {
+public final class TraceRestClient {
     @Value("${trace.genai.base-url}")
     private String genAiBaseUrl;
 

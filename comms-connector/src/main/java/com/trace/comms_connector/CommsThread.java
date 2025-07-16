@@ -2,7 +2,6 @@ package com.trace.comms_connector;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -13,9 +12,6 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import com.trace.comms_connector.connection.ConnectionEntity;
-import com.trace.comms_connector.discord.DiscordRestClient;
-import com.trace.comms_connector.model.CommsMessage;
-import com.trace.comms_connector.util.CommsMessageConverter;
 
 import jakarta.annotation.PreDestroy;
 import lombok.NoArgsConstructor;
@@ -26,15 +22,6 @@ public class CommsThread extends Thread {
     @Autowired
     private CommsService commsService;
 
-    @Autowired
-    private DiscordRestClient discordClient;
-
-    @Autowired
-    private CommsRestClient commsClient;
-
-    @Autowired
-    private CommsMessageConverter msgConverter;
-
     private Logger logger = LoggerFactory.getLogger(CommsThread.class);
 
     /* 
@@ -43,8 +30,6 @@ public class CommsThread extends Thread {
      */
     @Override
     public void run() {
-        logger.info("Comms thread running!");
-
         while (true) {
             Instant before = Instant.now();
 
@@ -52,38 +37,44 @@ public class CommsThread extends Thread {
 
             logger.info("Pulling messages...");
 
-            for (ConnectionEntity connection : connections) {
-                List<? extends CommsMessage> messageBatch = new ArrayList<>();
-                List<? extends CommsMessage> allMessages = new ArrayList<>();
-
-                do {
-                    // Get next batch of messages from the channel
-                    switch (connection.getPlatform()) {
-                        case DISCORD:
-                            messageBatch = discordClient.getChannelMessages(
-                                connection.getPlatformChannelId(),
-                                connection.getLastMessageId(),
-                                connection.getProjectId());
-                            break;
-                    }
-
-                    // Update last message ID
-                    commsService.saveConnection(
-                        connection.getProjectId(),
-                        connection.getPlatformChannelId(),
-                        connection.getPlatform(),
-                        messageBatch.get(0).getId()
-                    );
-
-                    allMessages.addAll(messageBatch);
-                } while (!interrupted() && !messageBatch.isEmpty());
-
-                if (!allMessages.isEmpty()) {
-                    String messageJsonArray = msgConverter.convertListToJsonArray(
-                        allMessages, connection.getProjectId(), connection.getPlatform());
-
-                    commsClient.sendMessageListToGenAi(messageJsonArray);
+            for (int i = 0; i < connections.size(); i++) {
+                if (interrupted()) {
+                    return;
                 }
+            
+                ConnectionEntity connection = connections.get(i);
+
+                try {
+                    String msgs = "[]";
+
+                    do {
+                        msgs = commsService.getMessageBatchFromChannel(
+                            connection.getProjectId(),
+                            connection.getPlatform(),
+                            connection.getPlatformChannelId(),
+                            null,
+                            true,
+                            false
+                        );
+                        logger.info(msgs);
+                    } while (!msgs.equals("[]"));
+
+                } catch (RuntimeException re) {
+                    
+                    logger.error("Failed to pull messages from platform "
+                        + connection.getPlatform().toString() + ", channel ID "
+                        + connection.getPlatformChannelId());
+                    
+                    try {
+                        sleep(Long.parseLong(re.getMessage()) * 1000);
+                        i--; // Retry the same connection after waiting
+                    } catch (Exception e) {
+                        logger.error("An error has occured in the comms thread: " + e.getMessage());
+                        logger.info("Stopping the comms thread...");
+                        return;
+                    }
+                }
+                
             }
 
             Instant after = Instant.now();
@@ -104,17 +95,31 @@ public class CommsThread extends Thread {
     }
 
     public void cancel() {
+        if (!isAlive()) {
+            logger.warn("Comms thread is not running, cannot stop!");
+            return;
+        }
+        logger.info("Comms thread stopping...");
         interrupt();
+    }
+
+    public void startThread() {
+        if (isAlive()) {
+            logger.warn("Comms thread already running, not starting again!");
+            return;
+        }
+        setName("CommsThread");
+        logger.info("Comms thread starting...");
+        start();
     }
 
     @EventListener(ApplicationReadyEvent.class)
     public void runCommsThreadOnStartup() {
-        this.start();
+        startThread();
     }
 
     @PreDestroy
     public void stopCommsThreadOnDestroy() {
-        logger.info("Comms thread stopping!");
-        this.cancel();
+        cancel();
     }
 }

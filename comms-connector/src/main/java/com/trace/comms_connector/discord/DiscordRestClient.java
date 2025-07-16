@@ -8,8 +8,10 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import com.trace.comms_connector.model.CommsPlatformRestClient;
+
 @Component
-public class DiscordRestClient {
+public class DiscordRestClient implements CommsPlatformRestClient {
     @Value("Bot ${trace.discord.secret}")
     private String token;
 
@@ -60,11 +62,8 @@ public class DiscordRestClient {
             .toList();
     }
 
-    /*
-     * Returns a string representing a JSON array that contains the messages in a form
-     * that is ready to be send to the gen AI microservice
-     */
-    public List<DiscordMessage> getChannelMessages(String channelId, String lastMessageId, UUID projectId) {
+    @Override
+    public List<DiscordMessage> getChannelMessages(String channelId, String lastMessageId, UUID projectId) throws RuntimeException {
         List<DiscordMessage> messages = getRestClient()
             .get()
             .uri(uriBuilder -> uriBuilder
@@ -74,6 +73,10 @@ public class DiscordRestClient {
                 .build())
             .header("Authorization", token)
             .retrieve()
+            .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+                (request, response) -> {
+                    throw new RuntimeException(response.getHeaders().get("Retry-After").getFirst());
+                })
             .body(new ParameterizedTypeReference<>() {});
 
         return messages;

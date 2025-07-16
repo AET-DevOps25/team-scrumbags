@@ -12,10 +12,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.trace.comms_connector.connection.ConnectionCompositeKey;
 import com.trace.comms_connector.connection.ConnectionEntity;
 import com.trace.comms_connector.connection.ConnectionRepo;
-import com.trace.comms_connector.discord.DiscordMessage;
 import com.trace.comms_connector.discord.DiscordRestClient;
+import com.trace.comms_connector.model.CommsMessage;
+import com.trace.comms_connector.model.CommsPlatformRestClient;
 import com.trace.comms_connector.user.UserCompositeKey;
 import com.trace.comms_connector.user.UserEntity;
 import com.trace.comms_connector.user.UserRepo;
@@ -35,7 +37,7 @@ public class CommsService {
     private DiscordRestClient discordClient;
 
     @Autowired
-    private CommsRestClient commsClient;
+    private TraceRestClient traceClient;
 
     // Save connection to the connection database
     @Transactional
@@ -165,30 +167,45 @@ public class CommsService {
         return user.isPresent() ? user.get().getUserId() : null;
     }
 
-    // Used for testing getting the messages from a Discord channel
-    public String getAllMessagesFromChannel(UUID projectId, Platform platform, String channelId) {
-        List<DiscordMessage> messageBatch = new ArrayList<>();
-        List<DiscordMessage> allMessages = new ArrayList<>();
-        
-        String lastMessageId = "0"; // Start from the beginning
+    // Used for getting a batch of messages from a platform channel
+    public String getMessageBatchFromChannel(
+        UUID projectId,
+        Platform platform,
+        String channelId,
+        String lastMessageId,
+        boolean updateLastMessageId,
+        boolean sendToGenAi
+    ) {
+        CommsPlatformRestClient client = null;
+        List<CommsMessage> messageBatch = new ArrayList<>();
 
-        do {
-            messageBatch = discordClient.getChannelMessages(
-                channelId,
-                lastMessageId,
-                projectId);
-
-            saveConnection(projectId, channelId, platform, messageBatch.get(0).getId());
-
-            allMessages.addAll(messageBatch);
-        } while (!messageBatch.isEmpty());
-
-        if (allMessages.isEmpty()) {
-            return "[]"; // Return empty JSON array if no messages found
+        // Select client
+        switch (platform) {
+            case DISCORD:
+                client = this.discordClient;
+                break;
+            default:
+                return "Platform not supported.";
         }
-        
+
+        if (lastMessageId == null) {
+            lastMessageId = connectionRepo.findById(new ConnectionCompositeKey(projectId, channelId, platform)).get().getLastMessageId();
+        }
+
+        // Get the messages in batches
+        messageBatch.addAll(client.getChannelMessages(channelId, lastMessageId, projectId));
+
+        if (messageBatch.isEmpty()) {
+            return "[]";
+        }
+
+        if (updateLastMessageId) {
+            String newLastMessageId = messageBatch.get(0).getId();
+            saveConnection(projectId, channelId, platform, newLastMessageId);
+        }
+
         // Convert to a list of JSON strings
-        List<String> jsonMessages = allMessages.stream()
+        List<String> jsonMessages = messageBatch.stream()
             .map(msg -> {
                 UUID userId = getUserIdByProjectIdAndPlatformDetails(
                     projectId, platform, msg.getAuthor().getIdentifier());
@@ -202,10 +219,13 @@ public class CommsService {
         ObjectMapper mapper = new ObjectMapper();
         try {
             messageJsonArray = mapper.writeValueAsString(jsonMessages);
-        } catch (Exception e) { return "";}
+        } catch (Exception e) {
+            return "";
+        }
 
-        // Send to the gen AI microservice
-        commsClient.sendMessageListToGenAi(messageJsonArray);
+        if (sendToGenAi) {
+            traceClient.sendMessageListToGenAi(messageJsonArray);
+        }
 
         return messageJsonArray;
     }

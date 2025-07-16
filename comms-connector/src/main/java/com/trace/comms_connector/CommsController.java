@@ -132,7 +132,7 @@ public class CommsController {
     }
 
     /**
-     * Get every message from Discord text channel, for testing
+     * Get a message batch from Discord text channel, for testing
      * 
      * @param projectId
      * @param platform
@@ -142,22 +142,28 @@ public class CommsController {
      */
     @Operation(
         summary = "Get Discord messages from channel",
-        description = "Only for testing: Returns a list of discord messages from the specified channel ID (the ID of a text channel " +
-            " that was added to the connections database using add integration endpoint prior to this). The messages are formatted" +
+        description = "Returns a list of a batch of 100 platform messages from the specified channel ID (for Discord: the ID of a text" +
+            " channel that was added to the connections database using add integration endpoint prior to this). The messages are formatted" +
             " according to the JSON format specified by the gen AI microservice. Last message ID can be specified to only get the" +
-            " messages after a specific message with the given ID."
+            " messages after a specific message with the given ID. If lastMessageId is not specified, the last message ID is fetched" +
+            " instead. Setting updateLastMessageId to true will update the last message ID in the connections table," +
+            " and setting sendToGenAi to true will send the messages to the gen AI microservice."
     )
     @GetMapping("/{platform}/messages")
-    public ResponseEntity<?> getAllMessagesFromChannel(
+    public ResponseEntity<?> getMessagesFromChannel(
         @PathVariable UUID projectId,
         @PathVariable Platform platform,
-        @RequestParam(required = false) String channelId
+        @RequestParam(required = false) String channelId,
+        @RequestParam(required = false) String lastMessageId,
+        @RequestParam(required = false, defaultValue = "false") boolean updateLastMessageId,
+        @RequestParam(required = false, defaultValue = "false") boolean sendToGenAi
     ) {
         if (channelId == null) {
             return ResponseEntity.badRequest().body("Communication channel ID must be specified!"); 
         }
 
-        String messageJsonList = commsService.getAllMessagesFromChannel(projectId, platform, channelId);
+        String messageJsonList = commsService.getMessageBatchFromChannel(
+            projectId, platform, channelId, lastMessageId, updateLastMessageId, sendToGenAi);
 
         return ResponseEntity.ok(messageJsonList);
     }
