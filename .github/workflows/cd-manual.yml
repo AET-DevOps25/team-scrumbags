@@ -14,11 +14,14 @@ jobs:
       - name: Set up Helm
         uses: azure/setup-helm@v4
 
-#      - name: Set up Kubeconfig
-#        run: |
-#          mkdir -p ~/.kube
-#          echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
-#          chmod 600 ~/.kube/config
+      - name: Set up Kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Test Kubernetes connection
+        run: kubectl cluster-info
 
 #      - name: Deploy with Helm
 #        run: |
