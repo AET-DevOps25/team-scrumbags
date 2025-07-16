@@ -6,7 +6,12 @@ metadata:
   namespace: {{ .Values.global.namespace }}
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/issuer: letsencrypt-prod
 spec:
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host }}
+      secretName: trace-tls-secret
   rules:
     - host: {{ .Values.ingress.host }}
       http:

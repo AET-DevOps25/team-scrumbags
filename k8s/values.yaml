@@ -2,7 +2,7 @@
 global:
   imageRegistry: ghcr.io/aet-devops25/team-scrumbags
   imagePullPolicy: IfNotPresent
-
+  namespace: team-scrumbags
 
 # Environment variables
 environment:
@@ -28,38 +28,38 @@ ingress:
 # Service configurations
 client:
   enabled: true
-  image: ghcr.io/aet-devops25/team-scrumbags/client:latest
+  image: ghcr.io/aet-devops25/team-scrumbags/client:main
   port: 80
   nodePort: 30000
   replicas: 1
 
 projectManagement:
   enabled: true
-  image: ghcr.io/aet-devops25/team-scrumbags/project-management:latest
+  image: ghcr.io/aet-devops25/team-scrumbags/project-management:main
   port: 30001
   replicas: 1
 
 sdlc:
   enabled: true
-  image: ghcr.io/aet-devops25/team-scrumbags/sdlc-connector:latest
+  image: ghcr.io/aet-devops25/team-scrumbags/sdlc-connector:main
   port: 30002
   replicas: 1
 
 communication:
   enabled: true
-  image: ghcr.io/aet-devops25/team-scrumbags/comms-connector:latest
+  image: ghcr.io/aet-devops25/team-scrumbags/comms-connector:main
   port: 30003
   replicas: 1
 
 transcription:
   enabled: true
-  image: ghcr.io/aet-devops25/team-scrumbags/transcription:latest
+  image: ghcr.io/aet-devops25/team-scrumbags/transcription:main
   port: 30004
   replicas: 1
 
 genai:
   enabled: true
-  image: ghcr.io/aet-devops25/team-scrumbags/genai:latest
+  image: ghcr.io/aet-devops25/team-scrumbags/genai:main
   port: 30005
   replicas: 1
 
@@ -69,12 +69,14 @@ postgresql:
   image: postgres:latest
   port: 30006
   storageSize: 10Gi
+  replicas: 1
 
 mysql:
   enabled: true
   image: mysql:8.0
   port: 30007
   storageSize: 20Gi
+  replicas: 1
 
 keycloak:
   enabled: true
@@ -87,6 +89,7 @@ ollama:
   image: ollama/ollama:latest
   port: 30009
   storageSize: 20Gi
+  replicas: 1
 
 rabbitmq:
   enabled: true
@@ -94,9 +97,11 @@ rabbitmq:
   port: 30010
   managementPort: 15672
   storageSize: 5Gi
+  replicas: 1
 
 weaviate:
   enabled: true
   image: cr.weaviate.io/semitechnologies/weaviate:1.31.2
   port: 30011
   storageSize: 10Gi
+  replicas: 1

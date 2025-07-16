@@ -17,7 +17,7 @@ metadata:
   name: mysql
   namespace: {{ .Values.global.namespace }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.mysql.replicas }}
   selector:
     matchLabels:
       app: mysql
@@ -80,5 +80,7 @@ spec:
     app: mysql
   ports:
     - port: {{ .Values.mysql.port }}
-      targetPort: {{ .Values.mysql.port }}
+      targetPort: 3306
+      protocol: TCP
+      name: mysql
 {{- end }}

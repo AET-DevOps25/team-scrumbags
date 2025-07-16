@@ -6,6 +6,8 @@ metadata:
   namespace: {{ .Values.global.namespace }}
 spec:
   replicas: {{ .Values.keycloak.replicas }}
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: keycloak

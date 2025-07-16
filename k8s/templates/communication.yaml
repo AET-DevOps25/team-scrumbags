@@ -6,6 +6,8 @@ metadata:
   namespace: {{ .Values.global.namespace }}
 spec:
   replicas: {{ .Values.communication.replicas }}
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: communication
@@ -32,7 +34,7 @@ spec:
       initContainers:
         - name: wait-for-mysql
           image: busybox:1.35
-          command: ['sh', '-c', 'until nc -z mysql-service {{ .Values.mysql.port }}; do sleep 1; done']
+          command: [ 'sh', '-c', 'until nc -z mysql-service {{ .Values.mysql.port }}; do sleep 1; done' ]
 ---
 apiVersion: v1
 kind: Service

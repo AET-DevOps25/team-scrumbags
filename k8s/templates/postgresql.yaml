@@ -17,7 +17,9 @@ metadata:
   name: postgresql
   namespace: {{ .Values.global.namespace }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.postgresql.replicas }}
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: postgresql
