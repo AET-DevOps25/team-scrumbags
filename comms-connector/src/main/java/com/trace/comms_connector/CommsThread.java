@@ -48,7 +48,6 @@ public class CommsThread extends Thread {
                             true,
                             true
                         );
-                        logger.info(msgs);
                     } while (!msgs.equals("[]"));
 
                 } catch (RuntimeException re) {
