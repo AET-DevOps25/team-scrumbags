@@ -168,8 +168,8 @@ public class CommsController {
     }
 
     @Operation(
-        summary = "Start the comms thread",
-        description = "Starts the thread that pulls messages from external communication platforms " +
+        summary = "Start a new comms thread",
+        description = "Starts a new thread that pulls messages from external communication platforms " +
             "and sends these to the gen AI microservice every 24 hours."
     )
     @PostMapping("/comms/thread")
@@ -183,8 +183,8 @@ public class CommsController {
     }
 
     @Operation(
-        summary = "Stop the comms thread",
-        description = "Stops the thread that pulls messages from external communication platforms " +
+        summary = "Stop the running comms thread",
+        description = "Stops the running thread that pulls messages from external communication platforms " +
             "and sends these to the gen AI microservice."
     )
     @DeleteMapping("/comms/thread")
