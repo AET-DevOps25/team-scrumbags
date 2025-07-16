@@ -75,7 +75,7 @@ mysql:
   enabled: true
   image: mysql:8.0
   port: 30007
-  storageSize: 10Gi
+  storageSize: 20Gi
 
 keycloak:
   enabled: true
