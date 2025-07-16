@@ -15,9 +15,6 @@ public class CommsController {
     @Autowired
     private CommsService commsService;
 
-    @Autowired
-    private CommsThread commsThread;
-
     /**
      * Get the platform users for a given project ID and platform
      * 
@@ -168,35 +165,5 @@ public class CommsController {
             projectId, platform, channelId, lastMessageId, updateLastMessageId, sendToGenAi);
 
         return ResponseEntity.ok(messageJsonList);
-    }
-
-    @Operation(
-        summary = "Start the comms thread",
-        description = "Starts the thread that pulls messages from external communication platforms " +
-            "and sends these to the gen AI microservice every 24 hours."
-    )
-    @PostMapping("/comms/thread")
-    public ResponseEntity<?> startCommsThread() {
-        if (!commsThread.isAlive()) {
-            commsThread.start();
-            return ResponseEntity.ok("Comms thread started successfully.");
-        } else {
-            return ResponseEntity.status(400).body("Comms thread is already running.");
-        }
-    }
-
-    @Operation(
-        summary = "Stop the comms thread",
-        description = "Stops the thread that pulls messages from external communication platforms " +
-            "and sends these to the gen AI microservice."
-    )
-    @DeleteMapping("/comms/thread")
-    public ResponseEntity<?> stopCommsThread() {
-        if (commsThread.isAlive()) {
-            commsThread.cancel();
-            return ResponseEntity.ok("Comms thread stopped successfully.");
-        } else {
-            return ResponseEntity.status(400).body("Comms thread is not running.");
-        }
     }
 }
