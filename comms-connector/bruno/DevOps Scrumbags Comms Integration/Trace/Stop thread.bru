@@ -1,0 +1,11 @@
+meta {
+  name: Stop thread
+  type: http
+  seq: 8
+}
+
+delete {
+  url: {{baseUrl}}/comms/thread
+  body: none
+  auth: inherit
+}
