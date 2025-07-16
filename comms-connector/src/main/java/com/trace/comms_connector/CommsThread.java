@@ -46,7 +46,7 @@ public class CommsThread extends Thread {
                             connection.getPlatformChannelId(),
                             null,
                             true,
-                            false
+                            true
                         );
                         logger.info(msgs);
                     } while (!msgs.equals("[]"));
