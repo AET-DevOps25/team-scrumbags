@@ -23,6 +23,7 @@ jobs:
           chmod 600 ~/.kube/config
           echo "KUBECONFIG=${HOME}/.kube/config" >> $GITHUB_ENV
           echo "KUBECONFIG set to $KUBECONFIG"
+          echo "KUBE_CONFIG: ${{ secrets.KUBE_CONFIG != '' }}"
 
       - name: Test Kubernetes connection
         run: kubectl cluster-info
