@@ -173,12 +173,24 @@ public class TranscriptController {
                 transcriptService.updateEntityWithTranscript(transcriptId, transcriptJson);
                 logger.info("Transcript completed for project {}: {}", projectId, transcriptJson);
 
-                // Forward to GenAI core service (uncomment when integrated)
-                // HttpHeaders headers = new HttpHeaders();
-                // headers.setContentType(MediaType.APPLICATION_JSON);
-                // HttpEntity<String> entity = new HttpEntity<>(transcriptJson, headers);
-                // String endpoint = genaiServiceUrl + "/projects/" + projectId + "/transcripts";
-                // restTemplate.postForEntity(endpoint, entity, String.class);
+                // Forward to GenAI core service
+                try {
+                    HttpHeaders headers = new HttpHeaders();
+                    headers.setContentType(MediaType.APPLICATION_JSON);
+
+                    // Create the content entry structure expected by the GenAI service
+                    String contentEntryJson = String.format(
+                            "[{\"content\": %s, \"metadata\": {\"projectId\": \"%s\", \"timestamp\": %d}}]",
+                            transcriptJson, projectId, effectiveTimestamp
+                    );
+
+                    HttpEntity<String> entity = new HttpEntity<>(contentEntryJson, headers);
+                    String endpoint = genaiServiceUrl + "/content";
+                    ResponseEntity<String> response = restTemplate.postForEntity(endpoint, entity, String.class);
+                    logger.info("Successfully forwarded transcript to GenAI service: {}", response.getStatusCode());
+                } catch (Exception ex) {
+                    logger.error("Error forwarding transcript to GenAI service for project {}: {}", projectId, ex.getMessage(), ex);
+                }
 
             } catch (Exception ex) {
             logger.error("Error processing transcription for project {}: {}", projectId, ex.getMessage(), ex);
