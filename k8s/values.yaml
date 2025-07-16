@@ -1,8 +1,9 @@
 # Global configuration
 global:
-  namespace: trace-app
-  imageRegistry: ""
+  namespace: trace
+  imageRegistry: ghcr.io/aet-devops25/team-scrumbags
   imagePullPolicy: IfNotPresent
+
 
 # Environment variables
 environment:
@@ -22,44 +23,44 @@ environment:
 
 # Ingress configuration
 ingress:
-  enabled: false
-  host: trace.local
+  enabled: true
+  host: trace.student.k8s.aet.cit.tum.de
 
 # Service configurations
 client:
   enabled: true
-  image: trace/client:latest
+  image: ghcr.io/aet-devops25/team-scrumbags/client:latest
   port: 80
   nodePort: 4200
   replicas: 1
 
 projectManagement:
   enabled: true
-  image: trace/project-management:latest
+  image: ghcr.io/aet-devops25/team-scrumbags/project-management:latest
   port: 8080
   replicas: 1
 
 sdlc:
   enabled: true
-  image: trace/sdlc-connector:latest
+  image: ghcr.io/aet-devops25/team-scrumbags/sdlc-connector:latest
   port: 8081
   replicas: 1
 
 communication:
   enabled: true
-  image: trace/comms-connector:latest
+  image: ghcr.io/aet-devops25/team-scrumbags/comms-connector:latest
   port: 8082
   replicas: 1
 
 transcription:
   enabled: true
-  image: trace/transcription:latest
+  image: ghcr.io/aet-devops25/team-scrumbags/transcription:latest
   port: 8083
   replicas: 1
 
 genai:
   enabled: true
-  image: trace/genai:latest
+  image: ghcr.io/aet-devops25/team-scrumbags/genai:latest
   port: 4242
   replicas: 1
 
