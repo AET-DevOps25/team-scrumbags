@@ -6,33 +6,17 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
-import org.springframework.stereotype.Component;
 
 import com.trace.comms_connector.connection.ConnectionEntity;
-import com.trace.comms_connector.discord.DiscordRestClient;
-import com.trace.comms_connector.model.CommsMessage;
-import com.trace.comms_connector.util.CommsMessageConverter;
 
-import jakarta.annotation.PreDestroy;
 import lombok.NoArgsConstructor;
 
-@Component
 @NoArgsConstructor
 public class CommsThread extends Thread {
-    @Autowired
-    private CommsService commsService;
+    private static CommsService commsService;
 
-    @Autowired
-    private DiscordRestClient discordClient;
-
-    @Autowired
-    private CommsRestClient commsClient;
-
-    @Autowired
-    private CommsMessageConverter msgConverter;
+    private static boolean alive = false;
+    private static CommsThread instance;
 
     private Logger logger = LoggerFactory.getLogger(CommsThread.class);
 
@@ -42,45 +26,47 @@ public class CommsThread extends Thread {
      */
     @Override
     public void run() {
-        logger.info("Comms thread running!");
-
         while (true) {
             Instant before = Instant.now();
 
-            List<ConnectionEntity> connections = commsService.getAllConnections();
+            List<ConnectionEntity> connections = CommsThread.commsService.getAllConnections();
 
             logger.info("Pulling messages...");
 
-            for (ConnectionEntity connection : connections) {
-                if (interrupted()) {
-                    return;
-                }
+            for (int i = 0; i < connections.size(); i++) {
+                ConnectionEntity connection = connections.get(i);
 
-                List<? extends CommsMessage> messages = null;
+                try {
+                    String msgs = "[]";
 
-                switch (connection.getPlatform()) {
-                    case DISCORD:
-                        messages = discordClient.getChannelMessages(
+                    do {
+                        msgs = CommsThread.commsService.getMessageBatchFromChannel(
+                            connection.getProjectId(),
+                            connection.getPlatform(),
                             connection.getPlatformChannelId(),
-                            connection.getLastMessageId(),
-                            connection.getProjectId());
-                        break;
+                            null,
+                            true,
+                            true
+                        );
+                    } while (!msgs.equals("[]"));
+
+                } catch (RuntimeException re) {
+                    
+                    logger.error("Failed to pull messages from platform "
+                        + connection.getPlatform().toString() + ", channel ID "
+                        + connection.getPlatformChannelId());
+                    
+                    try {
+                        sleep(Long.parseLong(re.getMessage()) * 1000);
+                        i--; // Retry the same connection after waiting
+                    } catch (Exception e) {
+                        logger.error("An error has occured in the comms thread: " + e.getMessage());
+                        logger.info("Stopping the comms thread...");
+                        CommsThread.alive = false;
+                        return;
+                    }
                 }
-
-                if (messages != null && !messages.isEmpty()) {
-                    String messageJsonArray = msgConverter.convertListToJsonArray(
-                        messages, connection.getProjectId(), connection.getPlatform());
-
-                    commsClient.sendMessageListToGenAi(messageJsonArray);
-
-                    // Update last message ID
-                    commsService.saveConnection(
-                        connection.getProjectId(),
-                        connection.getPlatformChannelId(),
-                        connection.getPlatform(),
-                        messages.get(0).getId()
-                    );
-                }
+                
             }
 
             Instant after = Instant.now();
@@ -95,23 +81,48 @@ public class CommsThread extends Thread {
                 // TODO: possibly allow custom waiting time instead of default 1 day
                 sleep(timeToSleep);
             } catch (InterruptedException e) {
+                CommsThread.alive = false;
                 return;
             }
         }
     }
 
-    public void cancel() {
-        interrupt();
+    public void stopThread() throws RuntimeException {
+        synchronized (CommsThread.class) {
+            if (!CommsThread.alive) {
+                logger.warn("Comms thread is not running, cannot stop!");
+                throw new RuntimeException("Comms thread is not running, cannot stop!");
+            }
+            logger.info("Comms thread stopping...");
+            CommsThread.instance.interrupt();
+        }
     }
 
-    @EventListener(ApplicationReadyEvent.class)
-    public void runCommsThreadOnStartup() {
-        this.start();
+    public void startThread() throws RuntimeException {
+        synchronized (CommsThread.class) {
+            if (CommsThread.alive) {
+                logger.warn("Comms thread already running, not starting again!");
+                throw new RuntimeException("Comms thread already running, not starting again!");
+            }
+            logger.info("Comms thread starting...");
+            CommsThread.alive = true;
+            CommsThread.instance = this;
+            CommsThread.instance.start();
+        }
     }
 
-    @PreDestroy
-    public void stopCommsThreadOnDestroy() {
-        logger.info("Comms thread stopping!");
-        this.cancel();
+    public static CommsThread getInstance() {
+        synchronized (CommsThread.class) {
+            if (!alive) {
+                CommsThread.instance = new CommsThread();
+            }
+            return CommsThread.instance;
+        }
+    }
+
+    public static void setCommsService(CommsService service) {
+        synchronized (CommsThread.class) {
+            CommsThread.commsService = service;
+        }
     }
 }
