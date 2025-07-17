@@ -25,6 +25,11 @@ spec:
             - secretRef:
                 name: trace-secrets
           env:
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: trace-config
+                  key: DB_URL
             - name: SPRING_DATASOURCE_USERNAME
               valueFrom:
                 secretKeyRef:
