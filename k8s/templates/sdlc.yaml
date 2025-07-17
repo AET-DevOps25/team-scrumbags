@@ -16,6 +16,17 @@ spec:
       labels:
         app: sdlc
     spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: postgres:alpine
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h postgresql-service -p {{ .Values.postgresql.port }}; do
+                echo "Waiting for PostgreSQL on port {{ .Values.postgresql.port }}..."
+                sleep 2
+              done
       containers:
         - name: sdlc-connector
           image: {{ .Values.sdlc.image }}
