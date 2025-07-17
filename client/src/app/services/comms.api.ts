@@ -6,7 +6,6 @@ import { environment } from '../environment';
 import { CommsPlatformConnection } from '../models/comms-platform-connection.model';
 import { handleError } from './api-utils';
 import { CommsUserMapping } from '../models/comms-users.model';
-import { CommsServerId } from '../models/comms-server-id.model';
 
 @Injectable({
   providedIn: 'root'
@@ -34,13 +33,13 @@ export class CommsApi {
       .pipe(catchError(handleError('Error saving user mapping')));
   }
 
-  addCommsConnection(projectId: string, commsServerId: CommsServerId): Observable<CommsPlatformConnection[]> {
+  addCommsConnection(projectId: string, serverId: string, platform: string): Observable<CommsPlatformConnection[]> {
     const params = new HttpParams()
-      .set('serverId', commsServerId.serverId);
+      .set('serverId', serverId);
     
     return this.http
       .post<CommsPlatformConnection[]>(
-        `${environment.communicationUrl}/projects/${projectId}/comms/${commsServerId.platform.toUpperCase()}/connections`,
+        `${environment.communicationUrl}/projects/${projectId}/comms/${platform.toUpperCase()}/connections`,
         {},
         { params }
       )

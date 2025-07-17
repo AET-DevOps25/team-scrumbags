@@ -1,51 +1,60 @@
-<!-- Secret Input -->
-  <form
-    class="flex flex-row items-center gap-2"
-    (ngSubmit)="onSubmit()"
-    name="serverId"
-  >
-    <mat-form-field appearance="outline" class="flex-1">
-      <input
-        matInput
-        [type]="showSecret() ? 'text' : 'password'"
-        [disabled]="isLoading()"
-        name="secretInput"
-        placeholder="Enter platform server ID"
-        [(ngModel)]="secretInput"
-        (ngModelChange)="confirmation.set(false)"
-        (submit)="onSubmit()"
-      />
-      <button
-        mat-icon-button
-        matSuffix
-        type="button"
-        [disabled]="!secretInput()"
-        (click)="showSecret.set(!showSecret())"
-        [attr.aria-label]="showSecret() ? 'Hide secret' : 'Show secret'"
-      >
-        <mat-icon>{{
-          showSecret() ? "visibility_off" : "visibility"
-        }}</mat-icon>
-      </button>
-    </mat-form-field>
-    <div class="mb-4">
-      @if(isLoading()) {
-      <mat-progress-spinner
-        matSuffix
-        diameter="24"
-        mode="indeterminate"
-        color="primary"
-        class="mx-2"
-      ></mat-progress-spinner>
-      } @else {
-      <button
-        mat-icon-button
-        type="button"
-        (click)="onSubmit()"
-        [disabled]="confirmation() || secretInput() === initialSecret()"
-      >
-        <mat-icon>{{ confirmation() ? "check" : "send" }}</mat-icon>
-      </button>
+<form
+  class="flex flex-row items-center gap-2"
+  (ngSubmit)="onSubmit()"
+  name="serverId"
+>
+  <mat-form-field>
+    <mat-select
+      [value]="selectedPlatform()"
+      (valueChange)="onPlatformChange($event)"
+    >
+      @for (platform of platforms; track platform) {
+        <mat-option [value]="platform">{{ platform }}</mat-option>
       }
-    </div>
-  </form>
+    </mat-select>
+  </mat-form-field>
+  <mat-form-field appearance="outline" class="flex-1">
+    <input
+      matInput
+      [type]="showServerId() ? 'text' : 'password'"
+      [disabled]="isLoading()"
+      name="serverIdInput"
+      placeholder="Enter platform server ID"
+      [(ngModel)]="serverIdInput"
+      (ngModelChange)="confirmation.set(false)"
+      (submit)="onSubmit()"
+    />
+    <button
+      mat-icon-button
+      matSuffix
+      type="button"
+      [disabled]="!serverIdInput()"
+      (click)="showServerId.set(!showServerId())"
+      [attr.aria-label]="showServerId() ? 'Hide server ID' : 'Show server ID'"
+    >
+      <mat-icon>{{
+        showServerId() ? "visibility_off" : "visibility"
+      }}</mat-icon>
+    </button>
+  </mat-form-field>
+  <div class="mb-4">
+    @if(isLoading()) {
+    <mat-progress-spinner
+      matSuffix
+      diameter="24"
+      mode="indeterminate"
+      color="primary"
+      class="mx-2"
+    ></mat-progress-spinner>
+    } @else {
+    <button
+      mat-icon-button
+      type="button"
+      (click)="onSubmit()"
+      [disabled]="confirmation() || serverIdInput() === ''"
+    >
+      <mat-icon>{{ confirmation() ? "check" : "send" }}</mat-icon>
+    </button>
+    }
+  </div>
+</form>

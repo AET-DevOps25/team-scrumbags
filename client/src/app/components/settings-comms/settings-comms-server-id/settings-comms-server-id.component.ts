@@ -8,8 +8,8 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CommsApi } from '../../../services/comms.api';
 import { ProjectService } from '../../../services/project.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { CommsSettingsServerPlatformPicker } from './settings-comms-platform-picker/settings-comms-platform-picker.component';
-import { CommsPlatformConnection } from '../../../models/comms-platform-connection.model';
+import { SupportedCommsPlatforms } from '../../../enums/supported-comms-platforms.enum';
+import { MatSelectModule } from '@angular/material/select';
 
 @Component({
   selector: 'app-settings-comms-server-id',
@@ -20,7 +20,7 @@ import { CommsPlatformConnection } from '../../../models/comms-platform-connecti
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    CommsSettingsServerPlatformPicker,
+    MatSelectModule,
   ],
   templateUrl: './settings-comms-server-id.component.html',
   styleUrl: './settings-comms-server-id.component.scss'
@@ -28,7 +28,6 @@ import { CommsPlatformConnection } from '../../../models/comms-platform-connecti
 export class CommsSettingsServerId {
   private projectService = inject(ProjectService);
   private commsApi = inject(CommsApi);
-  private platformPicker = inject(CommsSettingsServerPlatformPicker);
 
   showServerId = signal(false);
   serverIdInput = signal('');
@@ -36,10 +35,21 @@ export class CommsSettingsServerId {
   isLoading = signal(false);
   confirmation = signal(false);
 
+  platforms = Object.values(SupportedCommsPlatforms);
+  
+  selectedPlatform = signal(SupportedCommsPlatforms.DISCORD);
+
+  onPlatformChange(platform: SupportedCommsPlatforms) {
+    this.selectedPlatform.set(platform);
+    console.log('Selected platform:', this.selectedPlatform);
+  }
+
   constructor() {
     effect(() => {
       this.isLoading.set(true);
+      // Default selections
       this.serverIdInput.set('');
+      this.selectedPlatform.set(SupportedCommsPlatforms.DISCORD);
       const projectId = this.projectService.selectedProject()?.id;
       if (projectId) {
         this.isLoading.set(false);
@@ -56,7 +66,7 @@ export class CommsSettingsServerId {
 
     this.isLoading.set(true);
 
-    this.commsApi.addCommsConnection(projectId, this.serverIdInput(), this.platformPicker.getSelectedPlatform()).subscribe({
+    this.commsApi.addCommsConnection(projectId, this.serverIdInput(), this.selectedPlatform()).subscribe({
       next: (connection) => {
         if (connection) {
           this.serverIdInput.set('');
