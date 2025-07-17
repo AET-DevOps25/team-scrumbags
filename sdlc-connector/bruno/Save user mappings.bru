@@ -5,15 +5,19 @@ meta {
 }
 
 post {
-  url: {{base_url}}/projects/c8bcfd02-1065-4532-a414-b48107968dcc/users
+  url: {{base_url}}/projects/:projectId/users
   body: json
   auth: inherit
+}
+
+params:path {
+  projectId: 73ed238c-fb5d-489a-b3a6-7947d779a33c
 }
 
 body:json {
   {
     "platform": "GITHUB",
     "platformUserId": "95364200",
-    "userId": "149519f7-23d0-466e-a2b1-8e236b86c8b3"
+    "userId": "2faee825-815e-4f53-8323-4420383ac33d"
   }
 }

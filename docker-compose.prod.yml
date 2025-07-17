@@ -86,7 +86,7 @@ services:
     environment:
       - DEBUG=${DEBUG}
       - TOKEN_SECRET=${SDLC_TOKEN_SECRET}
-      - MODE=forward
+      - SPRING_PROFILES_ACTIVE=forward
       - GENAI_URL=https://${DOMAIN}/api/genai
       - DB_URL=jdbc:postgresql://sdlc-db:5432/sdlc-db
       - DB_USER=${SDLC_DB_USER}

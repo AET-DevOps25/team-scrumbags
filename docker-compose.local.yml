@@ -45,7 +45,7 @@ services:
     environment:
       - DEBUG=true
       - TOKEN_SECRET=${SDLC_TOKEN_SECRET:-meinsecret}
-      - MODE=${SDLC_MODE:-forward}
+      - SPRING_PROFILES_ACTIVE=${SDLC_MODE:-forward}
       - GENAI_URL=http://localhost:4242
       - DB_URL=jdbc:postgresql://localhost:5432/sdlc-db
       - DB_USER=${POSTGRES_DB_USER:-user}
