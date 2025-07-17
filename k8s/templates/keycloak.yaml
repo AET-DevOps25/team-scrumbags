@@ -25,12 +25,12 @@ spec:
           ports:
             - containerPort: {{ .Values.keycloak.port }}
           env:
-            - name: KC_HOSTNAME
-              value: localhost
-            - name: KC_HOSTNAME_STRICT
-              value: "false"
-            - name: KC_HOSTNAME_PORT
-              value: "{{ .Values.keycloak.port }}"
+            - name: KC_HOSTNAME_URL
+              value: "https://{{ .Values.ingress.host }}/auth"
+            - name: KC_HOSTNAME_ADMIN_URL
+              value: "https://{{ .Values.ingress.host }}/auth"
+            - name: KC_PROXY
+              value: "edge"
             - name: KC_HTTP_ENABLED
               value: "true"
             - name: KC_HTTP_PORT

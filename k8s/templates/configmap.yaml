@@ -8,8 +8,9 @@ data:
   DEBUG: {{ .Values.environment.debug | quote }}
   KEYCLOAK_REALM: {{ .Values.environment.keycloakRealm }}
   KEYCLOAK_CLIENT_ID: {{ .Values.environment.keycloakClient }}
-  KEYCLOAK_URL: "http://keycloak-service:{{ .Values.keycloak.port }}"
   KEYCLOAK_AUTH_URL: "http://keycloak-service:{{ .Values.keycloak.port }}"
+  KEYCLOAK_INTERNAL_URL: "http://keycloak-service:{{ .Values.keycloak.port }}/auth"
+  KEYCLOAK_FRONTEND_URL: "https://{{ .Values.ingress.host }}/auth" #todo: use in client
   RABBITMQ_HOST: "rabbitmq-service"
   RABBITMQ_URL: "amqp://guest:guest@rabbitmq-service/"
 
