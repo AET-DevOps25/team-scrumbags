@@ -14,16 +14,34 @@ QUEUE_NAME = "content_queue"
 
 
 async def consume():
-    # Single long-lived connection
-    connection: AbstractRobustConnection = await connect_robust(RABBIT_URL)
-    channel: AbstractRobustChannel = await connection.channel()
-    await channel.set_qos(prefetch_count=10)
-    queue = await channel.declare_queue(QUEUE_NAME, durable=True)
+    max_retries = 5
+    retry_delay = 10
 
-    async with queue.iterator() as queue_iter:
-        print("Queue iterator: " + str(queue_iter))
-        async for message in queue_iter:
-            asyncio.create_task(handle_message(message))
+    for attempt in range(max_retries):
+        try:
+            print(f"Queue consumer connecting to RabbitMQ (attempt {attempt + 1}/{max_retries})")
+
+            # Single long-lived connection
+            connection: AbstractRobustConnection = await connect_robust(RABBIT_URL)
+            channel: AbstractRobustChannel = await connection.channel()
+            await channel.set_qos(prefetch_count=10)
+            queue = await channel.declare_queue(QUEUE_NAME, durable=True)
+
+            print("Queue consumer connected successfully")
+
+            async with queue.iterator() as queue_iter:
+                print("Queue consumer listening for messages...")
+                async for message in queue_iter:
+                    asyncio.create_task(handle_message(message))
+
+        except Exception as e:
+            print(f"Queue consumer error (attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                print(f"Retrying in {retry_delay} seconds...")
+                await asyncio.sleep(retry_delay)
+            else:
+                print("Queue consumer failed after all retries")
+                raise
 
 
 async def handle_message(message: AbstractIncomingMessage):

@@ -34,8 +34,11 @@ data:
           "clientId": "trace-api",
           "enabled": true,
           "publicClient": true,
-          "redirectUris": ["*"],
-          "webOrigins": ["*"]
+          "redirectUris": ["https://{{ .Values.ingress.host }}/*"],
+          "webOrigins": ["https://{{ .Values.ingress.host }}"],
+          "baseUrl": "https://{{ .Values.ingress.host }}/",
+          "rootUrl": "https://{{ .Values.ingress.host }}/",
+          "adminUrl": "https://{{ .Values.ingress.host }}/"
         }
       ]
     }

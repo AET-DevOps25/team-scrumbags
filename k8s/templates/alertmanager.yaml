@@ -16,12 +16,12 @@ data:
       receiver: '{{- if .Values.secrets.discordAlertmanagerWebhookUrl }}discord{{ else }}null{{ end }}'
     receivers:
       - name: 'null'
+      {{- if .Values.secrets.discordAlertmanagerWebhookUrl }}
       - name: 'discord'
-        {{- if .Values.secrets.discordAlertmanagerWebhookUrl }}
         discord_configs:
-          - webhook_url: ${DISCORD_WEBHOOK_URL}
+          - webhook_url_file: /etc/secrets/discord-webhook-url
             send_resolved: true
-        {{- end }}
+      {{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -54,19 +54,16 @@ spec:
             - '--web.route-prefix=/alertmanager'
           ports:
             - containerPort: {{ .Values.alertmanager.port }}
-          {{- if .Values.secrets.discordAlertmanagerWebhookUrl }}
-          env:
-            - name: DISCORD_WEBHOOK_URL
-              valueFrom:
-                secretKeyRef:
-                  name: trace-secrets
-                  key: DISCORD_ALERTMANAGER_WEBHOOK_URL
-          {{- end }}
           volumeMounts:
             - name: alertmanager-config
               mountPath: /etc/alertmanager
             - name: alertmanager-storage
               mountPath: /alertmanager
+            {{- if .Values.secrets.discordAlertmanagerWebhookUrl }}
+            - name: discord-webhook-secret
+              mountPath: /etc/secrets
+              readOnly: true
+            {{- end }}
       volumes:
         - name: alertmanager-config
           configMap:
@@ -74,6 +71,14 @@ spec:
         - name: alertmanager-storage
           persistentVolumeClaim:
             claimName: alertmanager-pvc
+        {{- if .Values.secrets.discordAlertmanagerWebhookUrl }}
+        - name: discord-webhook-secret
+          secret:
+            secretName: trace-secrets
+            items:
+              - key: DISCORD_ALERTMANAGER_WEBHOOK_URL
+                path: discord-webhook-url
+        {{- end }}
 ---
 apiVersion: v1
 kind: Service

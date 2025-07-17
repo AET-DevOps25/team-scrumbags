@@ -59,6 +59,12 @@ spec:
                 secretKeyRef:
                   name: trace-secrets
                   key: SDLC_TOKEN_SECRET
+            - name: KEYCLOAK_AUTH_URL
+              value: "https://{{ .Values.ingress.host }}/auth"
+            - name: KEYCLOAK_REALM
+              value: "{{ .Values.environment.keycloakRealm }}"
+            - name: GENAI_URL
+              value: "http://genai-service:{{ .Values.genai.port }}"
 ---
 apiVersion: v1
 kind: Service

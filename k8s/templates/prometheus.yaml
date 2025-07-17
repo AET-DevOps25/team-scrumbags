@@ -23,22 +23,34 @@ data:
         - static_configs:
             - targets:
                 - "alertmanager-service:{{ .Values.alertmanager.port }}"
+          api_version: v2
+          path_prefix: /alertmanager
     rule_files:
       - /etc/prometheus/rules/*.yml
     scrape_configs:
-      - job_name: 'prometheus'
-        static_configs:
-          - targets: ['localhost:{{ .Values.prometheus.port }}']
-      - job_name: 'node-exporter'
-        kubernetes_sd_configs:
-          - role: pod
-        relabel_configs:
-          - source_labels: [__meta_kubernetes_pod_label_app]
-            action: keep
-            regex: node-exporter
-          - source_labels: [__meta_kubernetes_pod_container_port_name]
-            action: keep
-            regex: metrics
+    - job_name: 'prometheus'
+      static_configs:
+        - targets: ['localhost:{{ .Values.prometheus.port }}']
+
+    - job_name: 'node-exporter'
+      static_configs:
+        - targets: ['node-exporter-service:{{ .Values.nodeExporter.port }}']
+      scrape_interval: 15s
+
+    - job_name: 'alertmanager'
+      static_configs:
+        - targets: ['alertmanager-service:{{ .Values.alertmanager.port }}']
+      scrape_interval: 15s
+
+    - job_name: 'spring-boot-apps'
+      static_configs:
+        - targets:
+          - 'project-management-service:{{ .Values.projectManagement.port }}'
+          - 'sdlc-service:{{ .Values.sdlc.port }}'
+          - 'communication-service:{{ .Values.communication.port }}'
+          - 'transcription-service:{{ .Values.transcription.port }}'
+      metrics_path: /actuator/prometheus
+      scrape_interval: 15s
 ---
 apiVersion: apps/v1
 kind: Deployment

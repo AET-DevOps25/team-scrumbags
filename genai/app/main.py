@@ -32,18 +32,74 @@ rabbit_channel: RobustChannel | None = None
 executor = ThreadPoolExecutor()
 
 
+async def connect_to_rabbitmq_with_retry(max_retries: int = 10, delay: int = 5) -> tuple[RobustConnection, RobustChannel]:
+    """Connect to RabbitMQ with retry logic"""
+    for attempt in range(max_retries):
+        try:
+            print(f"Attempting to connect to RabbitMQ (attempt {attempt + 1}/{max_retries})")
+            connection = await connect_robust(RABBIT_URL)
+            channel = await connection.channel()
+            await channel.set_qos(prefetch_count=100)
+            print("Successfully connected to RabbitMQ")
+            return connection, channel
+        except Exception as e:
+            print(f"Failed to connect to RabbitMQ (attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                await asyncio.sleep(delay)
+            else:
+                raise
+
+
+async def start_queue_consumer_with_retry():
+    """Start queue consumer with retry logic"""
+    max_retries = 5
+    delay = 10
+
+    for attempt in range(max_retries):
+        try:
+            print(f"Starting queue consumer (attempt {attempt + 1}/{max_retries})")
+            await consume()
+            break
+        except Exception as e:
+            print(f"Queue consumer failed (attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                await asyncio.sleep(delay)
+            else:
+                print("Queue consumer failed after all retries, continuing without it")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
     wc.init_collection()
-    task = asyncio.create_task(consume())
+
+    # Start queue consumer in background with retry logic
+    consumer_task = asyncio.create_task(start_queue_consumer_with_retry())
+
+    # Connect to RabbitMQ with retry logic
     global rabbit_connection, rabbit_channel
-    rabbit_connection = await connect_robust(RABBIT_URL)
-    rabbit_channel = await rabbit_connection.channel()
-    await rabbit_channel.set_qos(prefetch_count=100)
+    try:
+        rabbit_connection, rabbit_channel = await connect_to_rabbitmq_with_retry()
+    except Exception as e:
+        print(f"Failed to connect to RabbitMQ after all retries: {e}")
+        print("Application will start without RabbitMQ connection")
+        rabbit_connection = None
+        rabbit_channel = None
+
     yield
-    task.cancel()
+
+    # Cleanup
+    consumer_task.cancel()
+    try:
+        await consumer_task
+    except asyncio.CancelledError:
+        pass
+
+    if rabbit_connection:
+        await rabbit_connection.close()
+
     wc.client.close()
+
 
 app = FastAPI(
     title="Content Processing and Q&A API",
@@ -51,7 +107,6 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -68,7 +123,8 @@ app.add_middleware(
     responses={
         200: {"description": "Content entries successfully queued for processing"},
         422: {"description": "Validation error - missing required fields"},
-        500: {"description": "Internal server error - RabbitMQ not available"}
+        500: {"description": "Internal server error - RabbitMQ not available"},
+        503: {"description": "Service temporarily unavailable - RabbitMQ not connected"}
     },
     tags=["Content Processing"]
 )
@@ -86,7 +142,10 @@ async def post_content(
         )
 ):
     if rabbit_channel is None:
-        raise HTTPException(status_code=500, detail="RabbitMQ not initialized")
+        raise HTTPException(
+            status_code=503,
+            detail="RabbitMQ not available. Please try again later."
+        )
 
     # Validate and publish in parallel
     async def publish(entry):
@@ -102,10 +161,27 @@ async def post_content(
             routing_key=QUEUE_NAME
         )
 
-    # Use gather with fail-fast to process all entries concurrently
-    await asyncio.gather(*(publish(e) for e in entries))
+    try:
+        # Use gather with fail-fast to process all entries concurrently
+        await asyncio.gather(*(publish(e) for e in entries))
+        return {"status": f"Published {len(entries)} message(s) to queue."}
+    except Exception as e:
+        if "connection" in str(e).lower() or "channel" in str(e).lower():
+            raise HTTPException(
+                status_code=503,
+                detail="RabbitMQ connection lost. Please try again later."
+            )
+        raise
 
-    return {"status": f"Published {len(entries)} message(s) to queue."}
+
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "rabbitmq_connected": rabbit_connection is not None and not rabbit_connection.is_closed,
+        "weaviate_connected": not wc.client.is_closed() if hasattr(wc.client, 'is_closed') else True
+    }
 
 
 @app.post(
