@@ -44,7 +44,7 @@ spec:
         - name: rabbitmq
           image: {{ .Values.rabbitmq.image }}
           ports:
-            - containerPort: {{ .Values.rabbitmq.port }}
+            - containerPort: 5672
             - containerPort: {{ .Values.rabbitmq.managementPort }}
           env:
             - name: RABBITMQ_DEFAULT_USER
@@ -91,7 +91,7 @@ spec:
   ports:
     - name: amqp
       port: {{ .Values.rabbitmq.port }}
-      targetPort: {{ .Values.rabbitmq.port }}
+      targetPort: 5672
     - name: management
       port: {{ .Values.rabbitmq.managementPort }}
       targetPort: {{ .Values.rabbitmq.managementPort }}

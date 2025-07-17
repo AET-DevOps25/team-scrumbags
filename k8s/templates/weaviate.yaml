@@ -41,7 +41,10 @@ spec:
             - --scheme
             - http
           ports:
-            - containerPort: {{ .Values.weaviate.port }}
+            - name: http
+              containerPort: {{ .Values.weaviate.port }}
+            - name: grpc
+              containerPort: 50051
           env:
             - name: QUERY_DEFAULTS_LIMIT
               value: "25"
@@ -83,6 +86,10 @@ spec:
   selector:
     app: weaviate
   ports:
-    - port: {{ .Values.weaviate.port }}
+    - name: http
+      port: {{ .Values.weaviate.port }}
       targetPort: {{ .Values.weaviate.port }}
+    - name: grpc
+      port: 50051
+      targetPort: 50051
 {{- end }}

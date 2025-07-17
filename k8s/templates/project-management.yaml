@@ -6,8 +6,6 @@ metadata:
   namespace: {{ .Values.global.namespace }}
 spec:
   replicas: {{ .Values.projectManagement.replicas }}
-  strategy:
-    type: Recreate
   selector:
     matchLabels:
       app: project-management
@@ -21,18 +19,22 @@ spec:
           image: {{ .Values.projectManagement.image }}
           ports:
             - containerPort: {{ .Values.projectManagement.port }}
-          env:
-            - name: SERVER_PORT
-              value: "{{ .Values.projectManagement.port }}"
           envFrom:
             - configMapRef:
                 name: trace-config
             - secretRef:
                 name: trace-secrets
-      initContainers:
-        - name: wait-for-db
-          image: busybox:1.35
-          command: ['sh', '-c', 'until nc -z postgresql-service {{ .Values.postgresql.port }}; do sleep 1; done']
+          env:
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: trace-secrets
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: trace-secrets
+                  key: POSTGRES_PASSWORD
 ---
 apiVersion: v1
 kind: Service

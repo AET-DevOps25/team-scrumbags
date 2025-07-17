@@ -19,7 +19,7 @@ spec:
       containers:
         - name: keycloak
           image: {{ .Values.keycloak.image }}
-          command:
+          args:
             - start-dev
             - --import-realm
           ports:

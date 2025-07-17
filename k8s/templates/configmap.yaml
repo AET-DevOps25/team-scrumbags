@@ -4,27 +4,40 @@ metadata:
   name: trace-config
   namespace: {{ .Values.global.namespace }}
 data:
+  # Global
   DEBUG: {{ .Values.environment.debug | quote }}
-  KEYCLOAK_REALM: {{ .Values.environment.keycloakRealm | quote }}
-  KEYCLOAK_CLIENT: {{ .Values.environment.keycloakClient | quote }}
+  KEYCLOAK_REALM: {{ .Values.environment.keycloakRealm }}
+  KEYCLOAK_CLIENT_ID: {{ .Values.environment.keycloakClient }}
   KEYCLOAK_URL: "http://keycloak-service:{{ .Values.keycloak.port }}"
   KEYCLOAK_AUTH_URL: "http://keycloak-service:{{ .Values.keycloak.port }}"
-  PROJECT_MANAGEMENT_URL: "http://project-management-service:{{ .Values.projectManagement.port }}"
-  SDLC_URL: "http://sdlc-service:{{ .Values.sdlc.port }}"
-  COMMUNICATION_URL: "http://communication-service:{{ .Values.communication.port }}"
-  MEETING_NOTES_URL: "http://transcription-service:{{ .Values.transcription.port }}"
-  GEN_AI_URL: "http://genai-service:{{ .Values.genai.port }}"
-  GENAI_URL: "http://genai-service:{{ .Values.genai.port }}"
-  TRACE_GENAI_BASE_URL: "http://genai-service:{{ .Values.genai.port }}"
-  TRACE_PROJECT_MANAGEMENT_BASE_URL: "http://project-management-service:{{ .Values.projectManagement.port }}"
-  DB_URL: "jdbc:postgresql://postgresql-service:{{ .Values.postgresql.port }}/project-db"
-  SPRING_DATASOURCE_URL: "jdbc:mysql://mysql-service:{{ .Values.mysql.port }}/transcription-db"
-  COMM_DB_URL: "jdbc:mysql://mysql-service:{{ .Values.mysql.port }}/comms-db"
-  MYSQL_URL: "mysql+asyncmy://root:{{ .Values.environment.mysqlRootPassword }}@mysql-service:{{ .Values.mysql.port }}/genai-db"
-  SDLC_MODE: {{ .Values.environment.sdlcMode | quote }}
-  USE_CLOUD: {{ .Values.environment.useCloud | quote }}
-  USE_WHISPERX: {{ .Values.environment.useWhisperx | quote }}
-  TRANSCRIPTION_TIMEOUT: {{ .Values.environment.transcriptionTimeout | quote }}
-  WEAVIATE_URL: "http://weaviate-service:{{ .Values.weaviate.port }}"
+  RABBITMQ_HOST: "rabbitmq-service"
   RABBITMQ_URL: "amqp://guest:guest@rabbitmq-service/"
+
+  # Project Management
+  DB_URL: "jdbc:postgresql://postgresql-service:{{ .Values.postgresql.port }}/pm-db"
+
+  # SDLC
+  SDLC_DB_URL: "jdbc:postgresql://postgresql-service:{{ .Values.postgresql.port }}/sdlc-db"
+  SDLC_MODE: {{ .Values.environment.sdlcMode }}
+  TRACE_PROJECT_MANAGEMENT_BASE_URL: "http://project-management-service:{{ .Values.projectManagement.port }}"
+
+  # Communication
+  COMM_DB_URL: "jdbc:mysql://mysql-service:{{ .Values.mysql.port }}/comms-db?createDatabaseIfNotExist=true"
+  COMM_DISCORD_BOT_ID: {{ .Values.environment.commDiscordBotId | quote }}
+  COMM_DISCORD_API_VERSION: {{ .Values.environment.commDiscordApiVersion }}
+  COMM_DISCORD_BASE_URL: {{ .Values.environment.commDiscordBaseUrl }}
+  TRACE_GENAI_BASE_URL: "http://genai-service:{{ .Values.genai.port }}"
+
+  # Transcription
+  TRANSCRIPTION_DB_URL: "jdbc:mysql://mysql-service:{{ .Values.mysql.port }}/trans-db?createDatabaseIfNotExist=true"
+  USE_WHISPERX: {{ .Values.environment.useWhisperx | quote }}
+  USE_CLOUD: {{ .Values.environment.useCloud | quote }}
+  TRANSCRIPTION_TIMEOUT: {{ .Values.environment.transcriptionTimeout | quote }}
+
+  # GenAI
+  MYSQL_HOST: "mysql-service"
+  MYSQL_USER: "root"
+  MYSQL_DB: "genai-db"
+  MYSQL_PORT: {{ .Values.mysql.port | quote }}
+  WEAVIATE_URL: "http://weaviate-service:{{ .Values.weaviate.port }}"
   OLLAMA_LOCAL_URL: "http://ollama-service:{{ .Values.ollama.port }}"

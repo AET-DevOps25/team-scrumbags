@@ -5,8 +5,8 @@ metadata:
   namespace: {{ .Values.global.namespace }}
 data:
   init-db.sql: |
-    CREATE DATABASE IF NOT EXISTS "project-db";
-    CREATE DATABASE IF NOT EXISTS "sdlc-db";
+    CREATE DATABASE "pm-db";
+    CREATE DATABASE "sdlc-db";
 ---
 apiVersion: v1
 kind: ConfigMap

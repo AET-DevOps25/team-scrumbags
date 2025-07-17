@@ -26,6 +26,11 @@ spec:
               value: "{{ .Values.genai.port }}"
             - name: DEBUG
               value: "true"
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: trace-secrets
+                  key: MYSQL_ROOT_PASSWORD
           envFrom:
             - configMapRef:
                 name: trace-config
