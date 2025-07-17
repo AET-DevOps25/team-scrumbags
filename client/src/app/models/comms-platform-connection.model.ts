@@ -1,4 +1,6 @@
 export interface CommsPlatformConnection {
+  projectId: string;
+  platformChannelId: string;
   platform: string;
-  serverId: string;
+  lastMessageId: string;
 }

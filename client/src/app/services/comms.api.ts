@@ -6,6 +6,7 @@ import { environment } from '../environment';
 import { CommsPlatformConnection } from '../models/comms-platform-connection.model';
 import { handleError } from './api-utils';
 import { CommsUserMapping } from '../models/comms-users.model';
+import { CommsServerId } from '../models/comms-server-id.model';
 
 @Injectable({
   providedIn: 'root'
@@ -13,13 +14,13 @@ import { CommsUserMapping } from '../models/comms-users.model';
 export class CommsApi {
   private http = inject(HttpClient);
 
-  private getAllCommsUsers(projectId: string): Observable<CommsUserMapping[]> {
+  getAllCommsUsers(projectId: string): Observable<CommsUserMapping[]> {
     return this.http
       .get<CommsUserMapping[]>(`${environment.communicationUrl}/projects/${projectId}/comms/users`)
       .pipe(catchError(handleError('Error fetching user mappings')));
   }
 
-  private saveUserMapping(projectId: string, userMapping: CommsUserMapping): Observable<CommsUserMapping> {
+  saveUserMapping(projectId: string, userMapping: CommsUserMapping): Observable<CommsUserMapping> {
     const params = new HttpParams()
       .set('userId', userMapping.userId)
       .set('platformUserId', userMapping.platformUserId);
@@ -33,13 +34,13 @@ export class CommsApi {
       .pipe(catchError(handleError('Error saving user mapping')));
   }
 
-  private addCommsConnection(projectId: string, connection: CommsPlatformConnection): Observable<CommsPlatformConnection[]> {
+  addCommsConnection(projectId: string, commsServerId: CommsServerId): Observable<CommsPlatformConnection[]> {
     const params = new HttpParams()
-      .set('serverId', connection.serverId);
+      .set('serverId', commsServerId.serverId);
     
     return this.http
       .post<CommsPlatformConnection[]>(
-        `${environment.communicationUrl}/projects/${projectId}/comms/${connection.platform}`,
+        `${environment.communicationUrl}/projects/${projectId}/comms/${commsServerId.platform.toUpperCase()}/connections`,
         {},
         { params }
       )
