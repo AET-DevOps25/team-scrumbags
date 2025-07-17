@@ -175,7 +175,13 @@ async def post_content(
 
 
 # Health check endpoint
-@app.get("/health")
+@app.get("/health", summary="Health Check",
+            description="Checks the health of the API, RabbitMQ connection, and Weaviate client.",
+            responses={
+                200: {"description": "API is healthy"},
+                503: {"description": "Service unavailable - RabbitMQ or Weaviate not connected"}
+            },
+            tags=["Health Check"])
 async def health_check():
     return {
         "status": "healthy",
