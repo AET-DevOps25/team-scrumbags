@@ -29,7 +29,7 @@ data:
   TRACE_GENAI_BASE_URL: "http://genai-service:{{ .Values.genai.port }}"
 
   # Transcription
-  TRANSCRIPTION_DB_URL: "jdbc:mysql://mysql-service:{{ .Values.mysql.port }}/trans-db?createDatabaseIfNotExist=true"
+  SPRING_DATASOURCE_URL: "jdbc:mysql://mysql-service:{{ .Values.mysql.port }}/trans-db?createDatabaseIfNotExist=true"
   USE_WHISPERX: {{ .Values.environment.useWhisperx | quote }}
   USE_CLOUD: {{ .Values.environment.useCloud | quote }}
   TRANSCRIPTION_TIMEOUT: {{ .Values.environment.transcriptionTimeout | quote }}
