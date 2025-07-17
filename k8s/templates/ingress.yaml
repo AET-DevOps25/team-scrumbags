@@ -5,7 +5,7 @@ metadata:
   name: trace-ingress
   namespace: {{ .Values.global.namespace }}
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
     cert-manager.io/issuer: letsencrypt-prod
 spec:
   tls:
@@ -16,50 +16,71 @@ spec:
     - host: {{ .Values.ingress.host }}
       http:
         paths:
-          - path: /
-            pathType: Prefix
+          - path: /(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: client-service
                 port:
                   number: {{ .Values.client.port }}
-          - path: /auth
-            pathType: Prefix
+          - path: /auth(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: keycloak-service
                 port:
                   number: {{ .Values.keycloak.port }}
-          - path: /api/project
-            pathType: Prefix
+          - path: /grafana(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: grafana-service
+                port:
+                  number: {{ .Values.grafana.port }}
+          - path: /prometheus(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: prometheus-service
+                port:
+                  number: {{ .Values.prometheus.port }}
+          - path: /alertmanager(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: alertmanager-service
+                port:
+                  number: {{ .Values.alertmanager.port }}
+          - path: /api/project(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: project-management-service
                 port:
                   number: {{ .Values.projectManagement.port }}
-          - path: /api/sdlc
-            pathType: Prefix
+          - path: /api/sdlc(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: sdlc-service
                 port:
                   number: {{ .Values.sdlc.port }}
-          - path: /api/comm
-            pathType: Prefix
+          - path: /api/comm(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: communication-service
                 port:
                   number: {{ .Values.communication.port }}
-          - path: /api/transcription
-            pathType: Prefix
+          - path: /api/transcription(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: transcription-service
                 port:
                   number: {{ .Values.transcription.port }}
-          - path: /api/genai
-            pathType: Prefix
+          - path: /api/genai(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: genai-service

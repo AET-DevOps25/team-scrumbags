@@ -109,3 +109,34 @@ weaviate:
   port: 30011
   storageSize: 10Gi
   replicas: 1
+
+# Monitoring
+prometheus:
+  enabled: true
+  image: prom/prometheus:latest
+  port: 9090
+  nodePort: 30013
+  storageSize: 8Gi
+  replicas: 1
+
+nodeExporter:
+  enabled: true
+  image: prom/node-exporter:latest
+  port: 9100
+
+grafana:
+  enabled: true
+  image: grafana/grafana:latest
+  port: 3000
+  nodePort: 30012
+  storageSize: 5Gi
+  replicas: 1
+  adminUser: admin
+
+alertmanager:
+  enabled: true
+  image: prom/alertmanager:latest
+  port: 9093
+  nodePort: 30014
+  storageSize: 2Gi
+  replicas: 1
