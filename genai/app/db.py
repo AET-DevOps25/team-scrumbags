@@ -23,8 +23,8 @@ class Summary(Base):
     __tablename__ = "summaries"
     id = Column(Integer, primary_key=True, index=True)
     projectId = Column(String(length=36), index=True)
-    startTime = Column(BigInteger, index=True)
-    endTime = Column(BigInteger, index=True)
+    startTime = Column(Integer, index=True)
+    endTime = Column(Integer, index=True)
     generatedAt = Column(BigInteger)
     summary = Column(Text)
     userIds = Column(JSON, nullable=False, default=list)
