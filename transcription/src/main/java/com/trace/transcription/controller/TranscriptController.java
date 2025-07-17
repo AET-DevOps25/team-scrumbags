@@ -178,13 +178,7 @@ public class TranscriptController {
                     HttpHeaders headers = new HttpHeaders();
                     headers.setContentType(MediaType.APPLICATION_JSON);
 
-                    // Create the content entry structure expected by the GenAI service
-                    String contentEntryJson = String.format(
-                            "[{\"content\": %s, \"metadata\": {\"projectId\": \"%s\", \"timestamp\": %d}}]",
-                            transcriptJson, projectId, effectiveTimestamp
-                    );
-
-                    HttpEntity<String> entity = new HttpEntity<>(contentEntryJson, headers);
+                    HttpEntity<String> entity = new HttpEntity<>(transcriptJson, headers);
                     String endpoint = genaiServiceUrl + "/content";
                     ResponseEntity<String> response = restTemplate.postForEntity(endpoint, entity, String.class);
                     logger.info("Successfully forwarded transcript to GenAI service: {}", response.getStatusCode());
