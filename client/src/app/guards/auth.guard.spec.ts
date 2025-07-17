@@ -1,13 +1,8 @@
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRouteSnapshot, RouterStateSnapshot, convertToParamMap } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { canActivateAuth, canActivateProject } from './auth.guard';
 
 describe('Auth Guards', () => {
-  let mockMatSnackBar: jasmine.SpyObj<MatSnackBar>;
-  let mockRoute: ActivatedRouteSnapshot;
-  let mockState: RouterStateSnapshot;
-
   beforeEach(() => {
     const snackBarSpy = jasmine.createSpyObj('MatSnackBar', ['open']);
 
@@ -16,32 +11,6 @@ describe('Auth Guards', () => {
         { provide: MatSnackBar, useValue: snackBarSpy }
       ]
     });
-
-    mockMatSnackBar = TestBed.inject(MatSnackBar) as jasmine.SpyObj<MatSnackBar>;
-    
-    mockRoute = {
-      params: { projectId: 'test-project' },
-      queryParams: {},
-      data: {},
-      url: [],
-      fragment: null,
-      outlet: 'primary',
-      component: null,
-      routeConfig: null,
-      root: {} as ActivatedRouteSnapshot,
-      parent: null,
-      firstChild: null,
-      children: [],
-      pathFromRoot: [],
-      paramMap: convertToParamMap({ projectId: 'test-project' }),
-      queryParamMap: convertToParamMap({}),
-      title: undefined
-    };
-
-    mockState = {
-      url: '/test',
-      root: {} as ActivatedRouteSnapshot
-    };
   });
 
   describe('Auth Guards', () => {

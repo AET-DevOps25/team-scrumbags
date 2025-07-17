@@ -125,7 +125,7 @@ describe('ProjectOverviewView', () => {
       fixture.detectChanges();
       
       // Check if the component can access the projects from state
-      expect((component as any).state.allProjects()).toEqual(new Map([
+      expect((component as unknown as { state: { allProjects: () => Map<string, Project> } }).state.allProjects()).toEqual(new Map([
         ['project-1', mockProjects[0]],
         ['project-2', mockProjects[1]]
       ]));
@@ -142,7 +142,6 @@ describe('ProjectOverviewView', () => {
       component = fixture.componentInstance;
       fixture.detectChanges();
 
-      const loadingSpinner = fixture.nativeElement.querySelector('mat-spinner');
       // Note: The actual template check would depend on the template implementation
       // This is a placeholder for template-based testing
     });
@@ -150,8 +149,6 @@ describe('ProjectOverviewView', () => {
     it('should have add project button', () => {
       fixture.detectChanges();
       
-      // Look for button with add icon or specific content
-      const addButton = fixture.nativeElement.querySelector('button[mat-fab], button[mat-raised-button]');
       // Note: The actual selector would depend on the template implementation
     });
   });
@@ -168,7 +165,7 @@ describe('ProjectOverviewView', () => {
       component = fixture.componentInstance;
       fixture.detectChanges();
 
-      expect((component as any).state.allProjects().size).toBe(0);
+      expect((component as unknown as { state: { allProjects: () => Map<string, Project> } }).state.allProjects().size).toBe(0);
     });
 
     it('should handle project state updates', () => {
@@ -197,8 +194,8 @@ describe('ProjectOverviewView', () => {
       component = fixture.componentInstance;
       fixture.detectChanges();
 
-      expect((component as any).state.allProjects().size).toBe(3);
-      expect((component as any).state.allProjects().get('project-3')).toEqual(newProject);
+      expect((component as unknown as { state: { allProjects: () => Map<string, Project> } }).state.allProjects().size).toBe(3);
+      expect((component as unknown as { state: { allProjects: () => Map<string, Project> } }).state.allProjects().get('project-3')).toEqual(newProject);
     });
   });
 });

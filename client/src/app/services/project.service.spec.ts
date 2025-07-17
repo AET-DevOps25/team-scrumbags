@@ -14,7 +14,7 @@ describe('ProjectService', () => {
   let projectStateSpy: jasmine.SpyObj<ProjectState>;
   let routerSpy: jasmine.SpyObj<Router>;
   let keycloakSpy: jasmine.SpyObj<Keycloak>;
-  let routerEventsSubject: Subject<any>;
+  let routerEventsSubject: Subject<NavigationEnd>;
 
   const mockProject: Project = {
     id: 'project-1',
@@ -45,7 +45,7 @@ describe('ProjectService', () => {
   ];
 
   beforeEach(() => {
-    routerEventsSubject = new Subject();
+    routerEventsSubject = new Subject<NavigationEnd>();
     
     const projectApiSpyObj = jasmine.createSpyObj('ProjectApi', [
       'getProjectList',
@@ -72,8 +72,8 @@ describe('ProjectService', () => {
     
     const keycloakSpyObj = jasmine.createSpyObj('Keycloak', ['updateToken']);
 
-    // Mock the state allProjects signal
-    projectStateSpyObj.allProjects = jasmine.createSpy().and.returnValue(
+    // Mock the state allProjects signal with proper typing
+    (projectStateSpyObj as unknown as { allProjects: jasmine.Spy }).allProjects = jasmine.createSpy().and.returnValue(
       new Map([['project-1', mockProject]])
     );
 

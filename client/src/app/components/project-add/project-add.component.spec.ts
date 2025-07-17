@@ -175,7 +175,6 @@ describe('ProjectAddDialog', () => {
 
   describe('form validation UI', () => {
     it('should show required error in template when name is empty and touched', () => {
-      const nameInput = fixture.nativeElement.querySelector('input[formControlName="name"]');
       const nameControl = component.projectForm.get('name');
 
       nameControl?.setValue('');

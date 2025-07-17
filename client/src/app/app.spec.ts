@@ -1,11 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
 import { Component } from '@angular/core';
 import { App } from './app';
 
 // Mock component for RouterOutlet
 @Component({
-  selector: 'router-outlet',
+  selector: 'app-router-outlet',
   template: '<div>Router Outlet Mock</div>'
 })
 class MockRouterOutletComponent {}
@@ -13,16 +12,10 @@ class MockRouterOutletComponent {}
 describe('App', () => {
   let component: App;
   let fixture: ComponentFixture<App>;
-  let routerSpy: jasmine.SpyObj<Router>;
 
   beforeEach(async () => {
-    const routerSpyObj = jasmine.createSpyObj('Router', ['navigate']);
-
     await TestBed.configureTestingModule({
-      imports: [App],
-      providers: [
-        { provide: Router, useValue: routerSpyObj }
-      ]
+      imports: [App]
     })
     .overrideComponent(App, {
       remove: { imports: [] },
@@ -32,7 +25,6 @@ describe('App', () => {
 
     fixture = TestBed.createComponent(App);
     component = fixture.componentInstance;
-    routerSpy = TestBed.inject(Router) as jasmine.SpyObj<Router>;
     fixture.detectChanges();
   });
 
@@ -41,12 +33,12 @@ describe('App', () => {
   });
 
   it('should have title "trace-client"', () => {
-    expect((component as any).title).toEqual('trace-client');
+    expect((component as { title: string }).title).toEqual('trace-client');
   });
 
   it('should render router outlet', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('router-outlet')).toBeTruthy();
+    expect(compiled.querySelector('app-router-outlet')).toBeTruthy();
   });
 
   it('should have correct selector', () => {

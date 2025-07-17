@@ -97,11 +97,11 @@ describe('MeetingNotesService', () => {
         loading: false
       }));
 
-      spyOn(service as any, 'pollMeetingNote').and.callThrough();
+      const pollSpy = spyOn(service as unknown as { pollMeetingNote: (id: string, noteId: string) => void }, 'pollMeetingNote').and.callThrough();
 
       service.loadMeetingNotes('project-1').subscribe();
 
-      expect((service as any).pollMeetingNote).toHaveBeenCalledWith('project-1', 'loading-note');
+      expect(pollSpy).toHaveBeenCalledWith('project-1', 'loading-note');
     }));
 
     it('should preserve existing names for notes that have names', () => {
@@ -128,7 +128,7 @@ describe('MeetingNotesService', () => {
       };
 
       meetingNotesApiSpy.uploadMeetingNoteFile.and.returnValue(of(uploadedNote));
-      spyOn(service as any, 'pollMeetingNote').and.stub();
+      spyOn(service as unknown as { pollMeetingNote: (id: string, noteId: string) => void }, 'pollMeetingNote').and.stub();
 
       const result$ = service.uploadMeetingNoteFile('project-1', 2, mockFile);
 
@@ -151,11 +151,11 @@ describe('MeetingNotesService', () => {
       };
 
       meetingNotesApiSpy.uploadMeetingNoteFile.and.returnValue(of(loadingNote));
-      spyOn(service as any, 'pollMeetingNote').and.stub();
+      const pollSpy = spyOn(service as unknown as { pollMeetingNote: (id: string, noteId: string) => void }, 'pollMeetingNote').and.stub();
 
       service.uploadMeetingNoteFile('project-1', 2, mockFile).subscribe();
 
-      expect((service as any).pollMeetingNote).toHaveBeenCalledWith('project-1', 'loading-upload');
+      expect(pollSpy).toHaveBeenCalledWith('project-1', 'loading-upload');
     });
 
     it('should not trigger polling for completed uploaded note', () => {
@@ -166,11 +166,11 @@ describe('MeetingNotesService', () => {
       };
 
       meetingNotesApiSpy.uploadMeetingNoteFile.and.returnValue(of(completedNote));
-      spyOn(service as any, 'pollMeetingNote').and.stub();
+      const pollSpy = spyOn(service as unknown as { pollMeetingNote: (id: string, noteId: string) => void }, 'pollMeetingNote').and.stub();
 
       service.uploadMeetingNoteFile('project-1', 2, mockFile).subscribe();
 
-      expect((service as any).pollMeetingNote).not.toHaveBeenCalled();
+      expect(pollSpy).not.toHaveBeenCalled();
     });
 
     it('should preserve existing name when uploading', () => {
@@ -208,7 +208,7 @@ describe('MeetingNotesService', () => {
       );
 
       // Call the private method via bracket notation
-      (service as any).pollMeetingNote('project-1', 'polling-note');
+      (service as unknown as { pollMeetingNote: (id: string, noteId: string) => void }).pollMeetingNote('project-1', 'polling-note');
 
       // Wait for the polling delay
       tick(5000);
@@ -228,7 +228,7 @@ describe('MeetingNotesService', () => {
       spyOn(console, 'warn');
 
       // Start polling with count = 9 (one attempt before limit)
-      (service as any).pollMeetingNote('project-1', 'stuck-note', 9);
+      (service as unknown as { pollMeetingNote: (id: string, noteId: string, count: number) => void }).pollMeetingNote('project-1', 'stuck-note', 9);
 
       tick(5000);
 
@@ -244,16 +244,16 @@ describe('MeetingNotesService', () => {
       };
 
       meetingNotesApiSpy.getMeetingNote.and.returnValue(of(loadingNote));
-      spyOn(service as any, 'pollMeetingNote').and.callThrough();
+      const pollSpy = spyOn(service as unknown as { pollMeetingNote: (id: string, noteId: string, count: number) => void }, 'pollMeetingNote').and.callThrough();
 
       // Start with count = 5
-      (service as any).pollMeetingNote('project-1', 'still-loading', 5);
+      (service as unknown as { pollMeetingNote: (id: string, noteId: string, count: number) => void }).pollMeetingNote('project-1', 'still-loading', 5);
 
       tick(5000);
 
       expect(meetingNotesApiSpy.getMeetingNote).toHaveBeenCalledWith('project-1', 'still-loading');
       // Should call itself again with count = 6
-      expect((service as any).pollMeetingNote).toHaveBeenCalledWith('project-1', 'still-loading', 6);
+      expect(pollSpy).toHaveBeenCalledWith('project-1', 'still-loading', 6);
     }));
   });
 });
