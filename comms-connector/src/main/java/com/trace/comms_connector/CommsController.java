@@ -16,6 +16,26 @@ public class CommsController {
     private CommsService commsService;
 
     /**
+     * Get all comms users for all platforms for a given project ID
+     * 
+     * @param projectId
+     * @param platform
+     * @return list of user entities
+     */
+    @Operation(
+        summary = "Get all users for a given project ID",
+        description = "Returns a list of all platform user IDs / usernames for a given project ID."
+    )
+    @GetMapping("/projects/{projectId}/comms/users")
+    public ResponseEntity<?> getAllUsers(@PathVariable UUID projectId) {
+        var userList = commsService.getAllUsersByProjectId(projectId);
+        if (userList.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(userList);
+    }
+
+    /**
      * Get the platform users for a given project ID and platform
      * 
      * @param projectId

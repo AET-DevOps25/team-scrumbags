@@ -229,4 +229,9 @@ public class CommsService {
 
         return messageJsonArray;
     }
+
+    // Get all users by project ID
+    public List<UserEntity> getAllUsersByProjectId(UUID projectId) {
+        return userRepo.findAllByProjectId(projectId);
+    }
 }
