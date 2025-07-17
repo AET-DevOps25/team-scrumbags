@@ -13,12 +13,15 @@ data:
       group_wait: 10s
       group_interval: 10s
       repeat_interval: 1h
-      receiver: 'discord'
+      receiver: '{{- if .Values.secrets.discordAlertmanagerWebhookUrl }}discord{{ else }}null{{ end }}'
     receivers:
+      - name: 'null'
       - name: 'discord'
+        {{- if .Values.secrets.discordAlertmanagerWebhookUrl }}
         discord_configs:
-          - webhook_url_file: /etc/alertmanager/secrets/discord_webhook_url
+          - webhook_url: ${DISCORD_WEBHOOK_URL}
             send_resolved: true
+        {{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -37,32 +40,37 @@ spec:
       labels:
         app: alertmanager
     spec:
+      securityContext:
+        fsGroup: 65534
+        runAsUser: 65534
+        runAsGroup: 65534
       containers:
         - name: alertmanager
           image: {{ .Values.alertmanager.image }}
           args:
             - '--config.file=/etc/alertmanager/config.yml'
             - '--storage.path=/alertmanager'
+            - '--web.external-url=https://{{ .Values.ingress.host }}/alertmanager'
+            - '--web.route-prefix=/alertmanager'
           ports:
             - containerPort: {{ .Values.alertmanager.port }}
+          {{- if .Values.secrets.discordAlertmanagerWebhookUrl }}
+          env:
+            - name: DISCORD_WEBHOOK_URL
+              valueFrom:
+                secretKeyRef:
+                  name: trace-secrets
+                  key: DISCORD_ALERTMANAGER_WEBHOOK_URL
+          {{- end }}
           volumeMounts:
             - name: alertmanager-config
               mountPath: /etc/alertmanager
-            - name: alertmanager-secret
-              mountPath: /etc/alertmanager/secrets
-              readOnly: true
             - name: alertmanager-storage
               mountPath: /alertmanager
       volumes:
         - name: alertmanager-config
           configMap:
             name: alertmanager-config
-        - name: alertmanager-secret
-          secret:
-            secretName: trace-secrets
-            items:
-              - key: DISCORD_ALERTMANAGER_WEBHOOK_URL
-                path: discord_webhook_url
         - name: alertmanager-storage
           persistentVolumeClaim:
             claimName: alertmanager-pvc

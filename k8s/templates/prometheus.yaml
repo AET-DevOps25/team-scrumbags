@@ -22,7 +22,7 @@ data:
       alertmanagers:
         - static_configs:
             - targets:
-                - alertmanager-service:{{ .Values.alertmanager.port }}
+                - "alertmanager-service:{{ .Values.alertmanager.port }}"
     rule_files:
       - /etc/prometheus/rules/*.yml
     scrape_configs:
@@ -31,11 +31,14 @@ data:
           - targets: ['localhost:{{ .Values.prometheus.port }}']
       - job_name: 'node-exporter'
         kubernetes_sd_configs:
-          - role: endpoints
+          - role: pod
         relabel_configs:
-          - source_labels: [__meta_kubernetes_service_label_app]
+          - source_labels: [__meta_kubernetes_pod_label_app]
             action: keep
             regex: node-exporter
+          - source_labels: [__meta_kubernetes_pod_container_port_name]
+            action: keep
+            regex: metrics
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -65,6 +68,8 @@ spec:
             - '--config.file=/etc/prometheus/prometheus.yml'
             - '--storage.tsdb.path=/prometheus'
             - '--web.enable-lifecycle'
+            - '--web.external-url=https://{{ .Values.ingress.host }}/prometheus'
+            - '--web.route-prefix=/prometheus'
           ports:
             - containerPort: {{ .Values.prometheus.port }}
           volumeMounts:

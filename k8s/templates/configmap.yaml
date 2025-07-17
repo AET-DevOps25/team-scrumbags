@@ -42,3 +42,12 @@ data:
   MYSQL_PORT: {{ .Values.mysql.port | quote }}
   WEAVIATE_URL: "http://weaviate-service:{{ .Values.weaviate.port }}"
   OLLAMA_LOCAL_URL: "http://ollama-service:{{ .Values.ollama.port }}"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: proxy-headers
+  namespace: {{ .Values.global.namespace }}
+data:
+  X-Forwarded-Proto: "https"
+  X-Forwarded-Host: "{{ .Values.ingress.host }}"

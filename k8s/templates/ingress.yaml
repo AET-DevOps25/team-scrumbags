@@ -5,8 +5,10 @@ metadata:
   name: trace-ingress
   namespace: {{ .Values.global.namespace }}
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
     cert-manager.io/issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/proxy-set-headers: "{{ .Values.global.namespace }}/proxy-headers"
 spec:
   tls:
     - hosts:
@@ -16,13 +18,16 @@ spec:
     - host: {{ .Values.ingress.host }}
       http:
         paths:
-          - path: /(/|$)(.*)
-            pathType: ImplementationSpecific
+          # Client (no rewrite)
+          - path: /
+            pathType: Prefix
             backend:
               service:
                 name: client-service
                 port:
                   number: {{ .Values.client.port }}
+
+          # Keycloak (no rewrite)
           - path: /auth(/|$)(.*)
             pathType: ImplementationSpecific
             backend:
@@ -30,27 +35,8 @@ spec:
                 name: keycloak-service
                 port:
                   number: {{ .Values.keycloak.port }}
-          - path: /grafana(/|$)(.*)
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: grafana-service
-                port:
-                  number: {{ .Values.grafana.port }}
-          - path: /prometheus(/|$)(.*)
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: prometheus-service
-                port:
-                  number: {{ .Values.prometheus.port }}
-          - path: /alertmanager(/|$)(.*)
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: alertmanager-service
-                port:
-                  number: {{ .Values.alertmanager.port }}
+
+          # API services (strip prefix)
           - path: /api/project(/|$)(.*)
             pathType: ImplementationSpecific
             backend:
@@ -86,4 +72,27 @@ spec:
                 name: genai-service
                 port:
                   number: {{ .Values.genai.port }}
+
+          # Monitoring tools (preserve prefix)
+          - path: /grafana(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: grafana-service
+                port:
+                  number: {{ .Values.grafana.port }}
+          - path: /prometheus(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: prometheus-service
+                port:
+                  number: {{ .Values.prometheus.port }}
+          - path: /alertmanager(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: alertmanager-service
+                port:
+                  number: {{ .Values.alertmanager.port }}
 {{- end }}
