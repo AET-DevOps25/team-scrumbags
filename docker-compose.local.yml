@@ -72,7 +72,7 @@ services:
       dockerfile: Dockerfile
     network_mode: host
     depends_on:
-      mysql-db: 
+      mysql-db:
         condition: service_healthy
     environment:
       - DEBUG=true
@@ -107,7 +107,7 @@ services:
       - USE_CLOUD=${USE_CLOUD:-true}
       - ASSEMBLYAI_API_KEY=${ASSEMBLYAI_API_KEY}
       - TRANSCRIPTION_TIMEOUT=${TRANSCRIPTION_TIMEOUT:-300000}
-      - GENAI_URL=http://localhost:4242
+      - GENAI_URL=http://127.0.0.1:4242
       - SERVER_PORT=8083
       - USE_WHISPERX=${USE_WHISPERX:-false}
     restart: unless-stopped
@@ -170,7 +170,7 @@ services:
       interval: 15s
       timeout: 10s
       retries: 30
-  
+
   rabbitmq:
     image: rabbitmq:management
     container_name: rabbitmq

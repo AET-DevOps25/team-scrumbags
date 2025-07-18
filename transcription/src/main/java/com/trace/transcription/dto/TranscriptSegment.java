@@ -17,7 +17,7 @@ public class TranscriptSegment implements Serializable {
     private String segmentIndex;
 
     @Lob
-    @Column(name = "text")
+    @Column(name = "text", columnDefinition="TEXT")
     private String text;
 
     @Column(name = "start_time")
