@@ -9,6 +9,7 @@ jobs:
   deploy-helm:
     name: Kubernetes Deployment with Helm
     runs-on: ubuntu-latest
+    environment: prod-vm #change to kubernetes once prod-vm is rebased to kubernetes
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
