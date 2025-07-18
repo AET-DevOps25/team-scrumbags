@@ -7,7 +7,7 @@
 </div>
 } @else {
 <form class="flex flex-col gap-2">
-  @for (mapping of userMappingMap(); track mapping.user.id) {
+  @for (key of platformUsers().keys(); track key) {
   <div class="flex flex-row items-center gap-2">
     <mat-form-field appearance="outline" class="flex-0.5">
       <input
@@ -15,7 +15,7 @@
         type="text"
         [disabled]="true"
         name="platformInput"
-        [value]="mapping.mapping.platform"
+        [value]="platformUsers()?.get(key)?.platform"
       />
     </mat-form-field>
     <mat-form-field appearance="outline" class="flex-1">
@@ -24,19 +24,19 @@
         type="text"
         [disabled]="true"
         name="platformUserInput"
-        [value]="mapping.mapping.platformUserId"
+        [value]="platformUsers()?.get(key)?.platformUserId"
       />
     </mat-form-field>
 
-    @if(currentlyEditedMapping()?.userId === mapping.user.id) {
+    @if(currentlyEditedUser()?.id === platformUsers()?.get(key)?.userId) {
     <!-- the currently edited mapping  -->
     <mat-form-field appearance="outline" class="flex-1">
       <input
         matInput
         type="text"
-        name="platformUserIdInput"
-        [ngModel]="currentlyEditedMapping()?.platformUserId"
-        (ngModelChange)="onCurrentlyEditedMappingChange($event)"
+        name="usernameInput"
+        [ngModel]="projectUsers().get(key)?.username"
+        (ngModelChange)="onCurrentlyEditedUserChange($event)"
       />
       @if (isPostingMapping()){
       <mat-progress-spinner
@@ -51,7 +51,7 @@
         <button
           mat-icon-button
           type="button"
-          (click)="currentlyEditedMapping.set(null)"
+          (click)="currentlyEditedUser.set(null)"
         >
           <mat-icon>close</mat-icon>
         </button>
@@ -59,8 +59,8 @@
           mat-icon-button
           type="button"
           [disabled]="
-            currentlyEditedMapping()?.platformUserId ===
-            mapping.mapping.platformUserId
+            currentlyEditedUser()?.id ===
+            platformUsers()?.get(key)?.userId
           "
           (click)="onSubmitMapping()"
         >
@@ -76,14 +76,14 @@
         matInput
         type="text"
         [disabled]="true"
-        [value]="mapping.mapping.platformUserId"
+        [value]="platformUsers()?.get(key)?.platformUserId ?? ''"
       />
       <button
         mat-icon-button
         matSuffix
         type="button"
-        [disabled]="currentlyEditedMapping()"
-        (click)="currentlyEditedMapping.set(mapping.mapping)"
+        [disabled]="currentlyEditedUser()"
+        (click)="currentlyEditedUser.set(projectUsers()?.get(key) ?? null)"
       >
         <mat-icon>edit</mat-icon>
       </button>

@@ -29,30 +29,17 @@ export class CommsSettingsUsers {
   private projectService = inject(ProjectService);
   private commsApi = inject(CommsApi);
 
-  private projectsUser = computed<User[]>(() => {
-    return this.projectService.selectedProject()?.users ?? [];
-  });
-
-  currentlyEditedMapping = signal<CommsUserMapping | null>(null);
-  private userMappings = signal<Map<string, CommsUserMapping>>(new Map());
-  userMappingMap = computed<{ user: User; mapping: CommsUserMapping }[]>(() => {
-    const users = this.projectsUser();
-    const mappings = this.userMappings();
-    const projectId = this.projectService.selectedProjectId();
-    if (!projectId) {
-      return [];
-    }
-
-    return users.map((user) => {
-      const mapping = mappings.get(user.id) ?? {
-        userId: user.id,
-        platformUserId: '',
-        platform: SupportedCommsPlatforms.DISCORD,
-        projectId: projectId,
-      };
-      return { user, mapping };
+  projectUsers = computed<Map<string, User>>(() => {
+    const users = this.projectService.selectedProject()?.users ?? [];
+    const map = new Map();
+    users.forEach(user => {
+      map.set(user.id, user);
     });
+    return map;
   });
+
+  currentlyEditedUser = signal<User | null>(null);
+  platformUsers = signal<Map<string, CommsUserMapping>>(new Map());
 
   isLoadingMappings = signal(false);
   isPostingMapping = signal(false);
@@ -68,7 +55,7 @@ export class CommsSettingsUsers {
             for (const mapping of mappings) {
               map.set(mapping.userId, mapping);
             }
-            this.userMappings.set(map);
+            this.platformUsers.set(map);
           },
           complete: () => {
             this.isLoadingMappings.set(false);
@@ -78,34 +65,35 @@ export class CommsSettingsUsers {
     });
   }
 
-  onCurrentlyEditedMappingChange(platformUserId: string) {
-    const prevMapping = this.currentlyEditedMapping();
+  onCurrentlyEditedUserChange(userId: string) {
+    const prevMapping = this.currentlyEditedUser();
     if (!prevMapping) {
       return;
     }
-    this.currentlyEditedMapping.set({
-      ...prevMapping,
-      platformUserId: platformUserId,
-    });
+    const user = this.projectUsers()?.get(userId) ?? null;
+    this.currentlyEditedUser.set(user);
   }
 
   onSubmitMapping() {
     const projectId = this.projectService.selectedProject()?.id;
-    const submittedMapping = this.currentlyEditedMapping();
+    const submittedMapping = this.currentlyEditedUser();
     if (!projectId || !submittedMapping) {
       return;
     }
-
+    const submittedCommsUser = this.platformUsers().get(submittedMapping.id);
+    if (!submittedCommsUser) {
+      return;
+    }
     this.isPostingMapping.set(true);
-    this.commsApi.saveUserMapping(projectId, submittedMapping).subscribe({
+    this.commsApi.saveUserMapping(projectId, submittedCommsUser).subscribe({
       next: (mapping) => {
-        const currentMappings = this.userMappings();
+        const currentMappings = this.platformUsers();
 
         const newMappings = new Map(
           currentMappings.set(mapping.userId, mapping)
         );
-        this.userMappings.set(newMappings);
-        this.currentlyEditedMapping.set(null);
+        this.platformUsers.set(newMappings);
+        this.currentlyEditedUser.set(null);
       },
       error: (error) => {
         const snackbar = inject(MatSnackBar);
