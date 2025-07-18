@@ -1,0 +1,48 @@
+{{- if .Values.sdlc.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sdlc
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: {{ .Values.sdlc.replicas }}
+  selector:
+    matchLabels:
+      app: sdlc
+  template:
+    metadata:
+      labels:
+        app: sdlc
+    spec:
+      containers:
+        - name: sdlc
+          image: {{ .Values.sdlc.image }}
+          ports:
+            - containerPort: {{ .Values.sdlc.port }}
+          env:
+            - name: SERVER_PORT
+              value: "{{ .Values.sdlc.port }}"
+            - name: DEBUG
+              value: "true"
+          envFrom:
+            - configMapRef:
+                name: trace-config
+            - secretRef:
+                name: trace-secrets
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.35
+          command: ['sh', '-c', 'until nc -z postgresql-service {{ .Values.postgresql.port }}; do sleep 1; done']
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sdlc-service
+  namespace: {{ .Values.global.namespace }}
+spec:
+  selector:
+    app: sdlc
+  ports:
+    - port: {{ .Values.sdlc.port }}
+      targetPort: {{ .Values.sdlc.port }}
+{{- end }}

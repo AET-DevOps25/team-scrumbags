@@ -10,7 +10,7 @@ services:
       - comms_db_data:/var/lib/mysql/
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
-      interval: 10s
+      interval: 3s
       timeout: 5s
       retries: 5
 
@@ -21,7 +21,8 @@ services:
     ports:
       - "9876:8080"
     depends_on:
-      - comms-db
+      comms-db:
+        condition: service_healthy
     env_file:
       - .env
     networks:

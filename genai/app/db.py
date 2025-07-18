@@ -8,7 +8,7 @@ from sqlalchemy.orm import declarative_base
 load_dotenv()
 
 DATABASE_URL = (f"mysql+asyncmy://{os.getenv('MYSQL_USER')}:{os.getenv('MYSQL_PASSWORD')}"
-                f"@genai-db:3306/{os.getenv('MYSQL_DATABASE', 'summaries')}")
+                f"@{os.getenv('MYSQL_HOST')}:{os.getenv('MYSQL_PORT', 3306)}/{os.getenv('MYSQL_DB')}")
 
 if os.getenv('MYSQL_URL'):
     DATABASE_URL = os.getenv('MYSQL_URL')
@@ -23,8 +23,8 @@ class Summary(Base):
     __tablename__ = "summaries"
     id = Column(Integer, primary_key=True, index=True)
     projectId = Column(String(length=36), index=True)
-    startTime = Column(BigInteger, index=True)
-    endTime = Column(BigInteger, index=True)
+    startTime = Column(Integer, index=True)
+    endTime = Column(Integer, index=True)
     generatedAt = Column(BigInteger)
     summary = Column(Text)
     userIds = Column(JSON, nullable=False, default=list)

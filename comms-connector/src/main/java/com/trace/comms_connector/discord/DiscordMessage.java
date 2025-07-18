@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @NoArgsConstructor @Getter @Setter
-public class DiscordMessage implements CommsMessage {
+public class DiscordMessage extends CommsMessage {
     private String id;
     private String channel_id;
     private DiscordUser author;

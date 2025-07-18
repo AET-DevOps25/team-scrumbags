@@ -1,0 +1,46 @@
+{{- if .Values.projectManagement.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: project-management
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: {{ .Values.projectManagement.replicas }}
+  selector:
+    matchLabels:
+      app: project-management
+  template:
+    metadata:
+      labels:
+        app: project-management
+    spec:
+      containers:
+        - name: project-management
+          image: {{ .Values.projectManagement.image }}
+          ports:
+            - containerPort: {{ .Values.projectManagement.port }}
+          env:
+            - name: SERVER_PORT
+              value: "{{ .Values.projectManagement.port }}"
+          envFrom:
+            - configMapRef:
+                name: trace-config
+            - secretRef:
+                name: trace-secrets
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.35
+          command: ['sh', '-c', 'until nc -z postgresql-service {{ .Values.postgresql.port }}; do sleep 1; done']
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: project-management-service
+  namespace: {{ .Values.global.namespace }}
+spec:
+  selector:
+    app: project-management
+  ports:
+    - port: {{ .Values.projectManagement.port }}
+      targetPort: {{ .Values.projectManagement.port }}
+{{- end }}
