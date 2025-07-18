@@ -33,7 +33,7 @@ ingress:
 client:
   enabled: true
   image: ghcr.io/aet-devops25/team-scrumbags/client:main
-  port: 80
+  port: 443
   nodePort: 30000
   replicas: 1
 

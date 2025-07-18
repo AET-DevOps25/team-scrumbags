@@ -51,3 +51,4 @@ metadata:
 data:
   X-Forwarded-Proto: "https"
   X-Forwarded-Host: "{{ .Values.ingress.host }}"
+  X-Forwarded-Prefix: "/auth"

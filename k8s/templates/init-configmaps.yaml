@@ -29,16 +29,66 @@ data:
     {
       "realm": "trace",
       "enabled": true,
+      "sslRequired": "external",
+      "registrationAllowed": true,
+      "loginWithEmailAllowed": true,
+      "duplicateEmailsAllowed": false,
+      "resetPasswordAllowed": true,
+      "editUsernameAllowed": false,
+      "bruteForceProtected": true,
+      "permanentLockout": false,
+      "maxFailureWaitSeconds": 900,
+      "minimumQuickLoginWaitSeconds": 60,
+      "waitIncrementSeconds": 60,
+      "quickLoginCheckMilliSeconds": 1000,
+      "maxDeltaTimeSeconds": 43200,
+      "failureFactor": 30,
       "clients": [
         {
           "clientId": "trace-api",
           "enabled": true,
           "publicClient": true,
-          "redirectUris": ["https://{{ .Values.ingress.host }}/*"],
-          "webOrigins": ["https://{{ .Values.ingress.host }}"],
-          "baseUrl": "https://{{ .Values.ingress.host }}/",
-          "rootUrl": "https://{{ .Values.ingress.host }}/",
-          "adminUrl": "https://{{ .Values.ingress.host }}/"
+          "directAccessGrantsEnabled": true,
+          "serviceAccountsEnabled": false,
+          "standardFlowEnabled": true,
+          "implicitFlowEnabled": false,
+          "webOrigins": ["*"],
+          "redirectUris": ["*"],
+          "protocol": "openid-connect",
+          "attributes": {
+            "access.token.lifespan": "300",
+            "access.token.lifespan.for.implicit.flow": "900"
+          }
+        }
+      ],
+      "users": [
+        {
+          "username": "testuser",
+          "enabled": true,
+          "firstName": "Test",
+          "lastName": "User",
+          "email": "test@example.com",
+          "credentials": [
+            {
+              "type": "password",
+              "value": "password",
+              "temporary": false
+            }
+          ]
+        },
+        {
+          "username": "testuser2",
+          "enabled": true,
+          "firstName": "Test",
+          "lastName": "User2",
+          "email": "test2@example.com",
+          "credentials": [
+            {
+              "type": "password",
+              "value": "password",
+              "temporary": false
+            }
+          ]
         }
       ]
     }

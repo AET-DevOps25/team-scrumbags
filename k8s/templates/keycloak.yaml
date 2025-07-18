@@ -26,9 +26,7 @@ spec:
             - containerPort: 8080
           env:
             - name: KC_HOSTNAME_URL
-              value: "https://{{ .Values.ingress.host }}/auth"
-            - name: KC_HOSTNAME_ADMIN_URL
-              value: "https://{{ .Values.ingress.host }}/auth"
+              value: "https://{{ .Values.ingress.host }}"
             - name: KC_PROXY
               value: "edge"
             - name: KC_PROXY_HEADERS
@@ -70,4 +68,5 @@ spec:
     - port: {{ .Values.keycloak.port }}
       targetPort: 8080
       nodePort: 30008
+      protocol: TCP
 {{- end }}
