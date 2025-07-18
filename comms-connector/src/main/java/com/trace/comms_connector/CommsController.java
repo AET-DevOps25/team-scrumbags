@@ -29,9 +29,6 @@ public class CommsController {
     @GetMapping("/projects/{projectId}/comms/users")
     public ResponseEntity<?> getAllUsers(@PathVariable UUID projectId) {
         var userList = commsService.getAllUsersByProjectId(projectId);
-        if (userList.isEmpty()) {
-            return ResponseEntity.noContent().build();
-        }
         return ResponseEntity.ok(userList);
     }
 
