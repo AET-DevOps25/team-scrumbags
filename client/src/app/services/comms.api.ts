@@ -27,8 +27,8 @@ export class CommsApi {
     return this.http
       .post<CommsUserMapping>(
         `${environment.communicationUrl}/projects/${projectId}/comms/${userMapping.platform}/users`,
-        {}, 
-        { params }
+        {},
+        { params: params }
       )
       .pipe(catchError(handleError('Error saving user mapping')));
   }
@@ -39,9 +39,9 @@ export class CommsApi {
     
     return this.http
       .post<CommsPlatformConnection[]>(
-        `${environment.communicationUrl}/projects/${projectId}/comms/${platform.toUpperCase()}/connections`,
+        `${environment.communicationUrl}/projects/${projectId}/comms/${platform.toUpperCase()}`,
         {},
-        { params }
+        { params: params }
       )
       .pipe(catchError(handleError('Error adding communication connection')));
   }

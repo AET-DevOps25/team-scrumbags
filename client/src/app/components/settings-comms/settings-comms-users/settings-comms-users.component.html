@@ -1,0 +1,95 @@
+@if (isLoadingMappings()){
+<div class="flex flex-row items-center justify-center">
+  <mat-progress-spinner
+    diameter="24"
+    mode="indeterminate"
+  ></mat-progress-spinner>
+</div>
+} @else {
+<form class="flex flex-col gap-2">
+  @for (mapping of userMappingMap(); track mapping.user.id) {
+  <div class="flex flex-row items-center gap-2">
+    <mat-form-field appearance="outline" class="flex-0.5">
+      <input
+        matInput
+        type="text"
+        [disabled]="true"
+        name="platformInput"
+        [value]="mapping.mapping.platform"
+      />
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="flex-1">
+      <input
+        matInput
+        type="text"
+        [disabled]="true"
+        name="platformUserInput"
+        [value]="mapping.mapping.platformUserId"
+      />
+    </mat-form-field>
+
+    @if(currentlyEditedMapping()?.userId === mapping.user.id) {
+    <!-- the currently edited mapping  -->
+    <mat-form-field appearance="outline" class="flex-1">
+      <input
+        matInput
+        type="text"
+        name="platformUserIdInput"
+        [ngModel]="currentlyEditedMapping()?.platformUserId"
+        (ngModelChange)="onCurrentlyEditedMappingChange($event)"
+      />
+      @if (isPostingMapping()){
+      <mat-progress-spinner
+        matSuffix
+        diameter="24"
+        mode="indeterminate"
+        color="primary"
+        class="mx-2"
+      ></mat-progress-spinner>
+      } @else {
+      <div matSuffix>
+        <button
+          mat-icon-button
+          type="button"
+          (click)="currentlyEditedMapping.set(null)"
+        >
+          <mat-icon>close</mat-icon>
+        </button>
+        <button
+          mat-icon-button
+          type="button"
+          [disabled]="
+            currentlyEditedMapping()?.platformUserId ===
+            mapping.mapping.platformUserId
+          "
+          (click)="onSubmitMapping()"
+        >
+          <mat-icon>check</mat-icon>
+        </button>
+      </div>
+      }
+    </mat-form-field>
+    } @else {
+    <!-- any non edited mapping -->
+    <mat-form-field appearance="outline" class="flex-1">
+      <input
+        matInput
+        type="text"
+        [disabled]="true"
+        [value]="mapping.mapping.platformUserId"
+      />
+      <button
+        mat-icon-button
+        matSuffix
+        type="button"
+        [disabled]="currentlyEditedMapping()"
+        (click)="currentlyEditedMapping.set(mapping.mapping)"
+      >
+        <mat-icon>edit</mat-icon>
+      </button>
+    </mat-form-field>
+    }
+  </div>
+  }
+</form>
+}
