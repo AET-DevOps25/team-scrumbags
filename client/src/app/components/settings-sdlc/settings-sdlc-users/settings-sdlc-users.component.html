@@ -26,6 +26,7 @@
         matInput
         type="text"
         name="platformUserIdInput"
+        placeholder="Enter Github user ID"
         [ngModel]="currentlyEditedMapping()?.platformUserId"
         (ngModelChange)="onCurrentlyEditedMappingChange($event)"
       />
@@ -66,6 +67,7 @@
       <input
         matInput
         type="text"
+        placeholder="Enter Github user ID"
         [disabled]="true"
         [value]="mapping.mapping.platformUserId"
       />

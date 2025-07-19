@@ -230,4 +230,9 @@ public class CommsService {
 
         return messageJsonList;
     }
+
+    // Get all users by project ID
+    public List<UserEntity> getAllUsersByProjectId(UUID projectId) {
+        return userRepo.findAllByProjectId(projectId);
+    }
 }
