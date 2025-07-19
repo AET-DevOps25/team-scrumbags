@@ -11,6 +11,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { SupportedCommsPlatforms } from '../../../enums/supported-comms-platforms.enum';
 import { MatSelectModule } from '@angular/material/select';
 import { CommsUserRefreshService } from '../../../services/comms-user-refresh.service';
+import { catchError, finalize } from 'rxjs/operators';
+import { EMPTY } from 'rxjs';
 
 @Component({
   selector: 'app-settings-comms-server-id',
@@ -24,12 +26,13 @@ import { CommsUserRefreshService } from '../../../services/comms-user-refresh.se
     MatSelectModule,
   ],
   templateUrl: './settings-comms-server-id.component.html',
-  styleUrl: './settings-comms-server-id.component.scss'
+  styleUrl: './settings-comms-server-id.component.scss',
 })
 export class CommsSettingsServerId {
   private projectService = inject(ProjectService);
   private commsApi = inject(CommsApi);
-    private commsUserRefreshService = inject(CommsUserRefreshService);
+  private commsUserRefreshService = inject(CommsUserRefreshService);
+  private snackBar = inject(MatSnackBar);
 
   showServerId = signal(false);
   serverIdInput = signal('');
@@ -38,26 +41,8 @@ export class CommsSettingsServerId {
   confirmation = signal(false);
 
   platforms = Object.values(SupportedCommsPlatforms);
-  
+
   selectedPlatform = signal(SupportedCommsPlatforms.DISCORD);
-
-  onPlatformChange(platform: SupportedCommsPlatforms) {
-    this.selectedPlatform.set(platform);
-    console.log('Selected platform:', this.selectedPlatform);
-  }
-
-  constructor() {
-    effect(() => {
-      this.isLoading.set(true);
-      // Default selections
-      this.serverIdInput.set('');
-      this.selectedPlatform.set(SupportedCommsPlatforms.DISCORD);
-      const projectId = this.projectService.selectedProject()?.id;
-      if (projectId) {
-        this.isLoading.set(false);
-      }
-    });
-  }
 
   onSubmit() {
     const projectId = this.projectService.selectedProject()?.id;
@@ -68,24 +53,37 @@ export class CommsSettingsServerId {
 
     this.isLoading.set(true);
 
-    this.commsApi.addCommsConnection(projectId, this.serverIdInput(), this.selectedPlatform()).subscribe({
-      next: (connection) => {
-        if (connection) {
-          this.serverIdInput.set('');
-          this.confirmation.set(true);
-        }
-      },
-      error: (error) => {
-        const snackbar = inject(MatSnackBar);
-        snackbar.open(`Error saving server ID: ${error.message}`, 'Close', {
-          duration: 3000,
-        });
-        console.error('Error saving server ID:', error);
-      },
-      complete: () => {
-        this.commsUserRefreshService.onRefreshUsers.next('');
-        this.isLoading.set(false);
-      },
-    });
+    this.commsApi
+      .addCommsConnection(
+        projectId,
+        this.serverIdInput(),
+        this.selectedPlatform()
+      )
+      .pipe(
+        catchError((error) => {
+          this.snackBar.open(
+            `Error saving server ID: ${error.message}`,
+            'Close',
+            {
+              duration: 3000,
+            }
+          );
+          return EMPTY;
+        }),
+        finalize(() => {
+          this.isLoading.set(false);
+        })
+      )
+      .subscribe({
+        next: (connection) => {
+          if (connection) {
+            this.serverIdInput.set('');
+            this.confirmation.set(true);
+          }
+        },
+        complete: () => {
+          this.commsUserRefreshService.onRefreshUsers.next('');
+        },
+      });
   }
 }

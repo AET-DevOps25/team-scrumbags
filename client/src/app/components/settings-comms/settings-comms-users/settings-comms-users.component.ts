@@ -11,6 +11,7 @@ import { CommsUserMapping } from '../../../models/comms-users.model';
 import { User } from '../../../models/user.model';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { CommsUserRefreshService } from '../../../services/comms-user-refresh.service';
+import { catchError, EMPTY, finalize } from 'rxjs';
 
 @Component({
   selector: 'app-settings-comms-users',
@@ -23,17 +24,18 @@ import { CommsUserRefreshService } from '../../../services/comms-user-refresh.se
     MatProgressSpinnerModule,
   ],
   templateUrl: './settings-comms-users.component.html',
-  styleUrl: './settings-comms-users.component.scss'
+  styleUrl: './settings-comms-users.component.scss',
 })
 export class CommsSettingsUsers {
   private projectService = inject(ProjectService);
   private commsApi = inject(CommsApi);
-    private commsUserRefreshService = inject(CommsUserRefreshService);
+  private commsUserRefreshService = inject(CommsUserRefreshService);
+  private snackBar = inject(MatSnackBar);
 
   projectUsersUsernameMap = computed<Map<string, User>>(() => {
     const users = this.projectService.selectedProject()?.users ?? [];
     const map = new Map();
-    users.forEach(user => {
+    users.forEach((user) => {
       map.set(user.username, user);
     });
     return map;
@@ -42,7 +44,7 @@ export class CommsSettingsUsers {
   projectUsersIdMap = computed<Map<string, User>>(() => {
     const users = this.projectService.selectedProject()?.users ?? [];
     const map = new Map();
-    users.forEach(user => {
+    users.forEach((user) => {
       map.set(user.id, user);
     });
     return map;
@@ -57,26 +59,31 @@ export class CommsSettingsUsers {
   isPostingUsername = signal(false);
 
   constructor() {
-    effect(() => { this.getCommsUserListFromApi(); });
+    effect(() => {
+      const projectId = this.projectService.selectedProject()?.id;
+      if (projectId) {
+        this.getCommsUserListFromApi(projectId);
+      }
+    });
 
     this.commsUserRefreshService.onRefreshUsers.subscribe(() => {
-      this.getCommsUserListFromApi();
+      const projectId = this.projectService.selectedProject()?.id;
+      if (projectId) {
+        this.getCommsUserListFromApi(projectId);
+      }
     });
   }
 
-  getCommsUserListFromApi() {
-    const projectId = this.projectService.selectedProject()?.id;
-    if (projectId) {
-      this.isLoadingMappings.set(true);
-      this.commsApi.getAllCommsUsers(projectId).subscribe({
-        next: (mappings) => {
-          this.commsUsers.set(mappings);
-        },
-        complete: () => {
-          this.isLoadingMappings.set(false);
-        },
-      });
-    }
+  getCommsUserListFromApi(projectId: string) {
+    this.isLoadingMappings.set(true);
+    this.commsApi.getAllCommsUsers(projectId).subscribe({
+      next: (mappings) => {
+        this.commsUsers.set(mappings);
+      },
+      complete: () => {
+        this.isLoadingMappings.set(false);
+      },
+    });
   }
 
   onSubmitUsername() {
@@ -84,12 +91,17 @@ export class CommsSettingsUsers {
     const submittedUsername = this.currentUsernameInput();
     const submittedIndex = this.currentlyEditedEntry();
 
-    if (projectId === null || submittedUsername === null || submittedIndex === null) {
+    if (
+      projectId === null ||
+      submittedUsername === null ||
+      submittedIndex === null
+    ) {
       return;
     }
 
     const userMapping = this.commsUsers()[submittedIndex];
-    const submittedUserId = this.projectUsersUsernameMap().get(submittedUsername)?.id ?? undefined;
+    const submittedUserId =
+      this.projectUsersUsernameMap().get(submittedUsername)?.id ?? undefined;
 
     if (submittedUserId === undefined) {
       return;
@@ -99,31 +111,36 @@ export class CommsSettingsUsers {
 
     this.isPostingUsername.set(true);
 
-    this.commsApi.saveUserMapping(projectId, userMapping).subscribe({
-      next: () => {
-        const tmpCommsUsers = this.commsUsers();
-        tmpCommsUsers[submittedIndex].userId = submittedUserId;
-        this.commsUsers.set(tmpCommsUsers);
-        this.currentlyEditedEntry.set(null);
-        this.currentUsernameInput.set('');
-      },
-      error: (error) => {
-        const snackbar = inject(MatSnackBar);
-        snackbar.open(`Error saving username: ${error.message}`, 'Close', {
-          duration: 3000,
-        });
-        console.error('Error saving username:', error);
-      },
-      complete: () => {
-        this.isPostingUsername.set(false);
-      },
-    });
+    this.commsApi
+      .saveUserMapping(projectId, userMapping)
+      .pipe(
+        catchError((error) => {
+          this.snackBar.open(
+            `Error saving username: ${error.message}`,
+            'Close',
+            {
+              duration: 3000,
+            }
+          );
+          return EMPTY;
+        }),
+        finalize(() => this.isPostingUsername.set(false))
+      )
+      .subscribe({
+        next: () => {
+          const tmpCommsUsers = this.commsUsers();
+          tmpCommsUsers[submittedIndex].userId = submittedUserId;
+          this.commsUsers.set(tmpCommsUsers);
+          this.currentlyEditedEntry.set(null);
+          this.currentUsernameInput.set('');
+        },
+      });
   }
 
   getUsernameForInputField(commsUser: CommsUserMapping) {
     if (commsUser.userId === null) {
       return '';
-    } else { 
+    } else {
       return this.projectUsersIdMap().get(commsUser.userId)?.username ?? '';
     }
   }
