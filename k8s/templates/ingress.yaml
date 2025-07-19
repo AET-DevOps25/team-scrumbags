@@ -13,8 +13,19 @@ spec:
   tls:
     - hosts:
         - {{ .Values.ingress.host }}
+        - keycloak.{{ .Values.ingress.host }}
       secretName: trace-tls-secret
   rules:
+    - host: keycloak.{{ .Values.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: keycloak-service
+                port:
+                  number: {{ .Values.keycloak.port }}
     - host: {{ .Values.ingress.host }}
       http:
         paths:
@@ -27,14 +38,7 @@ spec:
                 port:
                   number: {{ .Values.client.port }}
 
-          # Keycloak (no rewrite)
-          - path: /auth(/|$)(.*)
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: keycloak-service
-                port:
-                  number: {{ .Values.keycloak.port }}
+
 
           # API services (strip prefix)
           - path: /api/project(/|$)(.*)

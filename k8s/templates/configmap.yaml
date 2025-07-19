@@ -8,9 +8,8 @@ data:
   DEBUG: {{ .Values.environment.debug | quote }}
   KEYCLOAK_REALM: {{ .Values.environment.keycloakRealm }}
   KEYCLOAK_CLIENT_ID: {{ .Values.environment.keycloakClient }}
-  KEYCLOAK_AUTH_URL: "http://keycloak-service:{{ .Values.keycloak.port }}"
-  KEYCLOAK_INTERNAL_URL: "http://keycloak-service:{{ .Values.keycloak.port }}/auth"
-  KEYCLOAK_URL: "https://{{ .Values.ingress.host }}/auth" #todo: use in client
+  KEYCLOAK_AUTH_URL: "https://keycloak.{{ .Values.ingress.host }}"
+  KEYCLOAK_URL: "https://keycloak.{{ .Values.ingress.host }}" #todo: use in client
   RABBITMQ_HOST: "rabbitmq-service"
   RABBITMQ_URL: "amqp://guest:guest@rabbitmq-service/"
 
@@ -51,4 +50,3 @@ metadata:
 data:
   X-Forwarded-Proto: "https"
   X-Forwarded-Host: "{{ .Values.ingress.host }}"
-  X-Forwarded-Prefix: "/auth"
