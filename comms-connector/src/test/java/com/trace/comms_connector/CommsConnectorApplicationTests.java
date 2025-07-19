@@ -466,7 +466,7 @@ class CommsConnectorApplicationTests {
 		when(discordClientMock.getChannelMessages(platformChannelId, lastMessageId, projectId)).thenReturn(new ArrayList<>());
 
 		mockMvc.perform(
-			get("projects/{projectId}/comms/{platform}/messages", projectId, platform)
+			get("/projects/{projectId}/comms/{platform}/messages", projectId, platform)
 				.param("channelId", platformChannelId)
 				.param("lastMessageId", lastMessageId)
 				.param("updateLastMessageId", "true")
@@ -516,7 +516,7 @@ class CommsConnectorApplicationTests {
 		message1.setChannel_id(platformChannelId);
 		message1.setAuthor(author1);
 		message1.setContent("this is the first message");
-		message1.setTimestamp("2025-01-01T00:00:00+0000");
+		message1.setTimestamp("2025-06-17T13:44:17.385000+00:00");
 
 		String messageId2 = "m2";
 		DiscordMessage message2 = new DiscordMessage();
@@ -524,7 +524,7 @@ class CommsConnectorApplicationTests {
 		message2.setChannel_id(platformChannelId);
 		message2.setAuthor(author2);
 		message2.setContent("this is the second message");
-		message2.setTimestamp("2025-02-02T00:00:00+0000");
+		message2.setTimestamp("2025-06-17T13:44:17.385000+00:00");
 
 		List<GenAiMessage> genAiMessages = Arrays.asList(
 			message1.getGenAiMessage(userId1, projectId),
@@ -536,7 +536,7 @@ class CommsConnectorApplicationTests {
 		when(discordClientMock.getChannelMessages(platformChannelId, lastMessageId, projectId)).thenReturn(Arrays.asList(message1, message2));
 
 		mockMvc.perform(
-			get("projects/{projectId}/comms/{platform}/messages", projectId, platform)
+			get("/projects/{projectId}/comms/{platform}/messages", projectId, platform)
 				.param("channelId", platformChannelId)
 				.param("lastMessageId", lastMessageId)
 				.param("updateLastMessageId", "true")
@@ -552,12 +552,13 @@ class CommsConnectorApplicationTests {
 	}
 
 	// Test get messages with no channel ID, should return bad request
+	@Test
 	public void test_getMessagesFromChannel_noChannelId() throws Exception {
 		UUID projectId = UUID.randomUUID();
 		Platform platform = Platform.DISCORD;
 
 		mockMvc.perform(
-			get("projects/{projectId}/comms/{platform}/messages", projectId, platform)
+			get("/projects/{projectId}/comms/{platform}/messages", projectId, platform)
 				.param("lastMessageId", "null")
 				.param("updateLastMessageId", "true")
 				.param("sendToGenAi", "true")
