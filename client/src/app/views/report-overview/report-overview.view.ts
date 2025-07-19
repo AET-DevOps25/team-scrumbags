@@ -13,6 +13,8 @@ import { ReportContentView } from './report-content/report-content.view';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule, MatOptionModule } from '@angular/material/core';
 import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { catchError, EMPTY } from 'rxjs';
 
 @Component({
   selector: 'app-report-overview',
@@ -39,6 +41,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 export class ReportOverviewView {
   private projectService = inject(ProjectService);
   private reportService = inject(ReportService);
+  private snackBar = inject(MatSnackBar);
 
   selectedReportId = signal<string | undefined>(undefined);
   selectedReport = computed(() => {
@@ -71,7 +74,17 @@ export class ReportOverviewView {
     if (!projectId) {
       return;
     }
-    this.projectService.loadUsersOfProject(projectId).subscribe();
+    this.projectService
+      .loadUsersOfProject(projectId)
+      .pipe(
+        catchError((error) => {
+          this.snackBar.open(`Error loading users: ${error.message}`, 'Close', {
+            duration: 3000,
+          });
+          return EMPTY;
+        })
+      )
+      .subscribe();
   }
 
   onSubmit() {
@@ -84,12 +97,26 @@ export class ReportOverviewView {
     this.userIds.set([]);
   }
 
-  private generateReport(periodStart: Date | null, periodEnd: Date | null, userIds?: string[]) {
+  private generateReport(
+    periodStart: Date | null,
+    periodEnd: Date | null,
+    userIds?: string[]
+  ) {
     const projectId = this.projectService.selectedProjectId();
 
     if (projectId) {
       this.reportService
         .generateReport(projectId, periodStart, periodEnd, userIds)
+        .pipe(
+          catchError((error) => {
+            this.snackBar.open(
+              `Error generating report: ${error.message}`,
+              'Close',
+              { duration: 3000 }
+            );
+            return EMPTY;
+          })
+        )
         .subscribe();
     }
   }

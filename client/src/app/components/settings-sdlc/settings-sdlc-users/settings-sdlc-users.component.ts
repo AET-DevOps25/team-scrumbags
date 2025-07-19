@@ -10,6 +10,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { catchError, EMPTY, finalize } from 'rxjs';
 
 @Component({
   selector: 'app-settings-sdlc-users',
@@ -27,6 +28,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 export class SettingsSdlcUsersComponent {
   private projectService = inject(ProjectService);
   private sdlcApi = inject(SdlcApi);
+  private snackbar;
 
   private projectsUser = computed<User[]>(() => {
     return this.projectService.selectedProject()?.users ?? [];
@@ -57,22 +59,35 @@ export class SettingsSdlcUsersComponent {
   isPostingMapping = signal(false);
 
   constructor() {
+    this.snackbar = inject(MatSnackBar);
     effect(() => {
       const projectId = this.projectService.selectedProject()?.id;
       if (projectId) {
         this.isLoadingMappings.set(true);
-        this.sdlcApi.getUserMappings(projectId).subscribe({
-          next: (mappings) => {
-            const map = new Map<string, SdlcUserMapping>();
-            for (const mapping of mappings) {
-              map.set(mapping.userId, mapping);
-            }
-            this.userMappings.set(map);
-          },
-          complete: () => {
-            this.isLoadingMappings.set(false);
-          },
-        });
+        this.sdlcApi
+          .getUserMappings(projectId)
+          .pipe(
+            catchError((error) => {
+              this.snackbar.open(
+                `Error fetching user mappings: ${error.message}`,
+                'Close',
+                { duration: 3000 }
+              );
+              return EMPTY;
+            }),
+            finalize(() => {
+              this.isLoadingMappings.set(false);
+            })
+          )
+          .subscribe({
+            next: (mappings) => {
+              const map = new Map<string, SdlcUserMapping>();
+              for (const mapping of mappings) {
+                map.set(mapping.userId, mapping);
+              }
+              this.userMappings.set(map);
+            },
+          });
       }
     });
   }
@@ -96,7 +111,19 @@ export class SettingsSdlcUsersComponent {
     }
 
     this.isPostingMapping.set(true);
-    this.sdlcApi.saveUserMapping(projectId, submittedMapping).subscribe({
+    this.sdlcApi.saveUserMapping(projectId, submittedMapping)
+    .pipe(
+      catchError((error) => {
+        this.snackbar.open(`Error saving mapping: ${error.message}`, 'Close', {
+          duration: 3000,
+        });
+        return EMPTY;
+      }),
+      finalize(() => {
+        this.isPostingMapping.set(false);
+      })
+    )
+    .subscribe({
       next: (mapping) => {
         const currentMappings = this.userMappings();
 
@@ -105,16 +132,6 @@ export class SettingsSdlcUsersComponent {
         );
         this.userMappings.set(newMappings);
         this.currentlyEditedMapping.set(null);
-      },
-      error: (error) => {
-        const snackbar = inject(MatSnackBar);
-        snackbar.open(`Error saving mapping: ${error.message}`, 'Close', {
-          duration: 3000,
-        });
-        console.error('Error saving mapping:', error);
-      },
-      complete: () => {
-        this.isPostingMapping.set(false);
       },
     });
   }

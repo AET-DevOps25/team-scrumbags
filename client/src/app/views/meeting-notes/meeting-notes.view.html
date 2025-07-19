@@ -9,6 +9,16 @@
       <mat-icon>add</mat-icon>
     </button>
   </mat-toolbar>
+
+  @if (isLoading()) {
+  <div class="flex-1 flex items-center justify-center">
+    <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+  </div>
+  } @else if (prelookMetadata().length === 0) {
+  <span class="text-(--mat-sys-on-surface-variant)"
+    >No meeting notes uploaded yet.</span
+  >
+  } @else {
   <mat-action-list class="flex-1 min-h-0 overflow-y-auto">
     @for (note of prelookMetadata(); let i = $index; track note.id) {
     <mat-list-item (click)="openFile(note)" class="!rounded-full">
@@ -32,5 +42,5 @@
   >
     {{prelookCount() ? "View all" : "View less"}}
   </button>
-  }
+  } }
 </div>
