@@ -18,6 +18,7 @@ import com.trace.comms_connector.connection.ConnectionRepo;
 import com.trace.comms_connector.discord.DiscordRestClient;
 import com.trace.comms_connector.model.CommsMessage;
 import com.trace.comms_connector.model.CommsPlatformRestClient;
+import com.trace.comms_connector.model.GenAiMessage;
 import com.trace.comms_connector.user.UserCompositeKey;
 import com.trace.comms_connector.user.UserEntity;
 import com.trace.comms_connector.user.UserRepo;
@@ -205,28 +206,33 @@ public class CommsService {
         }
 
         // Convert to a list of JSON strings
-        List<String> jsonMessages = messageBatch.stream()
+        List<GenAiMessage> jsonMessages = messageBatch.stream()
             .map(msg -> {
                 UUID userId = getUserIdByProjectIdAndPlatformDetails(
                     projectId, platform, msg.getAuthor().getIdentifier());
-                return msg.getJsonString(userId, projectId);
+                return msg.getGenAiMessage(userId, projectId);
             })
             .toList();
 
-        String messageJsonArray = "";
+        String messageJsonList = "";
         
         // Convert to a single string of a JSON array
         ObjectMapper mapper = new ObjectMapper();
         try {
-            messageJsonArray = mapper.writeValueAsString(jsonMessages);
+            messageJsonList = mapper.writeValueAsString(jsonMessages);
         } catch (Exception e) {
             return "";
         }
 
         if (sendToGenAi) {
-            traceClient.sendMessageListToGenAi(messageJsonArray);
+            traceClient.sendMessageListToGenAi(messageJsonList);
         }
 
-        return messageJsonArray;
+        return messageJsonList;
+    }
+
+    // Get all users by project ID
+    public List<UserEntity> getAllUsersByProjectId(UUID projectId) {
+        return userRepo.findAllByProjectId(projectId);
     }
 }

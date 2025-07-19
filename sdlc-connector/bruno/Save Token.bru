@@ -5,13 +5,17 @@ meta {
 }
 
 post {
-  url: {{base_url}}/projects/c8bcfd02-1065-4532-a414-b48107968dcc/token?system=GITHUB
+  url: {{base_url}}/projects/:projectId/token?system=GITHUB
   body: json
   auth: inherit
 }
 
 params:query {
   system: GITHUB
+}
+
+params:path {
+  projectId: 73ed238c-fb5d-489a-b3a6-7947d779a33c
 }
 
 body:json {

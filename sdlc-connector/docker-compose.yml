@@ -8,20 +8,19 @@ services:
     depends_on:
       - db
     environment:
-      - DEBUG=${DEBUG}
-      - TOKEN_SECRET=${TOKEN_SECRET}
-      - MODE=${MODE}
-      - DB_URL=jdbc:postgresql://db:5432/${DB_NAME}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
+      - DEBUG=${DEBUG:-true}
+      - TOKEN_SECRET=${TOKEN_SECRET:-meinsecret}
+      - SPRING_PROFILES_ACTIVE=${MODE:-persist}
+      - DB_URL=jdbc:postgresql://db:5432/${DB_NAME:-sdlc-db}
+      - DB_USER=${DB_USER:-user}
+      - DB_PASSWORD=${DB_PASSWORD:-test}
 
   db:
     image: postgres:latest
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
-
+      POSTGRES_USER: ${DB_USER:-user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-test}
+      POSTGRES_DB: ${DB_NAME:-sdlc-db}
     ports:
       - "5432:5432"
 

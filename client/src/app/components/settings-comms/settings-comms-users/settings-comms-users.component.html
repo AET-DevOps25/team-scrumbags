@@ -1,0 +1,99 @@
+@if (isLoadingMappings()){
+<div class="flex flex-row items-center justify-center">
+  <mat-progress-spinner
+    diameter="24"
+    mode="indeterminate"
+  ></mat-progress-spinner>
+</div>
+} @else {
+<form class="grid grid-cols-[1fr_2fr_2fr] gap-x-2">
+  <!-- Header Row -->
+  @if (commsUsers().length !== 0) {
+  <span class="font-medium text-sm mb-2">Platform</span>
+  <span class="font-medium text-sm mb-2">Platform User Name</span>
+  <span class="font-medium text-sm mb-2">Trace Username</span>
+  }
+
+  <!-- Data Rows -->
+  @for (commsUser of commsUsers(); track commsUser; let i = $index) {
+  <mat-form-field appearance="outline" class="w-full">
+    <input
+      matInput
+      type="text"
+      [disabled]="true"
+      name="commsUserPlatform"
+      [value]="commsUser.platform"
+    />
+  </mat-form-field>
+  <mat-form-field appearance="outline" class="w-full">
+    <input
+      matInput
+      type="text"
+      [disabled]="true"
+      name="commsUserId"
+      [value]="commsUser.platformUserId"
+    />
+  </mat-form-field>
+  @if (i === currentlyEditedEntry()) {
+  <mat-form-field appearance="outline" class="w-full">
+    <input
+      matInput
+      type="text"
+      name="usernameInput"
+      placeholder="Enter username"
+      [ngModel]="getUsernameForInputField(commsUser)"
+      (ngModelChange)="currentUsernameInput.set($event)"
+    />
+    @if (isPostingUsername()){
+    <mat-progress-spinner
+      matSuffix
+      diameter="24"
+      mode="indeterminate"
+      color="primary"
+      class="mx-2"
+    ></mat-progress-spinner>
+    } @else {
+    <div matSuffix>
+      <button
+        mat-icon-button
+        type="button"
+        (click)="currentlyEditedEntry.set(null)"
+      >
+        <mat-icon>close</mat-icon>
+      </button>
+      <button
+        mat-icon-button
+        type="button"
+        [disabled]="
+          projectUsersUsernameMap().get(currentUsernameInput())?.id ===
+          commsUser.userId
+        "
+        (click)="onSubmitUsername()"
+      >
+        <mat-icon>check</mat-icon>
+      </button>
+    </div>
+    }
+  </mat-form-field>
+  } @else {
+  <mat-form-field appearance="outline" class="w-full">
+    <input
+      matInput
+      type="text"
+      placeholder="Enter username"
+      [disabled]="true"
+      [value]="getUsernameForInputField(commsUser)"
+    />
+    <button
+      mat-icon-button
+      matSuffix
+      type="button"
+      [disabled]="currentlyEditedEntry() === i"
+      (click)="currentlyEditedEntry.set(i)"
+    >
+      <mat-icon>edit</mat-icon>
+    </button>
+  </mat-form-field>
+  } }
+</form>
+}

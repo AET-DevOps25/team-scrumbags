@@ -1,4 +1,4 @@
-package com.trace.sdlc_connector.message;
+package com.trace.sdlc_connector.message.persist;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;

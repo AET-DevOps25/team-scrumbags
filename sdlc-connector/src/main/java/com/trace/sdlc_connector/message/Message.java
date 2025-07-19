@@ -1,5 +1,7 @@
 package com.trace.sdlc_connector.message;
 
+import com.trace.sdlc_connector.message.persist.MessageEntity;
+
 import java.util.Map;
 
 public class Message {

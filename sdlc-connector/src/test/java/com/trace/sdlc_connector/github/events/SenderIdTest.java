@@ -1,16 +1,12 @@
 package com.trace.sdlc_connector.github.events;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trace.sdlc_connector.SupportedSystem;
-import com.trace.sdlc_connector.message.MessageEntity;
+import com.trace.sdlc_connector.message.persist.MessageEntity;
 import com.trace.sdlc_connector.user.UserMapping;
 import com.trace.sdlc_connector.user.UserMappingRepo;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;

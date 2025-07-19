@@ -24,7 +24,11 @@
         }
       </div>
     </div>
-    } } @else if(!isLoading()) {
+    } } @else if(isLoading()) {
+    <div class="flex-1 flex items-center justify-center">
+      <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+    </div>
+    } @else {
     <div class="text-center text-(--mat-sys-on-surface-variant)">
       No messages yet.
     </div>
@@ -49,7 +53,6 @@
         matSuffix
         diameter="24"
         mode="indeterminate"
-        color="primary"
         class="mx-2"
       ></mat-progress-spinner>
       } @else {
