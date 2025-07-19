@@ -1,4 +1,11 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -12,10 +19,12 @@ import { User } from '../../../models/user.model';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { CommsUserRefreshService } from '../../../services/comms-user-refresh.service';
 import { catchError, EMPTY, finalize } from 'rxjs';
+import { MatGridListModule } from '@angular/material/grid-list';
 
 @Component({
   selector: 'app-settings-comms-users',
   imports: [
+    MatGridListModule,
     FormsModule,
     MatFormFieldModule,
     MatInputModule,
@@ -26,7 +35,7 @@ import { catchError, EMPTY, finalize } from 'rxjs';
   templateUrl: './settings-comms-users.component.html',
   styleUrl: './settings-comms-users.component.scss',
 })
-export class CommsSettingsUsers {
+export class CommsSettingsUsers implements OnInit {
   private projectService = inject(ProjectService);
   private commsApi = inject(CommsApi);
   private commsUserRefreshService = inject(CommsUserRefreshService);
@@ -65,7 +74,9 @@ export class CommsSettingsUsers {
         this.getCommsUserListFromApi(projectId);
       }
     });
+  }
 
+  ngOnInit(): void {
     this.commsUserRefreshService.onRefreshUsers.subscribe(() => {
       const projectId = this.projectService.selectedProject()?.id;
       if (projectId) {
