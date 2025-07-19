@@ -1,11 +1,11 @@
 meta {
-  name: Delete all comms integrations from project
+  name: Get all comms users in project
   type: http
-  seq: 6
+  seq: 3
 }
 
-delete {
-  url: {{baseUrl}}/projects/:projectId/comms
+get {
+  url: {{baseUrl}}/projects/:projectId/comms/users
   body: none
   auth: inherit
 }
