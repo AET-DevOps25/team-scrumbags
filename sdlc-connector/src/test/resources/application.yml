@@ -6,6 +6,8 @@ trace:
 spring:
   application:
     name: sdlc-connector
+  profiles:
+    active: persist
 
   datasource:
     url: jdbc:h2:mem:testdb;MODE=PostgreSQL;INIT=CREATE DOMAIN IF NOT EXISTS JSONB AS JSON;
