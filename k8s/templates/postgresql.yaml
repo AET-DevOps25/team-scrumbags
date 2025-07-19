@@ -17,7 +17,9 @@ metadata:
   name: postgresql
   namespace: {{ .Values.global.namespace }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.postgresql.replicas }}
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: postgresql
@@ -30,7 +32,7 @@ spec:
         - name: postgresql
           image: {{ .Values.postgresql.image }}
           ports:
-            - containerPort: {{ .Values.postgresql.port }}
+            - containerPort: 5432
           env:
             - name: POSTGRES_USER
               valueFrom:
@@ -42,11 +44,10 @@ spec:
                 secretKeyRef:
                   name: trace-secrets
                   key: POSTGRES_PASSWORD
-            - name: POSTGRES_PORT
-              value: "{{ .Values.postgresql.port }}"
           volumeMounts:
             - name: postgres-storage
               mountPath: /var/lib/postgresql/data
+              subPath: postgres
             - name: init-script
               mountPath: /docker-entrypoint-initdb.d
       volumes:
@@ -67,5 +68,5 @@ spec:
     app: postgresql
   ports:
     - port: {{ .Values.postgresql.port }}
-      targetPort: {{ .Values.postgresql.port }}
+      targetPort: 5432
 {{- end }}

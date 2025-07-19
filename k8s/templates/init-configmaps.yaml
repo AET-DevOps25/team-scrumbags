@@ -5,8 +5,8 @@ metadata:
   namespace: {{ .Values.global.namespace }}
 data:
   init-db.sql: |
-    CREATE DATABASE IF NOT EXISTS "project-db";
-    CREATE DATABASE IF NOT EXISTS "sdlc-db";
+    CREATE DATABASE "pm-db";
+    CREATE DATABASE "sdlc-db";
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -29,13 +29,66 @@ data:
     {
       "realm": "trace",
       "enabled": true,
+      "sslRequired": "external",
+      "registrationAllowed": true,
+      "loginWithEmailAllowed": true,
+      "duplicateEmailsAllowed": false,
+      "resetPasswordAllowed": true,
+      "editUsernameAllowed": false,
+      "bruteForceProtected": true,
+      "permanentLockout": false,
+      "maxFailureWaitSeconds": 900,
+      "minimumQuickLoginWaitSeconds": 60,
+      "waitIncrementSeconds": 60,
+      "quickLoginCheckMilliSeconds": 1000,
+      "maxDeltaTimeSeconds": 43200,
+      "failureFactor": 30,
       "clients": [
         {
           "clientId": "trace-api",
           "enabled": true,
           "publicClient": true,
+          "directAccessGrantsEnabled": true,
+          "serviceAccountsEnabled": false,
+          "standardFlowEnabled": true,
+          "implicitFlowEnabled": false,
+          "webOrigins": ["*"],
           "redirectUris": ["*"],
-          "webOrigins": ["*"]
+          "protocol": "openid-connect",
+          "attributes": {
+            "access.token.lifespan": "300",
+            "access.token.lifespan.for.implicit.flow": "900"
+          }
+        }
+      ],
+      "users": [
+        {
+          "username": "testuser",
+          "enabled": true,
+          "firstName": "Test",
+          "lastName": "User",
+          "email": "test@example.com",
+          "credentials": [
+            {
+              "type": "password",
+              "value": "password",
+              "temporary": false
+            }
+          ]
+        },
+        {
+          "username": "testuser2",
+          "enabled": true,
+          "firstName": "Test",
+          "lastName": "User2",
+          "email": "test2@example.com",
+          "credentials": [
+            {
+              "type": "password",
+              "value": "password",
+              "temporary": false
+            }
+          ]
         }
       ]
     }

@@ -17,7 +17,9 @@ metadata:
   name: mysql
   namespace: {{ .Values.global.namespace }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.mysql.replicas }}
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: mysql
@@ -29,14 +31,18 @@ spec:
       containers:
         - name: mysql
           image: {{ .Values.mysql.image }}
+          args:
+            - "--default-authentication-plugin=mysql_native_password"
           ports:
-            - containerPort: {{ .Values.mysql.port }}
+            - containerPort: 3306
           env:
             - name: MYSQL_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: trace-secrets
                   key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_ROOT_HOST
+              value: "%"
           volumeMounts:
             - name: mysql-storage
               mountPath: /var/lib/mysql
@@ -80,5 +86,7 @@ spec:
     app: mysql
   ports:
     - port: {{ .Values.mysql.port }}
-      targetPort: {{ .Values.mysql.port }}
+      targetPort: 3306
+      protocol: TCP
+      name: mysql
 {{- end }}

@@ -6,6 +6,8 @@ metadata:
   namespace: {{ .Values.global.namespace }}
 spec:
   replicas: {{ .Values.genai.replicas }}
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: genai
@@ -24,6 +26,11 @@ spec:
               value: "{{ .Values.genai.port }}"
             - name: DEBUG
               value: "true"
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: trace-secrets
+                  key: MYSQL_ROOT_PASSWORD
           envFrom:
             - configMapRef:
                 name: trace-config

@@ -214,9 +214,9 @@ class TestContentEndpoint:
         """Test posting content when RabbitMQ is not initialized"""
         with patch('app.main.rabbit_channel', None):
             response = await client.post("/content", json=[sample_content_entry.model_dump(mode="json")])
-            assert response.status_code == 500
+            assert response.status_code == 503
             data = response.json()
-            assert "RabbitMQ not initialized" in data["detail"]
+            assert "RabbitMQ not available. Please try again later." in data["detail"]
 
 
 class TestSummaryEndpoints:
