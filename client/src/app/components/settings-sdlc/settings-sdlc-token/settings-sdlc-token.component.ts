@@ -9,7 +9,7 @@ import { FormsModule } from '@angular/forms';
 import { SdlcApi } from '../../../services/sdlc.api';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { catchError, finalize } from 'rxjs/operators';
-import { EMPTY, pipe } from 'rxjs';
+import { EMPTY } from 'rxjs';
 
 @Component({
   selector: 'app-settings-sdlc-token',
