@@ -7,12 +7,7 @@ from typing import List
 
 import aio_pika
 from aio_pika import connect_robust, RobustChannel, RobustConnection
-from app import weaviate_client as wc
-from app.db import async_session, Summary, Message
-from app.db import init_db
-from app.langchain_provider import summarize_entries, answer_question
-from app.models import ContentEntry
-from app.queue_consumer import consume
+from aio_pika.abc import AbstractRobustConnection, AbstractRobustChannel
 from dotenv import load_dotenv
 from fastapi import FastAPI, Query, Body, HTTPException, Path
 from fastapi import status
@@ -20,6 +15,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import UUID4
 from sqlalchemy import select, update
+
+from app import weaviate_client as wc
+from app.db import async_session, Summary, Message
+from app.db import init_db
+from app.langchain_provider import summarize_entries, answer_question
+from app.models import ContentEntry
+from app.queue_consumer import consume
 
 load_dotenv()
 
@@ -32,26 +34,84 @@ rabbit_channel: RobustChannel | None = None
 executor = ThreadPoolExecutor()
 
 
+async def connect_to_rabbitmq_with_retry(max_retries: int = 10, delay: int = 5) \
+        -> tuple[AbstractRobustConnection, AbstractRobustChannel] | None:
+    """Connect to RabbitMQ with retry logic"""
+    for attempt in range(max_retries):
+        try:
+            print(f"Attempting to connect to RabbitMQ (attempt {attempt + 1}/{max_retries})")
+            connection = await connect_robust(RABBIT_URL)
+            channel = await connection.channel()
+            await channel.set_qos(prefetch_count=100)
+            print("Successfully connected to RabbitMQ")
+            return connection, channel
+        except Exception as e:
+            print(f"Failed to connect to RabbitMQ (attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                await asyncio.sleep(delay)
+            else:
+                raise
+    return None
+
+
+async def start_queue_consumer_with_retry():
+    """Start queue consumer with retry logic"""
+    max_retries = 5
+    delay = 10
+
+    for attempt in range(max_retries):
+        try:
+            print(f"Starting queue consumer (attempt {attempt + 1}/{max_retries})")
+            await consume()
+            break
+        except Exception as e:
+            print(f"Queue consumer failed (attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                await asyncio.sleep(delay)
+            else:
+                print("Queue consumer failed after all retries, continuing without it")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
     wc.init_collection()
-    task = asyncio.create_task(consume())
+
+    # Start queue consumer in background with retry logic
+    consumer_task = asyncio.create_task(start_queue_consumer_with_retry())
+
+    # Connect to RabbitMQ with retry logic
     global rabbit_connection, rabbit_channel
-    rabbit_connection = await connect_robust(RABBIT_URL)
-    rabbit_channel = await rabbit_connection.channel()
-    await rabbit_channel.set_qos(prefetch_count=100)
+    try:
+        rabbit_connection, rabbit_channel = await connect_to_rabbitmq_with_retry()
+    except Exception as e:
+        print(f"Failed to connect to RabbitMQ after all retries: {e}")
+        print("Application will start without RabbitMQ connection")
+        rabbit_connection = None
+        rabbit_channel = None
+
     yield
-    task.cancel()
+
+    # Cleanup
+    consumer_task.cancel()
+    try:
+        await consumer_task
+    except asyncio.CancelledError:
+        pass
+
+    if rabbit_connection:
+        await rabbit_connection.close()
+
     wc.client.close()
+
 
 app = FastAPI(
     title="Content Processing and Q&A API",
-    description="API for processing content entries, generating summaries, and answering questions about project data using AI",
+    description="API for processing content entries, generating summaries, "
+                "and answering questions about project data using AI",
     version="1.0.0",
     lifespan=lifespan
 )
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -61,14 +121,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.post(
     "/content",
     summary="Submit content entries for processing",
-    description="Publishes a list of content entries to the processing queue. Each entry must include projectId and timestamp metadata.",
+    description="Publishes a list of content entries to the processing queue. "
+                "Each entry must include projectId and timestamp metadata.",
     responses={
         200: {"description": "Content entries successfully queued for processing"},
         422: {"description": "Validation error - missing required fields"},
-        500: {"description": "Internal server error - RabbitMQ not available"}
+        500: {"description": "Internal server error - RabbitMQ not available"},
+        503: {"description": "Service temporarily unavailable - RabbitMQ not connected"}
     },
     tags=["Content Processing"]
 )
@@ -86,7 +149,10 @@ async def post_content(
         )
 ):
     if rabbit_channel is None:
-        raise HTTPException(status_code=500, detail="RabbitMQ not initialized")
+        raise HTTPException(
+            status_code=503,
+            detail="RabbitMQ not available. Please try again later."
+        )
 
     # Validate and publish in parallel
     async def publish(entry):
@@ -102,16 +168,41 @@ async def post_content(
             routing_key=QUEUE_NAME
         )
 
-    # Use gather with fail-fast to process all entries concurrently
-    await asyncio.gather(*(publish(e) for e in entries))
+    try:
+        # Use gather with fail-fast to process all entries concurrently
+        await asyncio.gather(*(publish(e) for e in entries))
+        return {"status": f"Published {len(entries)} message(s) to queue."}
+    except Exception as e:
+        if "connection" in str(e).lower() or "channel" in str(e).lower():
+            raise HTTPException(
+                status_code=503,
+                detail="RabbitMQ connection lost. Please try again later."
+            )
+        raise
 
-    return {"status": f"Published {len(entries)} message(s) to queue."}
+
+# Health check endpoint
+@app.get("/health", summary="Health Check",
+         description="Checks the health of the API, RabbitMQ connection, and Weaviate client.",
+         responses={
+             200: {"description": "API is healthy"},
+             503: {"description": "Service unavailable - RabbitMQ or Weaviate not connected"}
+         },
+         tags=["Health Check"])
+async def health_check():
+    return {
+        "status": "healthy",
+        "rabbitmq_connected": rabbit_connection is not None and not rabbit_connection.is_closed,
+        "weaviate_connected": not wc.client.is_closed() if hasattr(wc.client, 'is_closed') else True
+    }
 
 
 @app.post(
     "/projects/{projectId}/summary",
     summary="Generate or retrieve project summary",
-    description="Generates an AI summary of content entries for a project within a specified time range. If a summary already exists for the same parameters, it returns the cached version. Otherwise, generates a new summary asynchronously.",
+    description="Generates an AI summary of content entries for a project within a specified time range. "
+                "If a summary already exists for the same parameters, it returns the cached version. "
+                "Otherwise, generates a new summary asynchronously.",
     responses={
         200: {"description": "Summary generated or retrieved successfully"},
         422: {"description": "Invalid time range or parameters"},
@@ -125,7 +216,7 @@ async def generate_summary(
         startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp. Use -1 for no start limit",
                                examples=[1640995200]),
         endTime: int = Query(-1, ge=-1, description="End UNIX timestamp. Use -1 for no end limit",
-                            examples=[1641081600]),
+                             examples=[1641081600]),
         userIds: List[UUID4] = Query([],
                                      description="Optional list of user UUIDs to focus the summary on specific users",
                                      examples=[["456e7890-e12f-34a5-b678-526614174111"]])
@@ -184,7 +275,8 @@ async def generate_summary(
         await session.commit()
         await session.refresh(placeholder)
 
-        asyncio.create_task(_background_summary_task(placeholder.id, str(projectId), startTime, endTime, input_user_ids))
+        asyncio.create_task(
+            _background_summary_task(placeholder.id, str(projectId), startTime, endTime, input_user_ids))
 
     return JSONResponse(
         status_code=202 if placeholder.loading else 200,
@@ -204,7 +296,8 @@ async def generate_summary(
 @app.put(
     "/projects/{projectId}/summary",
     summary="Regenerate project summary",
-    description="Forces regeneration of a project summary by deleting any existing summary for the specified parameters and creating a new one. The summary generation happens asynchronously.",
+    description="Forces regeneration of a project summary by deleting any existing summary"
+                " for the specified parameters and creating a new one. The summary generation happens asynchronously.",
     status_code=status.HTTP_201_CREATED,
     responses={
         201: {"description": "Summary regeneration initiated successfully"},
@@ -219,7 +312,7 @@ async def refresh_summary(
         startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp. Use -1 for no start limit",
                                examples=[1640995200]),
         endTime: int = Query(-1, ge=-1, description="End UNIX timestamp. Use -1 for no end limit",
-                            examples=[1641081600]),
+                             examples=[1641081600]),
         userIds: List[UUID4] = Query([],
                                      description="Optional list of user UUIDs to focus the summary on specific users",
                                      examples=[["456e7890-e12f-34a5-b678-526614174111"]])
@@ -265,7 +358,8 @@ async def refresh_summary(
         await session.commit()
         await session.refresh(placeholder)
 
-        asyncio.create_task(_background_summary_task(placeholder.id, str(projectId), startTime, endTime, input_user_ids))
+        asyncio.create_task(
+            _background_summary_task(placeholder.id, str(projectId), startTime, endTime, input_user_ids))
 
     return {
         "id": placeholder.id,
@@ -278,10 +372,12 @@ async def refresh_summary(
         "summary": placeholder.summary,
     }
 
+
 @app.get(
     "/projects/{projectId}/summary",
     summary="Get all summaries for a project",
-    description="Retrieves all existing summaries for a specific project, including their generation status and metadata.",
+    description="Retrieves all existing summaries for a specific project, "
+                "including their generation status and metadata.",
     responses={
         200: {"description": "List of summaries retrieved successfully"},
         404: {"description": "Project not found or no summaries exist"},
@@ -317,7 +413,8 @@ async def get_summaries(
 @app.get(
     "/projects/{projectId}/summary/{summaryId}",
     summary="Get summary by ID",
-    description="Retrieves a specific summary by its ID for a given project. Returns the summary content and metadata.",
+    description="Retrieves a specific summary by its ID for a given project. "
+                "Returns the summary content and metadata.",
     responses={
         200: {"description": "Summary retrieved successfully"},
         404: {"description": "Summary not found for the specified project"},
@@ -362,7 +459,8 @@ async def get_summary_by_id(
 @app.post(
     "/projects/{projectId}/messages",
     summary="Ask a question about project content",
-    description="Submits a question about project content and generates an AI-powered answer based on the project's processed content. The answer generation happens asynchronously.",
+    description="Submits a question about project content and generates an AI-powered answer "
+                "based on the project's processed content. The answer generation happens asynchronously.",
     responses={
         200: {"description": "Question submitted successfully, answer generation in progress"},
         422: {"description": "Invalid question format or empty question"},
@@ -376,7 +474,7 @@ async def query_project(
         userId: UUID4 = Query(..., description="User UUID who is asking the question (must be UUID4)",
                               examples=["456e7890-e12f-34a5-b678-526614174111"]),
         question: str = Body(..., description="Question to ask about the project content",
-                            examples=["What is the main focus of this project?"])
+                             examples=["What is the main focus of this project?"])
 ):
     if not question or len(question.strip()) == 0:
         raise HTTPException(
@@ -439,7 +537,8 @@ async def query_project(
 @app.get(
     "/projects/{projectId}/messages",
     summary="Get chat history for a user",
-    description="Retrieves the complete question and answer history for a specific user within a project, ordered by timestamp.",
+    description="Retrieves the complete question and answer history for a "
+                "specific user within a project, ordered by timestamp.",
     responses={
         200: {"description": "Chat history retrieved successfully"},
         404: {"description": "No messages found for this user/project combination"},
@@ -472,10 +571,12 @@ async def get_chat_history(
         for entry in history
     ]
 
+
 @app.get(
     "/projects/{projectId}/messages/{messageId}",
     summary="Get chat history for a user",
-    description="Retrieves the message by ID for a specific user within a project. Returns the message content and metadata.",
+    description="Retrieves the message by ID for a specific user within a project. "
+                "Returns the message content and metadata.",
     responses={
         200: {"description": "Message retrieved successfully"},
         404: {"description": "No messages found for this user/project/messageId combination"},
@@ -505,7 +606,7 @@ async def get_message_by_id(
 
     return JSONResponse(
         status_code=202 if message.loading else 200,
-        content= {
+        content={
             "id": message.id,
             "userId": message.userId,
             "isGenerated": message.isGenerated,

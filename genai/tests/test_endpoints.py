@@ -1,18 +1,17 @@
 import os
+import time
+from typing import AsyncGenerator
+from unittest.mock import patch, AsyncMock
+from uuid import uuid4
+
 import pytest
 import pytest_asyncio
-from typing import AsyncGenerator
-from unittest.mock import patch, AsyncMock, MagicMock
-from uuid import uuid4
-import json
-import time
-
 from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
-from app.main import app
 from app.db import Base, async_session, Summary, Message
+from app.main import app
 from app.models import ContentEntry, Metadata
 
 # Use MySQL for testing - matches CI environment
@@ -214,9 +213,9 @@ class TestContentEndpoint:
         """Test posting content when RabbitMQ is not initialized"""
         with patch('app.main.rabbit_channel', None):
             response = await client.post("/content", json=[sample_content_entry.model_dump(mode="json")])
-            assert response.status_code == 500
+            assert response.status_code == 503
             data = response.json()
-            assert "RabbitMQ not initialized" in data["detail"]
+            assert "RabbitMQ not available. Please try again later." in data["detail"]
 
 
 class TestSummaryEndpoints:
@@ -669,7 +668,6 @@ class TestErrorHandling:
             headers={"Content-Type": "application/x-www-form-urlencoded"}
         )
         assert response.status_code == 422
-
 
     @pytest.mark.asyncio(loop_scope="session")
     async def test_concurrent_summary_requests(self, client: AsyncClient):
