@@ -36,6 +36,8 @@ spec:
             - secretRef:
                 name: trace-secrets
           env:
+            - name: SERVER_PORT
+              value: "{{ .Values.projectManagement.port }}"
             - name: SPRING_DATASOURCE_URL
               valueFrom:
                 configMapKeyRef:

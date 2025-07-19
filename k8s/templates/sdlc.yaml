@@ -60,7 +60,7 @@ spec:
                 configMapKeyRef:
                   name: trace-config
                   key: TRACE_PROJECT_MANAGEMENT_BASE_URL
-            - name: MODE
+            - name: SPRING_PROFILES_ACTIVE
               valueFrom:
                 configMapKeyRef:
                   name: trace-config
@@ -71,7 +71,7 @@ spec:
                   name: trace-secrets
                   key: SDLC_TOKEN_SECRET
             - name: KEYCLOAK_AUTH_URL
-              value: "https://{{ .Values.ingress.host }}/auth"
+              value: "https://keycloak.{{ .Values.ingress.host }}"
             - name: KEYCLOAK_REALM
               value: "{{ .Values.environment.keycloakRealm }}"
             - name: GENAI_URL

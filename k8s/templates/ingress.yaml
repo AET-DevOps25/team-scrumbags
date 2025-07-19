@@ -38,10 +38,8 @@ spec:
                 port:
                   number: {{ .Values.client.port }}
 
-
-
           # API services (strip prefix)
-          - path: /api/project(/|$)(.*)
+          - path: /projects(/|$)(.*)
             pathType: ImplementationSpecific
             backend:
               service:

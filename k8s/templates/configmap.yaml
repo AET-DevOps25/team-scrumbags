@@ -9,7 +9,7 @@ data:
   KEYCLOAK_REALM: {{ .Values.environment.keycloakRealm }}
   KEYCLOAK_CLIENT_ID: {{ .Values.environment.keycloakClient }}
   KEYCLOAK_AUTH_URL: "https://keycloak.{{ .Values.ingress.host }}"
-  KEYCLOAK_URL: "https://keycloak.{{ .Values.ingress.host }}" #todo: use in client
+  KEYCLOAK_URL: "https://keycloak.{{ .Values.ingress.host }}"
   RABBITMQ_HOST: "rabbitmq-service"
   RABBITMQ_URL: "amqp://guest:guest@rabbitmq-service/"
 
