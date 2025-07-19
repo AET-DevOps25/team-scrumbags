@@ -1,15 +1,17 @@
-<h1 class="mb-8 text-3xl font-bold">Settings of {{project()?.name}}</h1>
-<div class="flex flex-col gap-4">
-  <app-settings-project-users
-    class="p-4 outline !outline-(--mat-sys-outline-variant) rounded !shadow-(--mat-sys-level2)"
-  ></app-settings-project-users>
-  <app-settings-sdlc
-    class="p-4 outline !outline-(--mat-sys-outline-variant) rounded !shadow-(--mat-sys-level2)"
-  ></app-settings-sdlc>
-  <app-settings-transcription
-    class="p-4 outline !outline-(--mat-sys-outline-variant) rounded !shadow-(--mat-sys-level2)"
-  ></app-settings-transcription>
-  <app-settings-comms
-    class="p-4 outline !outline-(--mat-sys-outline-variant) rounded !shadow-(--mat-sys-level2)"
-  ></app-settings-comms>
+<div class="h-full flex flex-col">
+  <h1 class="mb-8 text-3xl font-bold">Settings of {{project()?.name}}</h1>
+  <div class="flex-1 flex flex-col gap-4 p-1 overflow-y-auto">
+    <app-settings-project-users
+      class="p-4 outline !outline-(--mat-sys-outline-variant) rounded !shadow-(--mat-sys-level2)"
+    ></app-settings-project-users>
+    <app-settings-sdlc
+      class="p-4 outline !outline-(--mat-sys-outline-variant) rounded !shadow-(--mat-sys-level2)"
+    ></app-settings-sdlc>
+    <app-settings-transcription
+      class="p-4 outline !outline-(--mat-sys-outline-variant) rounded !shadow-(--mat-sys-level2)"
+    ></app-settings-transcription>
+    <app-settings-comms
+      class="p-4 outline !outline-(--mat-sys-outline-variant) rounded !shadow-(--mat-sys-level2)"
+    ></app-settings-comms>
+  </div>
 </div>
