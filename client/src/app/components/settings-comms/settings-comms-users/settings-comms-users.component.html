@@ -8,9 +8,11 @@
 } @else {
 <form class="grid grid-cols-[1fr_2fr_2fr] gap-x-2">
   <!-- Header Row -->
-  <span class="font-semibold text-sm mb-2">Platform</span>
-  <span class="font-semibold text-sm mb-2">Platform User Name</span>
-  <span class="font-semibold text-sm mb-2">Trace Username</span>
+  @if (commsUsers().length !== 0) {
+  <span class="font-medium text-sm mb-2">Platform</span>
+  <span class="font-medium text-sm mb-2">Platform User Name</span>
+  <span class="font-medium text-sm mb-2">Trace Username</span>
+  }
 
   <!-- Data Rows -->
   @for (commsUser of commsUsers(); track commsUser; let i = $index) {
