@@ -100,7 +100,7 @@ export class CommsSettingsUsers {
     this.isPostingUsername.set(true);
 
     this.commsApi.saveUserMapping(projectId, userMapping).subscribe({
-      next: (mapping) => {
+      next: () => {
         const tmpCommsUsers = this.commsUsers();
         tmpCommsUsers[submittedIndex].userId = submittedUserId;
         this.commsUsers.set(tmpCommsUsers);

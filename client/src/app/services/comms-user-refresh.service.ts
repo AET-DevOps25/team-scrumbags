@@ -6,6 +6,4 @@ import { Subject } from 'rxjs';
 })
 export class CommsUserRefreshService {
   onRefreshUsers = new Subject();
-
-  constructor() {}
 }
