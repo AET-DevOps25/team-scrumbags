@@ -49,8 +49,35 @@ jobs:
           host: ${{ vars.PUBLIC_IP }}
           username: ${{ vars.VM_USER }}
           key: ${{ secrets.VM_PRIVATE_KEY }}
-          source: "./project-management/keycloak/trace-realm.json"
+          source: "./project-management/keycloak/"
           target: /home/${{ vars.VM_USER }}/keycloak
+      
+      - name: Copy Prometheus Config From Repo to VM Host
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ vars.PUBLIC_IP }}
+          username: ${{ vars.VM_USER }}
+          key: ${{ secrets.VM_PRIVATE_KEY }}
+          source: "./prometheus/"
+          target: /home/${{ vars.VM_USER }}/prometheus
+
+      - name: Copy Grafana Config From Repo to VM Host
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ vars.PUBLIC_IP }}
+          username: ${{ vars.VM_USER }}
+          key: ${{ secrets.VM_PRIVATE_KEY }}
+          source: "./grafana/"
+          target: /home/${{ vars.VM_USER }}/grafana
+
+      - name: Copy AlertManager Config From Repo to VM Host
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ vars.PUBLIC_IP }}
+          username: ${{ vars.VM_USER }}
+          key: ${{ secrets.VM_PRIVATE_KEY }}
+          source: "./alertmanager/"
+          target: /home/${{ vars.VM_USER }}/alertmanager
 
       - name: SSH to VM and Create .env.prod
         uses: appleboy/ssh-action@v1.0.3
@@ -64,6 +91,10 @@ jobs:
             touch .env
             echo "DOMAIN=${{ vars.PUBLIC_IP }}.nip.io" >> .env
             echo "DEBUG=${{ vars.DEBUG || false }}" >> .env
+
+            echo "TRAEFIK_USER=${{ secrets.TRAEFIK_USER }}" >> .env
+            echo "TRAEFIK_PASSWORD=${{ secrets.TRAEFIK_PASSWORD}}" >> .env
+            echo "TRAEFIK_PASSWORD_HASH=${{ secrets.TRAEFIK_PASSWORD_HASH}}" >> .env
 
             echo "KEYCLOAK_ADMIN_USERNAME=${{ secrets.KEYCLOAK_ADMIN_USERNAME }}" >> .env
             echo "KEYCLOAK_ADMIN_PASSWORD=${{ secrets.KEYCLOAK_ADMIN_PASSWORD}}" >> .env
@@ -99,6 +130,11 @@ jobs:
             echo "GENAI_OPEN_WEBUI_BEARER=${{ secrets.GENAI_OPEN_WEBUI_BEARER }}" >> .env
             echo "GENAI_RABBITMQ_USER=${{ secrets.GENAI_RABBITMQ_USER }}" >> .env
             echo "GENAI_RABBITMQ_PASSWORD=${{ secrets.GENAI_RABBITMQ_PASSWORD }}" >> .env
+         
+            echo "GRAFANA_ADMIN_USER=${{ secrets.GRAFANA_ADMIN_USER }}" >> .env
+            echo "GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}" >> .env
+         
+            echo "DISCORD_ALERTMANAGER_WEBHOOK_URL=${{ secrets.DISCORD_ALERTMANAGER_WEBHOOK_URL }}" >> .env
          
       - name: SSH to VM and Execute Docker-Compose Up
         uses: appleboy/ssh-action@v1.0.3

@@ -12,13 +12,26 @@ services:
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
       - "--certificatesresolvers.letsencrypt.acme.email=test@test.de"
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--api.dashboard=true"
+      - "--api.insecure=false"
+      # - "--log.level=DEBUG"
     restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
+      - "7998:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./letsencrypt:/letsencrypt
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.dashboard.middlewares=dashboard-auth"
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_USER}:${TRAEFIK_PASSWORD_HASH}"
+      # use `htpasswd -nb user test` to generate the user:password hash + replace all $ with $$
 
   client:
     image: ghcr.io/aet-devops25/team-scrumbags/client:${CLIENT_IMAGE_TAG:-main}
@@ -31,7 +44,7 @@ services:
       - MEETING_NOTES_URL=https://${DOMAIN}/api/transcription
       - COMMUNICATION_URL=https://${DOMAIN}/api/communication
       - GEN_AI_URL=https://${DOMAIN}/api/genai
-      - KEYCLOAK_URL=https://${DOMAIN}/keycloak
+      - KEYCLOAK_URL=https://auth.${DOMAIN}
       - KEYCLOAK_REALM=trace
       - KEYCLOAK_CLIENT=trace-api
     labels:
@@ -55,7 +68,7 @@ services:
       - DB_USER=${PROJECT_DB_USER}
       - DB_PASSWORD=${PROJECT_DB_PASSWORD}
       - KEYCLOAK_REALM=trace
-      - KEYCLOAK_AUTH_URL=https://${DOMAIN}/keycloak
+      - KEYCLOAK_AUTH_URL=https://auth.${DOMAIN}
       - KEYCLOAK_ADMIN_USERNAME=${KEYCLOAK_ADMIN_USERNAME}
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
     restart: unless-stopped
@@ -92,7 +105,7 @@ services:
       - DB_USER=${SDLC_DB_USER}
       - DB_PASSWORD=${SDLC_DB_PASSWORD}
       - KEYCLOAK_REALM=trace
-      - KEYCLOAK_AUTH_URL=https://${DOMAIN}/keycloak
+      - KEYCLOAK_AUTH_URL=https://auth.${DOMAIN}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.sdlc.rule=Host(`${DOMAIN}`) && PathPrefix(`/api/sdlc`)"
@@ -101,7 +114,7 @@ services:
       - "traefik.http.routers.sdlc.tls.certresolver=letsencrypt"
       - "traefik.http.middlewares.strip-sdlc.stripprefix.prefixes=/api/sdlc"
       - "traefik.http.routers.sdlc.middlewares=strip-sdlc"
-  
+
   sdlc-db:
     image: postgres:17
     environment:
@@ -110,13 +123,13 @@ services:
       POSTGRES_DB: sdlc-db
     volumes:
       - sdlc_db_data:/var/lib/postgresql/data
-  
+
   communication:
     image: ghcr.io/aet-devops25/team-scrumbags/comms-connector:${COMM_IMAGE_TAG:-main}
     ports:
       - "8082:8080"
     depends_on:
-      comms-db: 
+      comms-db:
         condition: service_healthy
     environment:
       - DEBUG=${DEBUG:-false}
@@ -147,7 +160,7 @@ services:
     volumes:
       - comms_db_data:/var/lib/mysql/
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 3s
       retries: 10
       timeout: 5s
@@ -188,7 +201,7 @@ services:
     volumes:
       - transcription_db_data:/var/lib/mysql/
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 3s
       retries: 10
       timeout: 5s
@@ -223,11 +236,11 @@ services:
     volumes:
       - genai_db_data:/var/lib/mysql/
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 3s
       retries: 10
       timeout: 5s
-  
+
   rabbitmq:
     image: rabbitmq:management
     ports:
@@ -246,7 +259,7 @@ services:
       - --host
       - 0.0.0.0
       - --port
-      - '6969'
+      - "6969"
       - --scheme
       - http
     image: cr.weaviate.io/semitechnologies/weaviate:1.31.2
@@ -258,10 +271,10 @@ services:
     restart: on-failure:0
     environment:
       QUERY_DEFAULTS_LIMIT: 25
-      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
-      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
-      ENABLE_API_BASED_MODULES: 'true'
-      CLUSTER_HOSTNAME: 'node1'
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+      PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
+      ENABLE_API_BASED_MODULES: "true"
+      CLUSTER_HOSTNAME: "node1"
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.2.5
@@ -271,20 +284,88 @@ services:
     ports:
       - "7999:8080"
     environment:
-      KC_HOSTNAME: ${DOMAIN}
+      KC_HOSTNAME: auth.${DOMAIN}
       KC_HTTP_ENABLED: true
       KC_PROXY_HEADERS: xforwarded
-      KC_HTTP_RELATIVE_PATH: /keycloak
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
     volumes:
       - ./keycloak/:/opt/keycloak/data/import/
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.keycloak.rule=Host(`${DOMAIN}`) && PathPrefix(`/keycloak`)"
+      - "traefik.http.routers.keycloak.rule=Host(`auth.${DOMAIN}`)"
       - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
       - "traefik.http.routers.keycloak.entrypoints=websecure"
       - "traefik.http.routers.keycloak.tls.certresolver=letsencrypt"
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+      - "--web.enable-lifecycle"
+    ports:
+      - "9090:9090"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.${DOMAIN}`)"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+      - "traefik.http.routers.prometheus.entrypoints=websecure"
+      - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
+
+  node-exporter:
+    image: prom/node-exporter:v1.9.1
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($|/)"
+    ports:
+      - "9100:9100"
+
+  grafana:
+    image: grafana/grafana:12.0.2
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.${DOMAIN}`)"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    environment:
+      - DISCORD_ALERTMANAGER_WEBHOOK_URL=${DISCORD_ALERTMANAGER_WEBHOOK_URL}
+    volumes:
+      - ./alertmanager/config.yml:/etc/alertmanager/config.yml:ro
+      - ./alertmanager/entrypoint.sh:/etc/alertmanager/entrypoint.sh:ro
+    entrypoint: ["/bin/sh", "/etc/alertmanager/entrypoint.sh"]
+    ports:
+      - "9093:9093"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.alertmanager.rule=Host(`alertmanager.${DOMAIN}`)"
+      - "traefik.http.services.alertmanager.loadbalancer.server.port=9093"
+      - "traefik.http.routers.alertmanager.entrypoints=websecure"
+      - "traefik.http.routers.alertmanager.tls.certresolver=letsencrypt"
 
 volumes:
   project_db_data:
@@ -297,3 +378,5 @@ volumes:
     driver: local
   rabbitmq-log:
     driver: local
+  prometheus_data:
+  grafana_data:
