@@ -5,10 +5,10 @@ metadata:
   namespace: {{ .Values.global.namespace }}
 spec:
   acme:
-    server: https://acme-v02.api.letsencrypt.org/directory
     email: ge58ler@mytum.de
+    server: https://acme-v02.api.letsencrypt.org/directory
     privateKeySecretRef:
-      name: letsencrypt-prod-private-key
+      name: letsencrypt-prod-key-private
     solvers:
       - http01:
           ingress:

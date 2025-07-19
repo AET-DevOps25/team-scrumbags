@@ -1,0 +1,61 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: trace-monitoring-ingress
+  namespace: {{ .Values.global.namespace }}
+  annotations:
+    cert-manager.io/issuer: letsencrypt-prod
+ #   nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    #nginx.ingress.kubernetes.io/proxy-set-headers: "{{ .Values.global.namespace }}/proxy-headers"
+spec:
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host }}
+        - {{ .Values.ingress.keycloakHost }}
+        - tttt.{{ .Values.ingress.host}}
+      secretName: trace-tls-secret
+  rules:
+    - host: {{.Values.ingress.keycloakHost }}
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: keycloak-service
+                port:
+                  number: {{ .Values.keycloak.port }}
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: client-service
+                port:
+                  number: {{ .Values.client.port }}
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          - path: /grafana
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-service
+                port:
+                  number: {{ .Values.grafana.port }}
+          - path: /prometheus
+            pathType: Prefix
+            backend:
+              service:
+                name: prometheus-service
+                port:
+                  number: {{ .Values.prometheus.port }}
+          - path: /alertmanager
+            pathType: Prefix
+            backend:
+              service:
+                name: alertmanager-service
+                port:
+                  number: {{ .Values.alertmanager.port }}

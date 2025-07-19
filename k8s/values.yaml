@@ -27,7 +27,8 @@ secrets: {}
 # Ingress configuration
 ingress:
   enabled: true
-  host: trace.student.k8s.aet.cit.tum.de
+  host: t.student.k8s.aet.cit.tum.de
+  keycloakHost: tkc.trace.student.k8s.aet.cit.tum.de
 
 # Service configurations
 client:

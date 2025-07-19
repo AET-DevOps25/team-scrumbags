@@ -1,4 +1,4 @@
-name: CD (Deploy to Kubernetes)
+name: CD (Deploy to Kubernetes via Helm)
 
 on:
   push:
@@ -9,7 +9,7 @@ jobs:
   deploy-helm:
     name: Kubernetes Deployment with Helm
     runs-on: ubuntu-latest
-    environment: prod-vm #change to kubernetes once prod-vm is rebased to kubernetes
+    environment: kubernetes
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

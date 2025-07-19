@@ -71,7 +71,7 @@ spec:
                   name: trace-secrets
                   key: SDLC_TOKEN_SECRET
             - name: KEYCLOAK_AUTH_URL
-              value: "https://keycloak.{{ .Values.ingress.host }}"
+              value: "https://{{ .Values.ingress.keycloakHost }}"
             - name: KEYCLOAK_REALM
               value: "{{ .Values.environment.keycloakRealm }}"
             - name: GENAI_URL
