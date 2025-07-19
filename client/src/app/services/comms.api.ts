@@ -45,4 +45,12 @@ export class CommsApi {
       )
       .pipe(catchError(handleError('Error adding communication connection')));
   }
+
+  deleteAllCommsConnections(projectId: string): Observable<void> {
+    return this.http
+      .delete<void>(
+        `${environment.communicationUrl}/projects/${projectId}/comms`
+      )
+      .pipe(catchError(handleError('Error adding communication connection')));
+  }
 }

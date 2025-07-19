@@ -10,6 +10,7 @@ import { ProjectService } from '../../../services/project.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { SupportedCommsPlatforms } from '../../../enums/supported-comms-platforms.enum';
 import { MatSelectModule } from '@angular/material/select';
+import { CommsUserRefreshService } from '../../../services/comms-user-refresh.service';
 
 @Component({
   selector: 'app-settings-comms-server-id',
@@ -28,6 +29,7 @@ import { MatSelectModule } from '@angular/material/select';
 export class CommsSettingsServerId {
   private projectService = inject(ProjectService);
   private commsApi = inject(CommsApi);
+    private commsUserRefreshService = inject(CommsUserRefreshService);
 
   showServerId = signal(false);
   serverIdInput = signal('');
@@ -75,12 +77,13 @@ export class CommsSettingsServerId {
       },
       error: (error) => {
         const snackbar = inject(MatSnackBar);
-        snackbar.open(`Error saving token: ${error.message}`, 'Close', {
+        snackbar.open(`Error saving server ID: ${error.message}`, 'Close', {
           duration: 3000,
         });
-        console.error('Error saving token:', error);
+        console.error('Error saving server ID:', error);
       },
       complete: () => {
+        this.commsUserRefreshService.onRefreshUsers.next('');
         this.isLoading.set(false);
       },
     });

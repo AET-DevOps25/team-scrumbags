@@ -10,7 +10,7 @@ import { ProjectService } from '../../../services/project.service';
 import { CommsUserMapping } from '../../../models/comms-users.model';
 import { User } from '../../../models/user.model';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { SupportedCommsPlatforms } from '../../../enums/supported-comms-platforms.enum';
+import { CommsUserRefreshService } from '../../../services/comms-user-refresh.service';
 
 @Component({
   selector: 'app-settings-comms-users',
@@ -28,6 +28,7 @@ import { SupportedCommsPlatforms } from '../../../enums/supported-comms-platform
 export class CommsSettingsUsers {
   private projectService = inject(ProjectService);
   private commsApi = inject(CommsApi);
+    private commsUserRefreshService = inject(CommsUserRefreshService);
 
   projectUsersUsernameMap = computed<Map<string, User>>(() => {
     const users = this.projectService.selectedProject()?.users ?? [];
@@ -56,24 +57,26 @@ export class CommsSettingsUsers {
   isPostingUsername = signal(false);
 
   constructor() {
-    this.getCommsUserListFromApi();
+    effect(() => { this.getCommsUserListFromApi(); });
+
+    this.commsUserRefreshService.onRefreshUsers.subscribe(() => {
+      this.getCommsUserListFromApi();
+    });
   }
 
   getCommsUserListFromApi() {
-    effect(() => {
-      const projectId = this.projectService.selectedProject()?.id;
-      if (projectId) {
-        this.isLoadingMappings.set(true);
-        this.commsApi.getAllCommsUsers(projectId).subscribe({
-          next: (mappings) => {
-            this.commsUsers.set(mappings);
-          },
-          complete: () => {
-            this.isLoadingMappings.set(false);
-          },
-        });
-      }
-    });
+    const projectId = this.projectService.selectedProject()?.id;
+    if (projectId) {
+      this.isLoadingMappings.set(true);
+      this.commsApi.getAllCommsUsers(projectId).subscribe({
+        next: (mappings) => {
+          this.commsUsers.set(mappings);
+        },
+        complete: () => {
+          this.isLoadingMappings.set(false);
+        },
+      });
+    }
   }
 
   onSubmitUsername() {
@@ -106,10 +109,10 @@ export class CommsSettingsUsers {
       },
       error: (error) => {
         const snackbar = inject(MatSnackBar);
-        snackbar.open(`Error saving mapping: ${error.message}`, 'Close', {
+        snackbar.open(`Error saving username: ${error.message}`, 'Close', {
           duration: 3000,
         });
-        console.error('Error saving mapping:', error);
+        console.error('Error saving username:', error);
       },
       complete: () => {
         this.isPostingUsername.set(false);
