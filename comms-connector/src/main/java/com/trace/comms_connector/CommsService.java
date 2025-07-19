@@ -206,7 +206,7 @@ public class CommsService {
         }
 
         // Convert to a list of JSON strings
-        List<GenAiMessage> jsonMessages = messageBatch.stream()
+        List<GenAiMessage> genAiMessages = messageBatch.stream()
             .map(msg -> {
                 UUID userId = getUserIdByProjectIdAndPlatformDetails(
                     projectId, platform, msg.getAuthor().getIdentifier());
@@ -219,7 +219,7 @@ public class CommsService {
         // Convert to a single string of a JSON array
         ObjectMapper mapper = new ObjectMapper();
         try {
-            messageJsonList = mapper.writeValueAsString(jsonMessages);
+            messageJsonList = mapper.writeValueAsString(genAiMessages);
         } catch (Exception e) {
             return "";
         }

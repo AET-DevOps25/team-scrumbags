@@ -10,7 +10,7 @@ import lombok.*;
 @Entity
 @Table(name = "Connections")
 @IdClass(ConnectionCompositeKey.class)
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @EqualsAndHashCode
 public class ConnectionEntity {
     @Id
     private UUID projectId;

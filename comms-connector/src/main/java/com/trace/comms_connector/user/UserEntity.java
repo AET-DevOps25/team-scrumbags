@@ -10,7 +10,7 @@ import lombok.*;
 @Entity
 @Table(name = "Users")
 @IdClass(UserCompositeKey.class)
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @EqualsAndHashCode
 public class UserEntity {
     @Id
     private UUID projectId;
