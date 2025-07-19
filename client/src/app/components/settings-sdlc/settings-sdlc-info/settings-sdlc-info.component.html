@@ -1,0 +1,72 @@
+<div mat-dialog-title class="h-auto !w-full !pb-0">
+  <div class="flex flex-row justify-between">
+    <h2 class="text-xl font-semibold">Version Control Setting Guide</h2>
+    <button mat-icon-button (click)="onCancel()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+</div>
+
+<div mat-dialog-content>
+  <mat-stepper #stepper labelPosition="bottom">
+    <mat-step completed="false">
+      <img
+        src="assets/sdlc-secret.gif"
+        alt="Secret Input GIF"
+        class="mx-auto w-auto mb-2"
+      />
+      <p class="text-base">
+        Add a secure secret for the webhook to be configured in the next step.
+        This can be any string, but it is recommended to use a strong, random
+        value.
+      </p>
+    </mat-step>
+    <mat-step completed="false">
+      <img
+        src="assets/sdlc-webhook-settings.gif"
+        alt="Guide GIF"
+        class="mx-auto w-auto mb-2"
+      />
+      <p class="text-base">Navigate to the websocket setting in Github.</p>
+    </mat-step>
+    <mat-step completed="false">
+      <img
+        src="assets/sdlc-webhook-add.gif"
+        alt="Guide GIF"
+        class="mx-auto w-auto mb-2"
+      />
+      <p class="text-base">
+        Add
+        <a class="underline break-all">
+          {{ websocketUrl() }}
+        </a>
+        <button
+          mat-icon-button
+          type="button"
+          [cdkCopyToClipboard]="websocketUrl()"
+          matTooltip="Copy URL"
+          aria-label="Copy URL"
+        >
+          <mat-icon>content_copy</mat-icon>
+        </button>
+        as the webhook URL, set to JSON and add the secret you created in the previous step. You can configure events you want to receive.
+      </p>
+    </mat-step>
+  </mat-stepper>
+  <div class="flex flex-row justify-between">
+    <button
+      mat-icon-button
+      (click)="stepper.previous()"
+      [disabled]="stepper.selectedIndex === 0"
+    >
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <button
+      mat-icon-button
+      (click)="stepper.next()"
+      [disabled]="stepper.selectedIndex === stepper.steps.length - 1"
+    >
+      <mat-icon>arrow_forward</mat-icon>
+    </button>
+  </div>
+</div>

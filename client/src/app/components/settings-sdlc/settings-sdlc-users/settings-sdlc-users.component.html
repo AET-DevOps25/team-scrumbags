@@ -6,83 +6,84 @@
   ></mat-progress-spinner>
 </div>
 } @else {
-<form class="flex flex-col gap-2">
-  @for (mapping of userMappingMap(); track mapping.user.id) {
-  <div class="flex flex-row items-center gap-2">
-    <mat-form-field appearance="outline" class="flex-1">
-      <input
-        matInput
-        type="text"
-        [disabled]="true"
-        name="userInput"
-        [value]="mapping.user.username"
-      />
-    </mat-form-field>
+<form class="grid grid-cols-2 gap-x-2">
+  <!-- Header Row -->
+  <span class="font-medium text-sm mb-2">Trace Username</span>
+  <span class="font-medium text-sm mb-2">Platform User Id</span>
 
-    @if(currentlyEditedMapping()?.userId === mapping.user.id) {
-    <!-- the currently edited mapping  -->
-    <mat-form-field appearance="outline" class="flex-1">
-      <input
-        matInput
-        type="text"
-        name="platformUserIdInput"
-        placeholder="Enter Github user ID"
-        [ngModel]="currentlyEditedMapping()?.platformUserId"
-        (ngModelChange)="onCurrentlyEditedMappingChange($event)"
-      />
-      @if (isPostingMapping()){
-      <mat-progress-spinner
-        matSuffix
-        diameter="24"
-        mode="indeterminate"
-        color="primary"
-        class="mx-2"
-      ></mat-progress-spinner>
-      } @else {
-      <div matSuffix>
-        <button
-          mat-icon-button
-          type="button"
-          (click)="currentlyEditedMapping.set(null)"
-        >
-          <mat-icon>close</mat-icon>
-        </button>
-        <button
-          mat-icon-button
-          type="button"
-          [disabled]="
-            currentlyEditedMapping()?.platformUserId ===
-            mapping.mapping.platformUserId
-          "
-          (click)="onSubmitMapping()"
-        >
-          <mat-icon>check</mat-icon>
-        </button>
-      </div>
-      }
-    </mat-form-field>
+  <!-- Data Rows -->
+  @for (mapping of userMappingMap(); track mapping.user.id) {
+  <mat-form-field appearance="outline" class="flex-1">
+    <input
+      matInput
+      type="text"
+      [disabled]="true"
+      name="userInput"
+      [value]="mapping.user.username"
+    />
+  </mat-form-field>
+
+  @if(currentlyEditedMapping()?.userId === mapping.user.id) {
+  <!-- the currently edited mapping  -->
+  <mat-form-field appearance="outline" class="flex-1">
+    <input
+      matInput
+      type="text"
+      name="platformUserIdInput"
+      placeholder="Enter platform user ID"
+      [ngModel]="currentlyEditedMapping()?.platformUserId"
+      (ngModelChange)="onCurrentlyEditedMappingChange($event)"
+    />
+    @if (isPostingMapping()){
+    <mat-progress-spinner
+      matSuffix
+      diameter="24"
+      mode="indeterminate"
+      class="mx-2"
+    ></mat-progress-spinner>
     } @else {
-    <!-- any non edited mapping -->
-    <mat-form-field appearance="outline" class="flex-1">
-      <input
-        matInput
-        type="text"
-        placeholder="Enter Github user ID"
-        [disabled]="true"
-        [value]="mapping.mapping.platformUserId"
-      />
+    <div matSuffix>
       <button
         mat-icon-button
-        matSuffix
         type="button"
-        [disabled]="currentlyEditedMapping()"
-        (click)="currentlyEditedMapping.set(mapping.mapping)"
+        (click)="currentlyEditedMapping.set(null)"
       >
-        <mat-icon>edit</mat-icon>
+        <mat-icon>close</mat-icon>
       </button>
-    </mat-form-field>
+      <button
+        mat-icon-button
+        type="button"
+        [disabled]="
+          currentlyEditedMapping()?.platformUserId ===
+          mapping.mapping.platformUserId
+        "
+        (click)="onSubmitMapping()"
+      >
+        <mat-icon>check</mat-icon>
+      </button>
+    </div>
     }
-  </div>
-  }
+  </mat-form-field>
+  } @else {
+  <!-- any non edited mapping -->
+  <mat-form-field appearance="outline" class="flex-1">
+    <input
+      matInput
+      type="text"
+      placeholder="Enter platform user ID"
+      [disabled]="true"
+      [value]="mapping.mapping.platformUserId"
+    />
+    <button
+      mat-icon-button
+      matSuffix
+      type="button"
+      [disabled]="currentlyEditedMapping()"
+      (click)="currentlyEditedMapping.set(mapping.mapping)"
+    >
+      <mat-icon>edit</mat-icon>
+    </button>
+  </mat-form-field>
+  } }
 </form>
 }
