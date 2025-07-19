@@ -3,10 +3,11 @@ import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
-from typing import List
+from typing import List, Any, Coroutine
 
 import aio_pika
 from aio_pika import connect_robust, RobustChannel, RobustConnection
+from aio_pika.abc import AbstractRobustConnection, AbstractRobustChannel
 from dotenv import load_dotenv
 from fastapi import FastAPI, Query, Body, HTTPException, Path
 from fastapi import status
@@ -33,8 +34,8 @@ rabbit_channel: RobustChannel | None = None
 executor = ThreadPoolExecutor()
 
 
-async def connect_to_rabbitmq_with_retry(max_retries: int = 10, delay: int = 5) -> tuple[
-    RobustConnection, RobustChannel]:
+async def connect_to_rabbitmq_with_retry(max_retries: int = 10, delay: int = 5) \
+        -> tuple[AbstractRobustConnection, AbstractRobustChannel] | None:
     """Connect to RabbitMQ with retry logic"""
     for attempt in range(max_retries):
         try:
@@ -50,6 +51,7 @@ async def connect_to_rabbitmq_with_retry(max_retries: int = 10, delay: int = 5) 
                 await asyncio.sleep(delay)
             else:
                 raise
+    return None
 
 
 async def start_queue_consumer_with_retry():
