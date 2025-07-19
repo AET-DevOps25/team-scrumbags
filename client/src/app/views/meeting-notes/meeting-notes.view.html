@@ -12,7 +12,15 @@
   <mat-action-list class="flex-1 min-h-0 overflow-y-auto">
     @for (note of prelookMetadata(); let i = $index; track note.id) {
     <mat-list-item (click)="openFile(note)" class="!rounded-full">
-      <span matListItemTitle> {{ note.name }} </span>
+      <div class="flex flex-row items-center gap-2">
+        <span class="flex-1 truncate"> {{ note.name }} </span>
+        @if(note.loading) {
+        <mat-progress-spinner
+          diameter="24"
+          mode="indeterminate"
+        ></mat-progress-spinner>
+        }
+      </div>
     </mat-list-item>
     }
   </mat-action-list>

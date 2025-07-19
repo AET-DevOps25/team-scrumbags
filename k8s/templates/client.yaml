@@ -1,0 +1,39 @@
+{{- if .Values.client.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: {{ .Values.client.replicas }}
+  selector:
+    matchLabels:
+      app: client
+  template:
+    metadata:
+      labels:
+        app: client
+    spec:
+      containers:
+        - name: client
+          image: {{ .Values.client.image }}
+          ports:
+            - containerPort: {{ .Values.client.port }}
+          envFrom:
+            - configMapRef:
+                name: trace-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: client-service
+  namespace: {{ .Values.global.namespace }}
+spec:
+  selector:
+    app: client
+  type: NodePort
+  ports:
+    - port: {{ .Values.client.port }}
+      targetPort: {{ .Values.client.port }}
+      nodePort: {{ .Values.client.nodePort }}
+{{- end }}

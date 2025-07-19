@@ -1,0 +1,63 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: trace-ingress
+  namespace: {{ .Values.global.namespace }}
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: client-service
+                port:
+                  number: {{ .Values.client.port }}
+          - path: /auth
+            pathType: Prefix
+            backend:
+              service:
+                name: keycloak-service
+                port:
+                  number: {{ .Values.keycloak.port }}
+          - path: /api/project
+            pathType: Prefix
+            backend:
+              service:
+                name: project-management-service
+                port:
+                  number: {{ .Values.projectManagement.port }}
+          - path: /api/sdlc
+            pathType: Prefix
+            backend:
+              service:
+                name: sdlc-service
+                port:
+                  number: {{ .Values.sdlc.port }}
+          - path: /api/comm
+            pathType: Prefix
+            backend:
+              service:
+                name: communication-service
+                port:
+                  number: {{ .Values.communication.port }}
+          - path: /api/transcription
+            pathType: Prefix
+            backend:
+              service:
+                name: transcription-service
+                port:
+                  number: {{ .Values.transcription.port }}
+          - path: /api/genai
+            pathType: Prefix
+            backend:
+              service:
+                name: genai-service
+                port:
+                  number: {{ .Values.genai.port }}
+{{- end }}

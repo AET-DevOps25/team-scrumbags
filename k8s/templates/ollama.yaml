@@ -1,0 +1,87 @@
+{{- if .Values.ollama.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ollama-pvc
+  namespace: {{ .Values.global.namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.ollama.storageSize }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ollama
+  template:
+    metadata:
+      labels:
+        app: ollama
+    spec:
+      containers:
+        - name: ollama
+          image: {{ .Values.ollama.image }}
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "▶️  Starting Ollama server…"
+              ollama serve &
+              SERVER_PID=$!
+              echo "⏳  Waiting for server to be healthy…"
+              until ollama list > /dev/null 2>&1; do
+                sleep 1
+              done
+              echo "✅  Server is up! Pulling llama3.2…"
+              ollama pull llama3.2
+              echo "🚀  Model pulled. Waiting on server (PID $SERVER_PID)…"
+              wait $SERVER_PID
+          ports:
+            - containerPort: {{ .Values.ollama.port }}
+          volumeMounts:
+            - name: ollama-storage
+              mountPath: /root/.ollama
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - "ollama list | grep -q llama3.2"
+            initialDelaySeconds: 120
+            periodSeconds: 15
+            timeoutSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - "ollama list > /dev/null 2>&1"
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 10
+      volumes:
+        - name: ollama-storage
+          persistentVolumeClaim:
+            claimName: ollama-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama-service
+  namespace: {{ .Values.global.namespace }}
+spec:
+  selector:
+    app: ollama
+  ports:
+    - port: {{ .Values.ollama.port }}
+      targetPort: {{ .Values.ollama.port }}
+{{- end }}

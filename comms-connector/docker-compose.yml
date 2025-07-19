@@ -1,0 +1,37 @@
+services:
+  comms-db:
+    image: mysql:latest
+    environment:
+      - MYSQL_ROOT_PASSWORD=${COMM_MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${COMM_MYSQL_DATABASE}
+    ports:
+      - "4567:3306"
+    volumes:
+      - comms_db_data:/var/lib/mysql/
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      interval: 3s
+      timeout: 5s
+      retries: 5
+
+  comms-connector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "9876:8080"
+    depends_on:
+      comms-db:
+        condition: service_healthy
+    env_file:
+      - .env
+    networks:
+      - default
+      - trace-network
+
+volumes:
+  comms_db_data:
+
+networks:
+  trace-network:
+    external: true

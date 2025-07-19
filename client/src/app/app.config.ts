@@ -13,6 +13,7 @@ import {
   createInterceptorCondition,
   IncludeBearerTokenCondition,
 } from 'keycloak-angular';
+import { MARKED_OPTIONS, provideMarkdown } from 'ngx-markdown';
 
 import { routes } from './app.routes';
 import { environment } from './environment';
@@ -39,7 +40,7 @@ export const appConfig: ApplicationConfig = {
       },
       initOptions: {
         onLoad: 'login-required',
-        checkLoginIframe: false, // Disable iframe checking
+        checkLoginIframe: false,
         flow: 'standard',
       },
     }),
@@ -49,5 +50,15 @@ export const appConfig: ApplicationConfig = {
     },
     provideRouter(routes),
     provideHttpClient(withInterceptors([includeBearerTokenInterceptor])),
+    provideMarkdown({
+      markedOptions: {
+        provide: MARKED_OPTIONS,
+        useValue: {
+          gfm: true,
+          breaks: true,
+          pedantic: false,
+        },
+      },
+    }),
   ],
 };

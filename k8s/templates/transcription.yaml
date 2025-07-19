@@ -1,0 +1,48 @@
+{{- if .Values.transcription.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transcription
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: {{ .Values.transcription.replicas }}
+  selector:
+    matchLabels:
+      app: transcription
+  template:
+    metadata:
+      labels:
+        app: transcription
+    spec:
+      containers:
+        - name: transcription
+          image: {{ .Values.transcription.image }}
+          ports:
+            - containerPort: {{ .Values.transcription.port }}
+          env:
+            - name: SERVER_PORT
+              value: "{{ .Values.transcription.port }}"
+            - name: DEBUG
+              value: "true"
+          envFrom:
+            - configMapRef:
+                name: trace-config
+            - secretRef:
+                name: trace-secrets
+      initContainers:
+        - name: wait-for-mysql
+          image: busybox:1.35
+          command: ['sh', '-c', 'until nc -z mysql-service {{ .Values.mysql.port }}; do sleep 1; done']
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: transcription-service
+  namespace: {{ .Values.global.namespace }}
+spec:
+  selector:
+    app: transcription
+  ports:
+    - port: {{ .Values.transcription.port }}
+      targetPort: {{ .Values.transcription.port }}
+{{- end }}

@@ -1,0 +1,16 @@
+meta {
+  name: Post Receive
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/projects/0ebc399a-918d-475e-a4ed-cc301eab6460/transcripts
+  body: multipartForm
+  auth: inherit
+}
+
+body:multipart-form {
+  file: @file(/home/chernogop/Documents/GitHub/team-scrumbags/transcription/audio/meeting_recording.wav)
+  speakerAmount: 5
+}

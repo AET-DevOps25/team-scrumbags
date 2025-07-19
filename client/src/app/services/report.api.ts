@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, map } from 'rxjs/operators';
 import { environment } from '../environment';
 import { Report } from '../models/report.model';
 import { handleError } from './api-utils';
@@ -12,10 +12,38 @@ import { handleError } from './api-utils';
 export class ReportApi {
   private http = inject(HttpClient);
 
-  getReportsMetadata(projectId: string): Observable<Report[]> {
+  getReports(projectId: string): Observable<Report[]> {
     return this.http
-      .get<Report[]>(`${environment.genAiUrl}/projects/${projectId}/reports`)
-      .pipe(catchError(handleError('Error fetching reports metadata')));
+      .get<Report[]>(`${environment.genAiUrl}/projects/${projectId}/summary`)
+      .pipe(
+        map((reports) => {
+          for (const report of reports) {
+            report.startTime = new Date(Number(report.startTime) * 1000); // convert from seconds to milliseconds
+            report.endTime = new Date(Number(report.endTime) * 1000); // convert from seconds to milliseconds
+            report.generatedAt = new Date(report.generatedAt); // should be already in milliseconds
+          } 
+          return reports;
+        }),
+        catchError(handleError('Error fetching reports metadata'))
+      );
+  }
+
+  getReportbyId(projectId: string, reportId: string): Observable<Report> {
+    return this.http
+      .get<Report>(
+        `${environment.genAiUrl}/projects/${projectId}/summary/${reportId}`
+      )
+      .pipe(
+        map((report) => {
+          report.startTime = new Date(Number(report.startTime) * 1000); // convert from seconds to milliseconds
+          report.endTime = new Date(Number(report.endTime) * 1000); // convert from seconds to milliseconds
+          report.generatedAt = new Date(report.generatedAt); // should be already in milliseconds
+          return report;
+        }),
+        catchError(
+          handleError(`Error fetching report metadata for id ${reportId}`)
+        )
+      );
   }
 
   generateReport(
@@ -24,32 +52,26 @@ export class ReportApi {
     periodEnd: Date | null,
     userIds?: string[]
   ): Observable<Report> {
-    const url = `${environment.genAiUrl}/projects/${projectId}/reports`;
-    const body: Partial<{
-      periodStart: string;
-      periodEnd: string;
-      userIds: string[];
-    }> = {};
+    const url = `${environment.genAiUrl}/projects/${projectId}/summary`;
+    const params = new URLSearchParams();
     if (periodStart) {
-      body.periodStart = periodStart.toISOString();
+      params.append(
+        'startTime',
+        Math.floor(periodStart.getTime() / 1000).toString()
+      ); // unix timestamp in seconds
     }
     if (periodEnd) {
-      body.periodEnd = periodEnd.toISOString();
+      params.append(
+        'endTime',
+        Math.floor(periodEnd.getTime() / 1000).toString()
+      ); // unix timestamp in seconds
     }
     if (userIds && userIds.length > 0) {
-      body.userIds = userIds;
+      userIds.forEach((id) => params.append('userIds', id));
     }
 
     return this.http
-      .post<Report>(url, body)
+      .post<Report>(`${url}?${params.toString()}`, {})
       .pipe(catchError(handleError('Error generating report')));
-  }
-
-  getReportContent(projectId: string, reportId: string): Observable<Report> {
-    return this.http
-      .get<Report>(
-        `${environment.genAiUrl}/projects/${projectId}/reports/${reportId}/content`
-      )
-      .pipe(catchError(handleError('Error fetching report content')));
   }
 }

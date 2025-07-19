@@ -1,0 +1,30 @@
+name: Deploy to Kubernetes (Rancher) with Helm
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-helm:
+    name: Kubernetes Deployment with Helm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Set up Kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install -n team-scrumbags trace ./k8s  \
+            --set secrets.assemblyAiKey="${{ secrets.ASSEMBLYAI_API_KEY }}" \
+            --set secrets.commDiscordSecret="${{ secrets.COMM_DISCORD_SECRET }}" \
+            --set secrets.hfToken="${{ secrets.HF_TOKEN }}" \
+            --set secrets.nomicApiKey="${{ secrets.NOMIC_API_KEY }}" \
+            --set secrets.openWebuiBearer="${{ secrets.OPEN_WEBUI_BEARER }}"

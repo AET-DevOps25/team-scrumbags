@@ -1,0 +1,48 @@
+{{- if .Values.communication.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: communication
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: {{ .Values.communication.replicas }}
+  selector:
+    matchLabels:
+      app: communication
+  template:
+    metadata:
+      labels:
+        app: communication
+    spec:
+      containers:
+        - name: communication
+          image: {{ .Values.communication.image }}
+          ports:
+            - containerPort: {{ .Values.communication.port }}
+          env:
+            - name: SERVER_PORT
+              value: "{{ .Values.communication.port }}"
+            - name: DEBUG
+              value: "true"
+          envFrom:
+            - configMapRef:
+                name: trace-config
+            - secretRef:
+                name: trace-secrets
+      initContainers:
+        - name: wait-for-mysql
+          image: busybox:1.35
+          command: ['sh', '-c', 'until nc -z mysql-service {{ .Values.mysql.port }}; do sleep 1; done']
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: communication-service
+  namespace: {{ .Values.global.namespace }}
+spec:
+  selector:
+    app: communication
+  ports:
+    - port: {{ .Values.communication.port }}
+      targetPort: {{ .Values.communication.port }}
+{{- end }}

@@ -1,0 +1,47 @@
+services:
+  mysql:
+    container_name: transcription-db
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_URL: jdbc:mysql://transcription-db:3306/${MYSQL_DATABASE:-transcription-db}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-test}
+      MYSQL_USER: ${MYSQL_USER:-root}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-test}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-transcription-db}
+    ports:
+      - "3306:3306"
+    volumes:
+        - db_data:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  transcription-service:
+    container_name: transcription-service
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        USE_WHISPERX: ${USE_WHISPERX}
+    env_file: .env
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://transcription-db:3306/${MYSQL_DATABASE}
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+      HF_TOKEN: ${HF_TOKEN}
+      USE_CLOUD: ${USE_CLOUD}
+      ASSEMBLYAI_API_KEY: ${ASSEMBLYAI_API_KEY}
+      TRANSCRIPTION_TIMEOUT: ${TRANSCRIPTION_TIMEOUT}
+      GENAI_URL: ${GENAI_URL}
+
+    ports:
+      - "4269:4269"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  db_data:

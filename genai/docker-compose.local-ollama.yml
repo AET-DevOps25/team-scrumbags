@@ -1,0 +1,119 @@
+services:
+
+  app:
+    build: .
+    ports:
+      - "4242:4242"
+    depends_on:
+      ollama:
+        condition: service_healthy
+      genai-db:
+        condition: service_healthy
+    environment:
+      - WEAVIATE_URL=${WEAVIATE_URL:-http://weaviate:8080}
+      - RABBITMQ_URL=${RABBITMQ_URL:-amqp://guest:guest@rabbitmq/}
+    volumes:
+      - .:/app
+
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq-lib:/var/lib/rabbitmq/
+      - rabbitmq-log:/var/log/rabbitmq
+
+  weaviate:
+    command:
+      - --host
+      - 0.0.0.0
+      - --port
+      - '6969'
+      - --scheme
+      - http
+    image: cr.weaviate.io/semitechnologies/weaviate:1.31.2
+    ports:
+      - "6969:6969"
+      - "50051:50051"
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    restart: on-failure:0
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+      ENABLE_API_BASED_MODULES: 'true'
+      CLUSTER_HOSTNAME: 'node1'
+
+  ollama:
+    container_name: ollama
+    image: ollama/ollama:latest
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -e
+
+        echo "▶️  Starting Ollama server…"
+        # Launch server in background
+        ollama serve &
+        SERVER_PID=$!
+
+        echo "⏳  Waiting for server to be healthy…"
+        # simple health‑check loop: try 'ollama list' until it returns success
+        until ollama list > /dev/null 2>&1; do
+          sleep 1
+        done
+
+        echo "✅  Server is up! Pulling llama3.3…"
+        # Now that the daemon is running, pull the model
+        ollama pull llama3.2
+
+        echo "🚀  Model pulled. Waiting on server (PID $SERVER_PID)…"
+        # Drop into the Ollama server process so Docker keeps the container alive
+        wait $SERVER_PID
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+    restart: always
+    healthcheck:
+      test: [ "CMD-SHELL", "ollama list | grep -q llama3.2" ]
+      interval: 15s
+      timeout: 10s
+      retries: 30
+
+  genai-db:
+    image: mysql:8.0
+    container_name: genai-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-summaries}
+      MYSQL_USER: ${MYSQL_USER:-user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
+    ports:
+      - "3306:3306"
+    volumes:
+      - genai_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 2s
+      timeout: 10s
+      retries: 5
+
+
+volumes:
+  weaviate_data:
+  rabbitmq-lib:
+    driver: local
+  rabbitmq-log:
+    driver: local
+  ollama:
+  genai_db_data:

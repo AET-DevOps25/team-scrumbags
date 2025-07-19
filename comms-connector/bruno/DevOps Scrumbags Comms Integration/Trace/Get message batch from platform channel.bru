@@ -1,0 +1,23 @@
+meta {
+  name: Get message batch from platform channel
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/projects/:projectId/comms/:platform/messages?channelId&sendToGenAi=false&updateLastMessageId=true
+  body: none
+  auth: inherit
+}
+
+params:query {
+  channelId: 
+  sendToGenAi: false
+  updateLastMessageId: false
+  ~lastMessageId: 0
+}
+
+params:path {
+  projectId: 52db9da6-0c9e-4528-babb-c85eb6e7f27d
+  platform: DISCORD
+}

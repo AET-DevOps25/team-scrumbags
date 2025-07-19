@@ -1,0 +1,55 @@
+name: Comms deploy docker compose
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: comms-deploy
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Copy Docker Compose File From Repo to VM Host
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ vars.PUBLIC_IP }}
+          username: ${{ vars.VM_USER }}
+          key: ${{ secrets.VM_PRIVATE_KEY }}
+          source: "./comms-connector/docker-compose.yml"
+          target: /home/${{ vars.VM_USER }}/comms-connector
+
+      - name: SSH to VM and Create .env
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ vars.PUBLIC_IP }}
+          username: ${{ vars.VM_USER }}
+          key: ${{ secrets.VM_PRIVATE_KEY }}
+          script: |
+            rm comms-connector/.env
+            touch comms-connector/.env
+            echo "COMM_MYSQL_DATABASE=${{ vars.COMM_MYSQL_DATABASE }}" >> comms-connector/.env
+            echo "COMM_MYSQL_ROOT_PASSWORD=${{ secrets.COMM_MYSQL_ROOT_PASSWORD }}" >> comms-connector/.env
+            echo "COMM_DB_USER=${{ secrets.COMM_DB_USER }}" >> comms-connector/.env
+            echo "COMM_DB_PASSWORD=${{ secrets.COMM_MYSQL_ROOT_PASSWORD }} " >> comms-connector/.env
+            echo "COMM_DB_URL=jdbc:mysql://comms-db:3306/${{ vars.COMM_MYSQL_DATABASE }}" >> comms-connector/.env
+            echo "COMM_DISCORD_SECRET=${{ secrets.COMM_DISCORD_SECRET }}" >> comms-connector/.env
+            echo "COMM_DISCORD_BOT_ID=${{ vars.COMM_DISCORD_BOT_ID }}" >> comms-connector/.env
+            echo "COMM_DISCORD_API_VERSION=${{ vars.COMM_DISCORD_API_VERSION }}" >> comms-connector/.env
+            echo "COMM_DISCORD_BASE_URL=${{ vars.COMM_DISCORD_BASE_URL }}" >> comms-connector/.env
+            echo "TRACE_GENAI_BASE_URL=${{ vars.TRACE_GENAI_BASE_URL }}" >> comms-connector/.env
+            echo "TRACE_PROJECT_MANAGEMENT_BASE_URL=${{ vars.TRACE_PROJECT_MANAGEMENT_BASE_URL }}" >> comms-connector/.env
+            echo "DEBUG=${{ vars.DEBUG }}" >> comms-connector/.env
+
+      - name: SSH to VM and Execute Docker-Compose Up
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ vars.PUBLIC_IP }}
+          username: ${{ vars.VM_USER }}
+          key: ${{ secrets.VM_PRIVATE_KEY }}
+          script: |
+            echo "Logging into Docker registry..."
+            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            echo "Starting Docker Compose..."
+            docker compose -f comms-connector/docker-compose.yml up --pull=always -d

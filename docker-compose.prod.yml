@@ -25,15 +25,15 @@ services:
     ports:
       - "4200:80"
     environment:
+      - DEBUG=${DEBUG:-false}
       - PROJECT_MANAGEMENT_URL=https://${DOMAIN}/api/project-management
       - SDLC_URL=https://${DOMAIN}/api/sdlc
-      - MEETING_NOTES_URL=https://${DOMAIN}/api/meeting-notes
+      - MEETING_NOTES_URL=https://${DOMAIN}/api/transcription
       - COMMUNICATION_URL=https://${DOMAIN}/api/communication
       - GEN_AI_URL=https://${DOMAIN}/api/genai
       - KEYCLOAK_URL=https://${DOMAIN}/keycloak
       - KEYCLOAK_REALM=trace
       - KEYCLOAK_CLIENT=trace-api
-      - DEBUG=${DEBUG:-false}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.client.rule=Host(`${DOMAIN}`)"
@@ -84,9 +84,9 @@ services:
     depends_on:
       - sdlc-db
     environment:
-      - DEBUG=${DEBUG}
+      - DEBUG=${DEBUG:-false}
       - TOKEN_SECRET=${SDLC_TOKEN_SECRET}
-      - MODE=forward
+      - SPRING_PROFILES_ACTIVE=forward
       - GENAI_URL=https://${DOMAIN}/api/genai
       - DB_URL=jdbc:postgresql://sdlc-db:5432/sdlc-db
       - DB_USER=${SDLC_DB_USER}
@@ -110,53 +110,168 @@ services:
       POSTGRES_DB: sdlc-db
     volumes:
       - sdlc_db_data:/var/lib/postgresql/data
-
-  mock-meeting-notes:
-    image: ghcr.io/aet-devops25/team-scrumbags/mock-meeting-notes:${MEETING_NOTES_IMAGE_TAG:-main}
+  
+  communication:
+    image: ghcr.io/aet-devops25/team-scrumbags/comms-connector:${COMM_IMAGE_TAG:-main}
     ports:
-      - "3030:3030"
+      - "8082:8080"
+    depends_on:
+      comms-db: 
+        condition: service_healthy
     environment:
-      - SERVER_PORT=3030
-      - DEBUG=${DEBUG}
+      - DEBUG=${DEBUG:-false}
+      - COMM_DB_URL=jdbc:mysql://comms-db:3306/comms-db
+      - COMM_DB_USER=root
+      - COMM_DB_PASSWORD=${COMM_DB_PASSWORD}
+      - COMM_DISCORD_SECRET=${COMM_DISCORD_SECRET}
+      - COMM_DISCORD_BOT_ID=${COMM_DISCORD_BOT_ID:-1377229494263222302}
+      - COMM_DISCORD_API_VERSION=${COMM_DISCORD_API_VERSION:-v10}
+      - COMM_DISCORD_BASE_URL=${COMM_DISCORD_BASE_URL:-https://discord.com/api}
+      - TRACE_GENAI_BASE_URL=https://${DOMAIN}/api/genai
+      - TRACE_PROJECT_MANAGEMENT_BASE_URL=https://${DOMAIN}/api/project-management
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.meeting-notes.rule=Host(`${DOMAIN}`) && PathPrefix(`/api/meeting-notes`)"
-      - "traefik.http.services.meeting-notes.loadbalancer.server.port=3030"
-      - "traefik.http.routers.meeting-notes.entrypoints=websecure"
-      - "traefik.http.routers.meeting-notes.tls.certresolver=letsencrypt"
-      - "traefik.http.middlewares.strip-meeting-notes.stripprefix.prefixes=/api/meeting-notes"
-      - "traefik.http.routers.meeting-notes.middlewares=strip-meeting-notes"
+      - "traefik.http.routers.comms.rule=Host(`${DOMAIN}`) && PathPrefix(`/api/communication`)"
+      - "traefik.http.services.comms.loadbalancer.server.port=8080"
+      - "traefik.http.routers.comms.entrypoints=websecure"
+      - "traefik.http.routers.comms.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.strip-comms.stripprefix.prefixes=/api/communication"
+      - "traefik.http.routers.comms.middlewares=strip-comms"
 
-  mock-genai:
-    image: ghcr.io/aet-devops25/team-scrumbags/mock-genai:${GENAI_IMAGE_TAG:-main}
-    ports:
-      - "3031:3030"
+  comms-db:
+    image: mysql:8.0
     environment:
-      - SERVER_PORT=3030
-      - DEBUG=${DEBUG}
+      - MYSQL_DATABASE=comms-db
+      - MYSQL_ROOT_PASSWORD=${COMM_DB_PASSWORD}
+    volumes:
+      - comms_db_data:/var/lib/mysql/
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      interval: 3s
+      retries: 10
+      timeout: 5s
+
+  transcription:
+    image: ghcr.io/aet-devops25/team-scrumbags/transcription:${TRANSCRIPTION_IMAGE_TAG:-main}
+    ports:
+      - "8083:8080"
+    depends_on:
+      transcription-db:
+        condition: service_healthy
+    environment:
+      - DEBUG=${DEBUG:-false}
+      - SPRING_DATASOURCE_URL=jdbc:mysql://transcription-db:3306/transcription-db
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${TRANSCRIPTION_DB_PASSWORD}
+      - HF_TOKEN=${TRANSCRIPTION_HF_TOKEN}
+      - USE_CLOUD=true
+      - ASSEMBLYAI_API_KEY=${TRANSCRIPTION_ASSEMBLYAI_API_KEY}
+      - TRANSCRIPTION_TIMEOUT=${TRANSCRIPTION_TIMEOUT:-300000}
+      - GENAI_URL=https://${DOMAIN}/api/genai
+      - USE_WHISPERX=false
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.transcription.rule=Host(`${DOMAIN}`) && PathPrefix(`/api/transcription`)"
+      - "traefik.http.services.transcription.loadbalancer.server.port=8080"
+      - "traefik.http.routers.transcription.entrypoints=websecure"
+      - "traefik.http.routers.transcription.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.strip-transcription.stripprefix.prefixes=/api/transcription"
+      - "traefik.http.routers.transcription.middlewares=strip-transcription"
+
+  transcription-db:
+    image: mysql:8.0
+    environment:
+      - MYSQL_DATABASE=transcription-db
+      - MYSQL_ROOT_PASSWORD=${TRANSCRIPTION_DB_PASSWORD}
+    volumes:
+      - transcription_db_data:/var/lib/mysql/
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      interval: 3s
+      retries: 10
+      timeout: 5s
+
+  genai:
+    image: ghcr.io/aet-devops25/team-scrumbags/genai:${GENAI_IMAGE_TAG:-main}
+    depends_on:
+      genai-db:
+        condition: service_healthy
+    environment:
+      - OLLAMA_CLOUD_URL=${GENAI_OLLAMA_CLOUD_URL:-https://gpu.aet.cit.tum.de/ollama}
+      - NOMIC_API_KEY=${GENAI_NOMIC_API_KEY}
+      - OPEN_WEBUI_BEARER=${GENAI_OPEN_WEBUI_BEARER}
+      - WEAVIATE_URL=http://weaviate:6969
+      - RABBITMQ_URL=amqp://${GENAI_RABBITMQ_USER}:${GENAI_RABBITMQ_PASSWORD}@rabbitmq/
+      - MYSQL_URL=mysql+asyncmy://root:${GENAI_DB_PASSWORD}@genai-db:3306/genai-db
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.genai.rule=Host(`${DOMAIN}`) && PathPrefix(`/api/genai`)"
-      - "traefik.http.services.genai.loadbalancer.server.port=3030"
+      - "traefik.http.services.genai.loadbalancer.server.port=4242"
       - "traefik.http.routers.genai.entrypoints=websecure"
       - "traefik.http.routers.genai.tls.certresolver=letsencrypt"
       - "traefik.http.middlewares.strip-genai.stripprefix.prefixes=/api/genai"
       - "traefik.http.routers.genai.middlewares=strip-genai"
+
+  genai-db:
+    image: mysql:8.0
+    environment:
+      - MYSQL_DATABASE=genai-db
+      - MYSQL_ROOT_PASSWORD=${GENAI_DB_PASSWORD}
+    volumes:
+      - genai_db_data:/var/lib/mysql/
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      interval: 3s
+      retries: 10
+      timeout: 5s
+  
+  rabbitmq:
+    image: rabbitmq:management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${GENAI_RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${GENAI_RABBITMQ_PASSWORD}
+    volumes:
+      - rabbitmq-lib:/var/lib/rabbitmq/
+      - rabbitmq-log:/var/log/rabbitmq
+
+  weaviate:
+    command:
+      - --host
+      - 0.0.0.0
+      - --port
+      - '6969'
+      - --scheme
+      - http
+    image: cr.weaviate.io/semitechnologies/weaviate:1.31.2
+    ports:
+      - "6969:6969"
+      - "50051:50051"
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    restart: on-failure:0
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+      ENABLE_API_BASED_MODULES: 'true'
+      CLUSTER_HOSTNAME: 'node1'
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.2.5
     command:
       - start-dev
       - --import-realm
-      - --proxy-headers=xforwarded # configure keycloak for reverse proxy
-      - --http-relative-path=/keycloak
     ports:
       - "7999:8080"
     environment:
       KC_HOSTNAME: ${DOMAIN}
-      KC_HOSTNAME_STRICT: false
       KC_HTTP_ENABLED: true
       KC_PROXY_HEADERS: xforwarded
       KC_HTTP_RELATIVE_PATH: /keycloak
@@ -174,3 +289,11 @@ services:
 volumes:
   project_db_data:
   sdlc_db_data:
+  comms_db_data:
+  transcription_db_data:
+  genai_db_data:
+  weaviate_data:
+  rabbitmq-lib:
+    driver: local
+  rabbitmq-log:
+    driver: local
