@@ -105,7 +105,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Content Processing and Q&A API",
-    description="API for processing content entries, generating summaries, and answering questions about project data using AI",
+    description="API for processing content entries, generating summaries, "
+                "and answering questions about project data using AI",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -122,7 +123,8 @@ app.add_middleware(
 @app.post(
     "/content",
     summary="Submit content entries for processing",
-    description="Publishes a list of content entries to the processing queue. Each entry must include projectId and timestamp metadata.",
+    description="Publishes a list of content entries to the processing queue. "
+                "Each entry must include projectId and timestamp metadata.",
     responses={
         200: {"description": "Content entries successfully queued for processing"},
         422: {"description": "Validation error - missing required fields"},
@@ -196,7 +198,9 @@ async def health_check():
 @app.post(
     "/projects/{projectId}/summary",
     summary="Generate or retrieve project summary",
-    description="Generates an AI summary of content entries for a project within a specified time range. If a summary already exists for the same parameters, it returns the cached version. Otherwise, generates a new summary asynchronously.",
+    description="Generates an AI summary of content entries for a project within a specified time range. "
+                "If a summary already exists for the same parameters, it returns the cached version. "
+                "Otherwise, generates a new summary asynchronously.",
     responses={
         200: {"description": "Summary generated or retrieved successfully"},
         422: {"description": "Invalid time range or parameters"},
@@ -290,7 +294,8 @@ async def generate_summary(
 @app.put(
     "/projects/{projectId}/summary",
     summary="Regenerate project summary",
-    description="Forces regeneration of a project summary by deleting any existing summary for the specified parameters and creating a new one. The summary generation happens asynchronously.",
+    description="Forces regeneration of a project summary by deleting any existing summary"
+                " for the specified parameters and creating a new one. The summary generation happens asynchronously.",
     status_code=status.HTTP_201_CREATED,
     responses={
         201: {"description": "Summary regeneration initiated successfully"},
@@ -369,7 +374,8 @@ async def refresh_summary(
 @app.get(
     "/projects/{projectId}/summary",
     summary="Get all summaries for a project",
-    description="Retrieves all existing summaries for a specific project, including their generation status and metadata.",
+    description="Retrieves all existing summaries for a specific project, "
+                "including their generation status and metadata.",
     responses={
         200: {"description": "List of summaries retrieved successfully"},
         404: {"description": "Project not found or no summaries exist"},
@@ -405,7 +411,8 @@ async def get_summaries(
 @app.get(
     "/projects/{projectId}/summary/{summaryId}",
     summary="Get summary by ID",
-    description="Retrieves a specific summary by its ID for a given project. Returns the summary content and metadata.",
+    description="Retrieves a specific summary by its ID for a given project. "
+                "Returns the summary content and metadata.",
     responses={
         200: {"description": "Summary retrieved successfully"},
         404: {"description": "Summary not found for the specified project"},
@@ -450,7 +457,8 @@ async def get_summary_by_id(
 @app.post(
     "/projects/{projectId}/messages",
     summary="Ask a question about project content",
-    description="Submits a question about project content and generates an AI-powered answer based on the project's processed content. The answer generation happens asynchronously.",
+    description="Submits a question about project content and generates an AI-powered answer "
+                "based on the project's processed content. The answer generation happens asynchronously.",
     responses={
         200: {"description": "Question submitted successfully, answer generation in progress"},
         422: {"description": "Invalid question format or empty question"},
@@ -527,7 +535,8 @@ async def query_project(
 @app.get(
     "/projects/{projectId}/messages",
     summary="Get chat history for a user",
-    description="Retrieves the complete question and answer history for a specific user within a project, ordered by timestamp.",
+    description="Retrieves the complete question and answer history for a "
+                "specific user within a project, ordered by timestamp.",
     responses={
         200: {"description": "Chat history retrieved successfully"},
         404: {"description": "No messages found for this user/project combination"},
@@ -564,7 +573,8 @@ async def get_chat_history(
 @app.get(
     "/projects/{projectId}/messages/{messageId}",
     summary="Get chat history for a user",
-    description="Retrieves the message by ID for a specific user within a project. Returns the message content and metadata.",
+    description="Retrieves the message by ID for a specific user within a project. "
+                "Returns the message content and metadata.",
     responses={
         200: {"description": "Message retrieved successfully"},
         404: {"description": "No messages found for this user/project/messageId combination"},
