@@ -30,7 +30,8 @@ services:
       - "traefik.http.routers.dashboard.entrypoints=websecure"
       - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
       - "traefik.http.routers.dashboard.middlewares=dashboard-auth"
-      - "traefik.http.middlewares.dashboard-auth.basicauth.users=user:$$apr1$$.q5AHQcQ$$WRyM7KVjyjtmXkyBsBHhW1"
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_USER}:${TRAEFIK_PASSWORD_HASH}"
+      # use `htpasswd -nb user test` to generate the user:password hash + replace all $ with $$
 
   client:
     image: ghcr.io/aet-devops25/team-scrumbags/client:${CLIENT_IMAGE_TAG:-main}
