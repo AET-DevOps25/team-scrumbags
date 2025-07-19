@@ -3,7 +3,7 @@ import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
-from typing import List, Any, Coroutine
+from typing import List
 
 import aio_pika
 from aio_pika import connect_robust, RobustChannel, RobustConnection
