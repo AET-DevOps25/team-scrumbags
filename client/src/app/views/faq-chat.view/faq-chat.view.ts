@@ -11,7 +11,7 @@ import {
 import { Message } from '../../models/message.model';
 import { ProjectService } from '../../services/project.service';
 import { ChatService } from '../../services/chat.service';
-import { finalize } from 'rxjs';
+import { catchError, EMPTY, finalize } from 'rxjs';
 
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -20,7 +20,8 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
-import {MarkdownComponent} from 'ngx-markdown';
+import { MarkdownComponent } from 'ngx-markdown';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-faq-chat',
@@ -41,6 +42,7 @@ export class FaqChatView implements AfterViewInit {
   @ViewChild('scrollContainer') scrollContainer?: ElementRef<HTMLDivElement>;
   private projectService = inject(ProjectService);
   private chatService = inject(ChatService);
+  private snackBar;
 
   messages = computed<Message[]>(() => {
     const project = this.projectService.selectedProject();
@@ -59,6 +61,7 @@ export class FaqChatView implements AfterViewInit {
   });
 
   constructor() {
+    this.snackBar = inject(MatSnackBar);
     effect(() => {
       const projectId = this.projectService.selectedProjectId();
       if (projectId) {
@@ -66,6 +69,14 @@ export class FaqChatView implements AfterViewInit {
         this.chatService
           .loadAllMessages(projectId)
           .pipe(
+            catchError((error) => {
+              this.snackBar.open(
+                `Error loading messages: ${error.message}`,
+                'Close',
+                { duration: 3000 }
+              );
+              return EMPTY;
+            }),
             finalize(() => {
               this.isLoading.set(false);
             })
@@ -105,6 +116,14 @@ export class FaqChatView implements AfterViewInit {
     this.chatService
       .sendMessage(projectId, content)
       .pipe(
+        catchError((error) => {
+          this.snackBar.open(
+            `Error sending message: ${error.message}`,
+            'Close',
+            { duration: 3000 }
+          );
+          return EMPTY;
+        }),
         finalize(() => {
           this.inputMessage.set('');
           this.isLoading.set(false);

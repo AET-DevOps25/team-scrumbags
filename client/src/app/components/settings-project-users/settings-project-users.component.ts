@@ -18,6 +18,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { catchError, EMPTY, pipe } from 'rxjs';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-settings-project-users',
@@ -39,6 +41,7 @@ export class ProjectUserSettings implements OnInit {
   projectState = inject(ProjectState);
   userService = inject(UserService);
   userState = inject(UserState);
+  private snackBar = inject(MatSnackBar);
 
   loadingProjectsUser = signal(false);
   signedInUser = signal<User | undefined>(undefined);
@@ -98,12 +101,34 @@ export class ProjectUserSettings implements OnInit {
   addUserToProject(user: User) {
     this.projectService
       .assignUserToProject(this.projectService.selectedProjectId()!, [user])
-      .subscribe({ next: () => this.userSearch.set('') });
+      .pipe(
+        catchError((error) => {
+          this.snackBar.open(
+            `Error adding user to project: ${error.message}`,
+            'Close',
+            { duration: 3000 }
+          );
+          return EMPTY;
+        })
+      )
+      .subscribe({
+        next: () => this.userSearch.set(''),
+      });
   }
 
   removeUserFromProject(userId: string) {
     this.projectService
       .removeUserFromProject(this.projectService.selectedProjectId()!, [userId])
+      .pipe(
+        catchError((error) => {
+          this.snackBar.open(
+            `Error removing user from project: ${error.message}`,
+            'Close',
+            { duration: 3000 }
+          );
+          return EMPTY;
+        })
+      )
       .subscribe();
   }
 

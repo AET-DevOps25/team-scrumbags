@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, map } from 'rxjs/operators';
 import { environment } from '../environment';
 import { MeetingNote } from '../models/meeting-note.model';
 import { handleError } from './api-utils';
@@ -17,7 +17,12 @@ export class MeetingNotesApi {
       .get<MeetingNote[]>(
         `${environment.meetingNotesUrl}/projects/${projectId}/transcripts`
       )
-      .pipe(catchError(handleError('Error fetching transcription list')));
+      .pipe(
+        map((notes) => {
+          return notes ? notes : [];
+        }),
+        catchError(handleError('Error fetching transcription list'))
+      );
   }
 
   getMeetingNote(projectId: string, noteId: string): Observable<MeetingNote> {
