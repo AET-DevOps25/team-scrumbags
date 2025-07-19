@@ -5,7 +5,7 @@ import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MeetingNotesService } from '../../services/meeting-notes.service';
 import { ProjectService } from '../../services/project.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { catchError, finalize, tap } from 'rxjs';
+import { catchError, EMPTY, finalize, tap } from 'rxjs';
 import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -75,7 +75,7 @@ export class NotesUploadDialog {
             'Close',
             { duration: 3000 }
           );
-          return [];
+          return EMPTY;
         }),
         finalize(() => {
           this.isSubmitting.set(false);

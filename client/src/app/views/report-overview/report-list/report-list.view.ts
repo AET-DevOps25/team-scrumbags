@@ -8,9 +8,10 @@ import {
 } from '@angular/core';
 import { ProjectService } from '../../../services/project.service';
 import { ReportService } from '../../../services/report.service';
-import { finalize } from 'rxjs';
+import { catchError, EMPTY, finalize } from 'rxjs';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-report-list',
@@ -43,9 +44,16 @@ export class ReportListView {
         this.reportService
           .loadReportsMetadata(projectId)
           .pipe(
-            finalize(() => {
-              this.isLoading.set(false);
-            })
+            catchError((error) => {
+              const snackBar = inject(MatSnackBar);
+              snackBar.open(
+                `Error loading reports: ${error.message}`,
+                'Close',
+                { duration: 3000 }
+              );
+              return EMPTY; // Correct usage here
+            }),
+            finalize(() => this.isLoading.set(false))
           )
           .subscribe();
       }

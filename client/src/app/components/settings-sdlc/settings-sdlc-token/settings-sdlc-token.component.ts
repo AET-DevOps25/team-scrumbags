@@ -8,6 +8,8 @@ import { ProjectService } from '../../../services/project.service';
 import { FormsModule } from '@angular/forms';
 import { SdlcApi } from '../../../services/sdlc.api';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { catchError, finalize } from 'rxjs/operators';
+import { EMPTY } from 'rxjs';
 
 @Component({
   selector: 'app-settings-sdlc-token',
@@ -25,6 +27,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 export class SettingsSdlcTokenComponent {
   private projectService = inject(ProjectService);
   private sdlcApi = inject(SdlcApi);
+  private snackBar;
 
   showSecret = signal(false);
   initialSecret = signal('');
@@ -34,24 +37,39 @@ export class SettingsSdlcTokenComponent {
   confirmation = signal(false);
 
   constructor() {
+    this.snackBar = inject(MatSnackBar);
     effect(() => {
       const projectId = this.projectService.selectedProject()?.id;
       if (projectId) {
         this.isLoading.set(true);
-        this.sdlcApi.getTokens(projectId).subscribe({
-          next: (tokens) => {
-            if (tokens.length > 0) {
-              this.initialSecret.set(tokens[0].token);
-              this.secretInput.set(tokens[0].token);
-            } else {
-              this.initialSecret.set('');
-              this.secretInput.set('');
-            }
-          },
-          complete: () => {
-            this.isLoading.set(false);
-          },
-        });
+        this.sdlcApi
+          .getTokens(projectId)
+          .pipe(
+            catchError((error) => {
+              this.snackBar.open(
+                `Error fetching tokens: ${error.message}`,
+                'Close',
+                {
+                  duration: 3000,
+                }
+              );
+              return EMPTY;
+            })
+          )
+          .subscribe({
+            next: (tokens) => {
+              if (tokens.length > 0) {
+                this.initialSecret.set(tokens[0].token);
+                this.secretInput.set(tokens[0].token);
+              } else {
+                this.initialSecret.set('');
+                this.secretInput.set('');
+              }
+            },
+            complete: () => {
+              this.isLoading.set(false);
+            },
+          });
       }
     });
   }
@@ -64,24 +82,27 @@ export class SettingsSdlcTokenComponent {
     }
 
     this.isLoading.set(true);
-    this.sdlcApi.saveToken(projectId, this.secretInput()).subscribe({
-      next: (token) => {
-        if (token) {
-          this.initialSecret.set(token.token);
-          this.secretInput.set(token.token);
-          this.confirmation.set(true);
-        }
-      },
-      error: (error) => {
-        const snackbar = inject(MatSnackBar);
-        snackbar.open(`Error saving token: ${error.message}`, 'Close', {
-          duration: 3000,
-        });
-        console.error('Error saving token:', error);
-      },
-      complete: () => {
-        this.isLoading.set(false);
-      },
-    });
+    this.sdlcApi
+      .saveToken(projectId, this.secretInput())
+      .pipe(
+        catchError((error) => {
+          this.snackBar.open(`Error saving token: ${error.message}`, 'Close', {
+            duration: 3000,
+          });
+          return EMPTY;
+        }),
+        finalize(() => {
+          this.isLoading.set(false);
+        })
+      )
+      .subscribe({
+        next: (token) => {
+          if (token) {
+            this.initialSecret.set(token.token);
+            this.secretInput.set(token.token);
+            this.confirmation.set(true);
+          }
+        },
+      });
   }
 }

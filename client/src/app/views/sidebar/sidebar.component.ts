@@ -1,8 +1,5 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import {
-  Router,
-  RouterOutlet,
-} from '@angular/router';
+import { Router, RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatListModule } from '@angular/material/list';
@@ -13,6 +10,8 @@ import { MatDialog } from '@angular/material/dialog';
 import { ProjectState } from '../../states/project.state';
 import { ProjectAddDialog } from '../../components/project-add/project-add.component';
 import { ProjectService } from '../../services/project.service';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { catchError, EMPTY } from 'rxjs';
 
 @Component({
   selector: 'app-sidebar',
@@ -29,18 +28,30 @@ import { ProjectService } from '../../services/project.service';
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss',
 })
-export class SidebarComponent implements OnInit{
+export class SidebarComponent implements OnInit {
   protected state = inject(ProjectState);
   protected service = inject(ProjectService);
   private router = inject(Router);
   private dialog = inject(MatDialog);
+  private snackBar = inject(MatSnackBar);
 
   readonly sidebarOpened = signal<boolean>(true);
   readonly loading = computed(() => this.service.isLoadingProjectList());
 
   ngOnInit(): void {
     // load project list from API
-    this.service.loadProjectList().subscribe();
+    this.service.loadProjectList()
+    .pipe(
+      catchError((error) => {
+        this.snackBar.open(
+          `Error loading project list: ${error.message}`,
+          'Close',
+          { duration: 3000 }
+        );
+        return EMPTY;
+      })
+    )
+    .subscribe();
   }
 
   toggleSidebar(): void {
