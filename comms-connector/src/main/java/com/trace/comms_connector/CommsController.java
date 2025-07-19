@@ -10,7 +10,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import lombok.NoArgsConstructor;
 
 @RestController
-@RequestMapping("/projects/{projectId}/comms")
 @NoArgsConstructor
 public class CommsController {
     @Autowired
@@ -27,7 +26,7 @@ public class CommsController {
         summary = "Get the users for a given platform connection",
         description = "Returns a list of platform user IDs / usernames for a given project ID and given platform."
     )
-    @GetMapping("/{platform}/users")
+    @GetMapping("/projects/{projectId}/comms/{platform}/users")
     public ResponseEntity<?> getPlatformUsers(@PathVariable UUID projectId, @PathVariable Platform platform) {
         var userList = commsService.getUsersByProjectId(projectId, platform);
         
@@ -48,7 +47,7 @@ public class CommsController {
             "For Discord, the server ID corresponds to the Discord server ID, also known as the guild ID. " + 
             "All of the users in the platform are also saved into the users table, except for the Trace bot, e.g. in Discord."
     )
-    @PostMapping("/{platform}")
+    @PostMapping("/projects/{projectId}/comms/{platform}")
     public ResponseEntity<?> addCommsIntegration(
         @PathVariable UUID projectId,
         @PathVariable Platform platform,
@@ -80,7 +79,7 @@ public class CommsController {
         description = "Saves the specified user in the database. For an existing combination of project ID, platform " +
             " and platform user ID, this endpoint can be used to assign a Trace UUID by overwriting the existing entry."
     )
-    @PostMapping("/{platform}/users")
+    @PostMapping("/projects/{projectId}/comms/{platform}/users")
     public ResponseEntity<?> addPlatformUser(
         @PathVariable UUID projectId,
         @PathVariable Platform platform,
@@ -107,7 +106,7 @@ public class CommsController {
         summary = "Delete comms integrations for platform",
         description = "Deletes the communications integrations for the given project ID and the given platform specifically."
     )
-    @DeleteMapping("/{platform}")
+    @DeleteMapping("/projects/{projectId}/comms/{platform}")
     public ResponseEntity<?> deletePlatformCommIntegrations(@PathVariable UUID projectId, @PathVariable Platform platform) {
         commsService.deleteCommsIntegration(projectId, platform);
 
@@ -124,7 +123,7 @@ public class CommsController {
         summary = "Delete comms integrations",
         description = "Deletes all communications integrations for the given project ID."
     )
-    @DeleteMapping("")
+    @DeleteMapping("/projects/{projectId}/comms")
     public ResponseEntity<?> deleteAllCommIntegrations(@PathVariable UUID projectId) {
         commsService.deleteCommsIntegration(projectId, null);
 
@@ -132,7 +131,7 @@ public class CommsController {
     }
 
     /**
-     * Get every message from Discord text channel, for testing
+     * Get a message batch from Discord text channel, for testing
      * 
      * @param projectId
      * @param platform
@@ -142,24 +141,59 @@ public class CommsController {
      */
     @Operation(
         summary = "Get Discord messages from channel",
-        description = "Only for testing: Returns a list of discord messages from the specified channel ID (the ID of a text channel " +
-            " that was added to the connections database using add integration endpoint prior to this). The messages are formatted" +
+        description = "Returns a list of a batch of 100 platform messages from the specified channel ID (for Discord: the ID of a text" +
+            " channel that was added to the connections database using add integration endpoint prior to this). The messages are formatted" +
             " according to the JSON format specified by the gen AI microservice. Last message ID can be specified to only get the" +
-            " messages after a specific message with the given ID."
+            " messages after a specific message with the given ID. If lastMessageId is not specified, the last message ID is fetched" +
+            " instead. Setting updateLastMessageId to true will update the last message ID in the connections table," +
+            " and setting sendToGenAi to true will send the messages to the gen AI microservice."
     )
-    @GetMapping("/{platform}/messages")
-    public ResponseEntity<?> getAllMessagesFromChannel(
+    @GetMapping("/projects/{projectId}/comms/{platform}/messages")
+    public ResponseEntity<?> getMessagesFromChannel(
         @PathVariable UUID projectId,
         @PathVariable Platform platform,
         @RequestParam(required = false) String channelId,
-        @RequestParam(required = false) String lastMessageId
+        @RequestParam(required = false) String lastMessageId,
+        @RequestParam(required = false, defaultValue = "false") boolean updateLastMessageId,
+        @RequestParam(required = false, defaultValue = "false") boolean sendToGenAi
     ) {
         if (channelId == null) {
-            return ResponseEntity.badRequest().body("Communication platform server ID must be specified!"); 
+            return ResponseEntity.badRequest().body("Communication channel ID must be specified!"); 
         }
 
-        String messageJsonList = commsService.getAllMessagesFromChannel(projectId, platform, channelId, lastMessageId);
+        String messageJsonList = commsService.getMessageBatchFromChannel(
+            projectId, platform, channelId, lastMessageId, updateLastMessageId, sendToGenAi);
 
         return ResponseEntity.ok(messageJsonList);
+    }
+
+    @Operation(
+        summary = "Start a new comms thread",
+        description = "Starts a new thread that pulls messages from external communication platforms " +
+            "and sends these to the gen AI microservice every 24 hours."
+    )
+    @PostMapping("/comms/thread")
+    public ResponseEntity<?> startCommsThread() {
+        try {
+            CommsThread.getInstance().startThread();
+            return ResponseEntity.ok("Comms thread is starting.");
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(400).body(e.getMessage());
+        }
+    }
+
+    @Operation(
+        summary = "Stop the running comms thread",
+        description = "Stops the running thread that pulls messages from external communication platforms " +
+            "and sends these to the gen AI microservice."
+    )
+    @DeleteMapping("/comms/thread")
+    public ResponseEntity<?> stopCommsThread() {
+        try {
+            CommsThread.getInstance().stopThread();
+            return ResponseEntity.ok("Comms thread is stopping.");
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(400).body(e.getMessage());
+        }
     }
 }

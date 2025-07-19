@@ -1,0 +1,23 @@
+trace:
+  sdlc:
+    token-secret: meinsecret
+    mode: persist
+
+spring:
+  application:
+    name: sdlc-connector
+  profiles:
+    active: persist
+
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;INIT=CREATE DOMAIN IF NOT EXISTS JSONB AS JSON;
+    username: user
+    password: test
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect

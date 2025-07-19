@@ -5,12 +5,15 @@ meta {
 }
 
 post {
-  url: {{base_url}}/project/0ebc399a-918d-475e-a4ed-cc301eab6460/messages?question=What did the guys forget to bring last time?&userId=1e29dcab-03c7-4aab-8ad6-59e13feb63e5
-  body: none
+  url: {{base_url}}/projects/0ebc399a-918d-475e-a4ed-cc301eab6460/messages?userId=1e29dcab-03c7-4aab-8ad6-59e13feb63e5
+  body: multipartForm
   auth: inherit
 }
 
 params:query {
-  question: What did the guys forget to bring last time?
   userId: 1e29dcab-03c7-4aab-8ad6-59e13feb63e5
+}
+
+body:multipart-form {
+  question: What did the guys forget to bring last time?
 }

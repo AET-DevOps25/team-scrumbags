@@ -1,12 +1,12 @@
 package com.trace.transcription.service;
 
-import com.trace.transcription.controller.SpeakerController;
 import com.trace.transcription.dto.TranscriptInput;
 import com.trace.transcription.model.SpeakerEntity;
 import com.trace.transcription.model.TranscriptEntity;
 import com.trace.transcription.dto.TranscriptSegment;
 import com.trace.transcription.repository.SpeakerRepository;
 import com.trace.transcription.repository.TranscriptRepository;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import org.apache.commons.io.FilenameUtils;
@@ -61,7 +61,8 @@ public class TranscriptService {
 
 
     public void saveFromJson(String json, MultipartFile file) throws Exception {
-        List<TranscriptInput> inputList = mapper.readValue(json, new TypeReference<>() {});
+        List<TranscriptInput> inputList = mapper.readValue(json, new TypeReference<>() {
+        });
 
         TranscriptInput.Metadata meta = inputList.getFirst().metadata;
         List<TranscriptSegment> segments = inputList.stream()
@@ -87,7 +88,8 @@ public class TranscriptService {
     @Transactional
     public void updateEntityWithTranscript(UUID transcriptId, String json) throws Exception {
         // Parse JSON into segments and metadata
-        List<TranscriptInput> inputList = mapper.readValue(json, new TypeReference<>() {});
+        List<TranscriptInput> inputList = mapper.readValue(json, new TypeReference<>() {
+        });
         // Map to TranscriptSegment list
         List<TranscriptSegment> segments = inputList.stream()
                 .map(input -> new TranscriptSegment(
@@ -185,10 +187,15 @@ public class TranscriptService {
         return transcriptRepository.findAllByProjectId(projectId);
     }
 
+    public TranscriptEntity getTranscriptById(UUID projectId, UUID transcriptId) {
+        return transcriptRepository.findById(transcriptId)
+                .orElse(null);
+    }
+
     public void streamAllAudios(UUID projectId, HttpServletResponse response) {
         List<TranscriptEntity> transcripts = transcriptRepository.findAllByProjectId(projectId);
         if (transcripts.isEmpty()) {
-            SpeakerController.logger.warn("No transcripts found for project {}", projectId);
+            logger.warn("No transcripts found for project {}", projectId);
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
             return;
         }
@@ -226,7 +233,7 @@ public class TranscriptService {
             // Finish writing the ZIP (optional: zos.finish() is called by close())
             zos.finish();
         } catch (IOException e) {
-            SpeakerController.logger.error("Error creating ZIP file for project {}: {}", projectId, e.getMessage(), e);
+            logger.error("Error creating ZIP file for project {}: {}", projectId, e.getMessage(), e);
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
     }

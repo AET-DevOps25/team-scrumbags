@@ -17,7 +17,15 @@ export class MeetingNotesApi {
       .get<MeetingNote[]>(
         `${environment.meetingNotesUrl}/projects/${projectId}/transcripts`
       )
-      .pipe(catchError(handleError('Error fetching project list')));
+      .pipe(catchError(handleError('Error fetching transcription list')));
+  }
+
+  getMeetingNote(projectId: string, noteId: string): Observable<MeetingNote> {
+    return this.http
+      .get<MeetingNote>(
+        `${environment.meetingNotesUrl}/projects/${projectId}/transcripts/${noteId}`
+      )
+      .pipe(catchError(handleError('Error fetching meeting note')));
   }
 
   uploadMeetingNoteFile(
@@ -35,22 +43,9 @@ export class MeetingNotesApi {
       .pipe(catchError(handleError('Error uploading meeting note')));
   }
 
-  getMeetingNoteFile(projectId: string, noteId: string): Observable<Blob> {
-    return this.http
-      .get(
-        `${environment.meetingNotesUrl}/projects/${projectId}/meeting-notes/${noteId}/file`,
-        {
-          responseType: 'blob',
-        }
-      )
-      .pipe(
-        catchError(handleError('Error downloading meeting note file'))
-      );
-  }
-
   getMeetingNoteUrl(projectId: string, noteId: string): Observable<string> {
     return new Observable((observer) => {
-      const url = `${environment.meetingNotesUrl}/projects/${projectId}/meeting-notes/${noteId}/file`;
+      const url = `${environment.meetingNotesUrl}/projects/${projectId}/transcripts/${noteId}/audio`;
       observer.next(url);
       observer.complete();
     });

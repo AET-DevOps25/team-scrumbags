@@ -1,6 +1,6 @@
 <div class="h-full flex flex-col">
   @if (isLoading()) {
-  <div class=" flex-1 flex items-center justify-center">
+  <div class="flex-1 flex items-center justify-center">
     <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
   </div>
   } @else if (reports().length === 0) {
@@ -11,11 +11,11 @@
     <button
       mat-list-item
       class="!rounded-full"
-      [disabled]="report.generating"
+      [disabled]="report.loading"
       (click)="onReportSelected(report.id)"
     >
       <span class="flex items-center gap-2">
-        {{report.name}} @if (report.generating){
+        {{report.name}} @if (report.loading){
         <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
         }
       </span>

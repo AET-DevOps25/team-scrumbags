@@ -1,0 +1,103 @@
+# Global configuration
+global:
+  namespace: team-scrumbags
+  imageRegistry: ghcr.io/aet-devops25/team-scrumbags
+  imagePullPolicy: IfNotPresent
+
+
+# Environment variables
+environment:
+  debug: false
+  keycloakRealm: trace
+  keycloakClient: trace-api
+  keycloakAdminUsername: admin
+  keycloakAdminPassword: admin
+  postgresDbUser: user
+  postgresDbPassword: test
+  mysqlRootPassword: test
+  sdlcTokenSecret: meinsecret
+  sdlcMode: forward
+  useWhisperx: false
+  useCloud: true
+  transcriptionTimeout: 300000
+
+# Ingress configuration
+ingress:
+  enabled: true
+  host: trace.student.k8s.aet.cit.tum.de
+
+# Service configurations
+client:
+  enabled: true
+  image: ghcr.io/aet-devops25/team-scrumbags/client:latest
+  port: 80
+  nodePort: 30000
+  replicas: 1
+
+projectManagement:
+  enabled: true
+  image: ghcr.io/aet-devops25/team-scrumbags/project-management:latest
+  port: 30001
+  replicas: 1
+
+sdlc:
+  enabled: true
+  image: ghcr.io/aet-devops25/team-scrumbags/sdlc-connector:latest
+  port: 30002
+  replicas: 1
+
+communication:
+  enabled: true
+  image: ghcr.io/aet-devops25/team-scrumbags/comms-connector:latest
+  port: 30003
+  replicas: 1
+
+transcription:
+  enabled: true
+  image: ghcr.io/aet-devops25/team-scrumbags/transcription:latest
+  port: 30004
+  replicas: 1
+
+genai:
+  enabled: true
+  image: ghcr.io/aet-devops25/team-scrumbags/genai:latest
+  port: 30005
+  replicas: 1
+
+# External services
+postgresql:
+  enabled: true
+  image: postgres:latest
+  port: 30006
+  storageSize: 10Gi
+
+mysql:
+  enabled: true
+  image: mysql:8.0
+  port: 30007
+  storageSize: 20Gi
+
+keycloak:
+  enabled: true
+  image: quay.io/keycloak/keycloak:26.2.5
+  port: 30008
+  replicas: 1
+
+ollama:
+  enabled: false
+  image: ollama/ollama:latest
+  port: 30009
+  storageSize: 20Gi
+
+rabbitmq:
+  enabled: true
+  image: rabbitmq:management
+  port: 30010
+  managementPort: 15672
+  storageSize: 5Gi
+
+weaviate:
+  enabled: true
+  image: cr.weaviate.io/semitechnologies/weaviate:1.31.2
+  port: 30011
+  storageSize: 10Gi

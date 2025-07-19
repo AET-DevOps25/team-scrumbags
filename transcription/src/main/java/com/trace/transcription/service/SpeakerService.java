@@ -75,7 +75,7 @@ public class SpeakerService {
                 String extension = FilenameUtils.getExtension(file.getOriginalFilename());
 
                 // create and set entity
-                SpeakerEntity speaker = new SpeakerEntity(userId, userName, projectId, file.getBytes(), extension);
+                SpeakerEntity speaker = new SpeakerEntity(userId, userName, projectId, file.getBytes(), extension, file.getOriginalFilename());
 
                 toSave.add(speaker);
             }
@@ -101,6 +101,36 @@ public class SpeakerService {
         return sb.toString();
     }
 
+    public SpeakerEntity saveSpeaker(UUID projectId, String userId, String userName, MultipartFile speakingSample) throws IOException, InterruptedException {
+        File tmp = File.createTempFile("durationcheck-", speakingSample.getOriginalFilename());
+
+        try {
+            try (InputStream in = speakingSample.getInputStream()) {
+                Files.copy(in, tmp.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
+
+            Duration d = getDurationWithFFprobe(tmp);
+
+            //check if duration is more than 15 seconds
+            if (d.isZero() || d.toMillis() < 15000) {
+                logger.warn("Speaker {} has zero or too short duration ({}), skipping", userId, d);
+                return null;
+            }
+
+            String extension = FilenameUtils.getExtension(speakingSample.getOriginalFilename());
+
+            // create and set entity
+            SpeakerEntity speaker = new SpeakerEntity(userId, userName, projectId, speakingSample.getBytes(), extension, speakingSample.getOriginalFilename());
+
+            return speakerRepository.save(speaker);
+        } finally {
+            boolean deleted = tmp.delete();
+            if (!deleted) {
+                logger.warn("Temporary file {} could not be deleted", tmp.getAbsolutePath());
+            }
+        }
+    }
+
     public SpeakerEntity getSpeakerById(UUID projectId, String userId) {
         return speakerRepository.findByProjectIdAndUserId(projectId, userId);
     }
@@ -117,29 +147,27 @@ public class SpeakerService {
         }
     }
 
-    public boolean updateSpeaker(
+    public SpeakerEntity updateSpeaker(
             UUID projectId,
             String userId,
             String userName,
             MultipartFile speakingSample) throws IOException {
         SpeakerEntity speaker = getSpeakerById(projectId, userId);
         if (speaker == null) {
-            logger.warn("Speaker with ID {} not found in project {}", userId, projectId);
-            return false;
+            return null;
         }
 
         if (userName != null && !userName.isEmpty()) {
             speaker.setUserName(userName);
         }
+
         if (speakingSample != null && !speakingSample.isEmpty()) {
-            String extension = FilenameUtils.getExtension(speakingSample.getOriginalFilename());
             speaker.setSpeakingSample(speakingSample.getBytes());
-            speaker.setSampleExtension(extension);
+            speaker.setSampleExtension(FilenameUtils.getExtension(speakingSample.getOriginalFilename()));
+            speaker.setOriginalFileName(speakingSample.getOriginalFilename());
         }
 
-        speakerRepository.save(speaker);
-        logger.info("Updated speaker with ID: {}", userId);
-        return true;
+        return speakerRepository.save(speaker);
     }
 
     //get all speaking samples for project and return all files as zip
@@ -147,11 +175,23 @@ public class SpeakerService {
         List<SpeakerEntity> speakers = speakerRepository.findAllByProjectId(projectId);
         if (speakers.isEmpty()) {
             logger.warn("No speakers found for project {}", projectId);
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            response.setStatus(HttpServletResponse.SC_OK);
+            response.setContentType("application/zip");
+            response.setHeader(
+                    HttpHeaders.CONTENT_DISPOSITION,
+                    "attachment; filename=\"speaking-samples.zip\""
+            );
+            // Return empty ZIP for consistency
+            try (ZipOutputStream zos = new ZipOutputStream(response.getOutputStream())) {
+                zos.finish();
+            } catch (IOException e) {
+                logger.error("Error creating empty ZIP file for project {}: {}", projectId, e.getMessage(), e);
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            }
             return;
         }
 
-        // 2. Prepare response headers for a ZIP download:
+        // Set headers before writing content
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType("application/zip");
         response.setHeader(
@@ -159,29 +199,23 @@ public class SpeakerService {
                 "attachment; filename=\"speaking-samples.zip\""
         );
 
-        // 3. Stream the ZIP directly to the response output stream:
+        // Stream the ZIP directly to the response output stream
         try (ZipOutputStream zos = new ZipOutputStream(response.getOutputStream())) {
             byte[] buffer = new byte[8192];
 
             for (SpeakerEntity m : speakers) {
-                // Build a predictable, ordered filename:
                 String filename = m.getUserId() + "." + m.getSampleExtension();
-
-                // Add a new ZIP entry
                 zos.putNextEntry(new ZipEntry(filename));
 
-                // Write the byte[] LOB in chunks
                 try (ByteArrayInputStream in = new ByteArrayInputStream(m.getSpeakingSample())) {
                     int len;
                     while ((len = in.read(buffer)) != -1) {
                         zos.write(buffer, 0, len);
                     }
                 }
-
                 zos.closeEntry();
             }
 
-            // Finish writing the ZIP (optional: zos.finish() is called by close())
             zos.finish();
         } catch (IOException e) {
             logger.error("Error creating ZIP file for project {}: {}", projectId, e.getMessage(), e);

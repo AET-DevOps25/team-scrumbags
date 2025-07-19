@@ -1,4 +1,4 @@
-name: CD (Deploy to Kubernetes)
+name: Deploy to Kubernetes (Rancher) with Helm
 
 on:
   push:
@@ -6,46 +6,27 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
-    name: Deploy to Minikube
+  deploy-helm:
+    name: Kubernetes Deployment with Helm
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Start Minikube
-        uses: medyagh/setup-minikube@latest
-
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v4
-
       - name: Set up Helm
         uses: azure/setup-helm@v4
 
-#      - name: Deploy MySQL via Helm
-#        run: |
-#          helm upgrade --install mysql ./helm/mysql \
-#            --namespace default \
-#            --set image.repository=mysql \
-#            --set image.tag=8.0 \
-#            --set mysqlRootPassword=${{ secrets.MYSQL_ROOT_PASSWORD }} \
-#            --set mysqlUser=${{ secrets.MYSQL_USER }} \
-#            --set mysqlPassword=${{ secrets.MYSQL_PASSWORD }}
-#
-#      - name: Deploy server via Helm
-#        run: |
-#          helm upgrade --install server ./helm/server \
-#            --namespace default \
-#            --set image.repository=ghcr.io/${{ github.repository_owner }}/server \
-#            --set image.tag=latest \
-#            --set spring.datasource.url=jdbc:mysql://mysql:3306/${{ secrets.MYSQL_DATABASE }} \
-#            --set spring.datasource.username=${{ secrets.MYSQL_USER }} \
-#            --set spring.datasource.password=${{ secrets.MYSQL_PASSWORD }}
-#
-#      - name: Deploy client via Helm
-#        run: |
-#          helm upgrade --install client ./helm/client \
-#            --namespace default \
-#            --set image.repository=ghcr.io/${{ github.repository_owner }}/client \
-#            --set image.tag=latest \
-#            --set backendUrl=http://server:8080
+      - name: Set up Kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install -n team-scrumbags trace ./k8s \
+            --set secrets.assemblyAiKey="${{ secrets.ASSEMBLYAI_API_KEY }}" \
+            --set secrets.commDiscordSecret="${{ secrets.COMM_DISCORD_SECRET }}" \
+            --set secrets.hfToken="${{ secrets.HF_TOKEN }}" \
+            --set secrets.nomicApiKey="${{ secrets.NOMIC_API_KEY }}" \
+            --set secrets.openWebuiBearer="${{ secrets.OPEN_WEBUI_BEARER }}"

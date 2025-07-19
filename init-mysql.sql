@@ -1,3 +1,3 @@
-CREATE DATABASE `comms-db`;
-CREATE DATABASE `transcription-db`;
-CREATE DATABASE `genai-db`;
+CREATE DATABASE IF NOT EXISTS `comms-db`;
+CREATE DATABASE IF NOT EXISTS `transcription-db`;
+CREATE DATABASE IF NOT EXISTS `genai-db`;

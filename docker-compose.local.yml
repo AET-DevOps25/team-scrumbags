@@ -45,7 +45,7 @@ services:
     environment:
       - DEBUG=true
       - TOKEN_SECRET=${SDLC_TOKEN_SECRET:-meinsecret}
-      - MODE=${SDLC_MODE:-forward}
+      - SPRING_PROFILES_ACTIVE=${SDLC_MODE:-forward}
       - GENAI_URL=http://localhost:4242
       - DB_URL=jdbc:postgresql://localhost:5432/sdlc-db
       - DB_USER=${POSTGRES_DB_USER:-user}
@@ -72,7 +72,7 @@ services:
       dockerfile: Dockerfile
     network_mode: host
     depends_on:
-      mysql-db: 
+      mysql-db:
         condition: service_healthy
     environment:
       - DEBUG=true
@@ -89,14 +89,14 @@ services:
     restart: unless-stopped
 
   transcription:
-    build:
+    build:  
       context: ./transcription
       dockerfile: Dockerfile
       args:
         USE_WHISPERX: ${USE_WHISPERX:-false}
     network_mode: host
     depends_on:
-      mysql-db: 
+      mysql-db:
         condition: service_healthy
     environment:
       - DEBUG=true
@@ -107,8 +107,9 @@ services:
       - USE_CLOUD=${USE_CLOUD:-true}
       - ASSEMBLYAI_API_KEY=${ASSEMBLYAI_API_KEY}
       - TRANSCRIPTION_TIMEOUT=${TRANSCRIPTION_TIMEOUT:-300000}
-      - GENAI_URL=http://localhost:4242
+      - GENAI_URL=http://127.0.0.1:4242
       - SERVER_PORT=8083
+      - USE_WHISPERX=${USE_WHISPERX:-false}
     restart: unless-stopped
 
   genai:
@@ -117,7 +118,7 @@ services:
       dockerfile: Dockerfile
     network_mode: host
     depends_on:
-      mysql-db: 
+      mysql-db:
         condition: service_healthy
     environment:
       - DEBUG=true
@@ -169,14 +170,12 @@ services:
       interval: 15s
       timeout: 10s
       retries: 30
-  
+
   rabbitmq:
     image: rabbitmq:management
     container_name: rabbitmq
+    network_mode: host
     restart: unless-stopped
-    ports:
-      - "5672:5672"
-      - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
@@ -193,9 +192,7 @@ services:
       - --scheme
       - http
     image: cr.weaviate.io/semitechnologies/weaviate:1.31.2
-    ports:
-      - "6969:6969"
-      - "50051:50051"
+    network_mode: host
     volumes:
       - weaviate_data:/var/lib/weaviate
     restart: on-failure:0
@@ -210,8 +207,7 @@ services:
     image: mysql:8.0
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-test}
-    ports:
-      - "3306:3306"
+    network_mode: host
     volumes:
       - mysql_data:/var/lib/mysql/
       - ./init-mysql.sql:/docker-entrypoint-initdb.d/init.sql
@@ -238,6 +234,61 @@ services:
     volumes:
       - ./project-management/keycloak/:/opt/keycloak/data/import/
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($|/)'
+    ports:
+      - "9100:9100"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    environment:
+      - DISCORD_ALERTMANAGER_WEBHOOK_URL=${DISCORD_ALERTMANAGER_WEBHOOK_URL}
+    volumes:
+      - ./alertmanager/config.yml:/etc/alertmanager/config.yml:ro
+      - ./alertmanager/entrypoint.sh:/etc/alertmanager/entrypoint.sh:ro
+    entrypoint: ["/bin/sh", "/etc/alertmanager/entrypoint.sh"]  
+    ports:
+      - "9093:9093"
+
 volumes:
   postgres_db_data:
   mysql_data:
@@ -247,3 +298,5 @@ volumes:
   rabbitmq-log:
     driver: local
   ollama:
+  prometheus_data:
+  grafana_data:

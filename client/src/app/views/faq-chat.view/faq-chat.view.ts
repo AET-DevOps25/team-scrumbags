@@ -20,6 +20,7 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
+import {MarkdownComponent} from 'ngx-markdown';
 
 @Component({
   selector: 'app-faq-chat',
@@ -31,6 +32,7 @@ import { MatIcon } from '@angular/material/icon';
     MatIcon,
     MatProgressSpinnerModule,
     DatePipe,
+    MarkdownComponent,
   ],
   templateUrl: './faq-chat.view.html',
   styleUrl: './faq-chat.view.scss',
@@ -51,6 +53,10 @@ export class FaqChatView implements AfterViewInit {
 
   inputMessage = signal('');
   isLoading = signal(false);
+  isLastMessageLoading = computed(() => {
+    const loadingMessages = this.messages().filter((msg) => msg.loading);
+    return loadingMessages.length > 0;
+  });
 
   constructor() {
     effect(() => {
@@ -66,11 +72,6 @@ export class FaqChatView implements AfterViewInit {
           )
           .subscribe();
         return;
-      }
-
-      const messages = this.messages();
-      if (messages.length > 0) {
-        this.isLoading.set(messages.at(messages.length - 1)?.loading ?? false);
       }
     });
 

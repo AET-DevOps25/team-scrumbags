@@ -2,10 +2,10 @@ package com.trace.comms_connector.model;
 
 import java.util.UUID;
 
-public interface CommsMessage {
-    public String getJsonString(UUID userId, UUID projectId);
+public abstract class CommsMessage {
+    public abstract GenAiMessage getGenAiMessage(UUID userId, UUID projectId);
 
-    public String getId();
+    public abstract String getId();
 
-    public CommsPlatformUser getAuthor();
+    public abstract CommsPlatformUser getAuthor();
 }

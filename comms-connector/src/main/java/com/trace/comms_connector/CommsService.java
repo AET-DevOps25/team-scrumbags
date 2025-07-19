@@ -12,10 +12,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.trace.comms_connector.connection.ConnectionCompositeKey;
 import com.trace.comms_connector.connection.ConnectionEntity;
 import com.trace.comms_connector.connection.ConnectionRepo;
-import com.trace.comms_connector.discord.DiscordMessage;
 import com.trace.comms_connector.discord.DiscordRestClient;
+import com.trace.comms_connector.model.CommsMessage;
+import com.trace.comms_connector.model.CommsPlatformRestClient;
+import com.trace.comms_connector.model.GenAiMessage;
 import com.trace.comms_connector.user.UserCompositeKey;
 import com.trace.comms_connector.user.UserEntity;
 import com.trace.comms_connector.user.UserRepo;
@@ -35,7 +38,7 @@ public class CommsService {
     private DiscordRestClient discordClient;
 
     @Autowired
-    private CommsRestClient commsClient;
+    private TraceRestClient traceClient;
 
     // Save connection to the connection database
     @Transactional
@@ -45,6 +48,10 @@ public class CommsService {
         @NonNull Platform platform,
         @Nullable String lastMessageId
     ) {
+        if (lastMessageId == null) {
+            lastMessageId = "0"; // Default to 0 if no last message ID is provided
+        }
+        
         ConnectionEntity connectionEntity = new ConnectionEntity(projectId, platformChannelId, platform, lastMessageId);
         connectionEntity = connectionRepo.save(connectionEntity);
         return connectionEntity;
@@ -161,36 +168,66 @@ public class CommsService {
         return user.isPresent() ? user.get().getUserId() : null;
     }
 
-    // Used for testing getting the messages from a Discord channel
-    public String getAllMessagesFromChannel(UUID projectId, Platform platform, String channelId, String lastMessageId) {
-        List<DiscordMessage> messages = discordClient.getChannelMessages(
-            channelId,
-            lastMessageId,
-            projectId);
+    // Used for getting a batch of messages from a platform channel
+    public String getMessageBatchFromChannel(
+        UUID projectId,
+        Platform platform,
+        String channelId,
+        String lastMessageId,
+        boolean updateLastMessageId,
+        boolean sendToGenAi
+    ) {
+        CommsPlatformRestClient client = null;
+        List<CommsMessage> messageBatch = new ArrayList<>();
 
-        if (!messages.isEmpty() && messages != null) {
-            List<String> jsonMessages = messages.stream()
-                .map(msg -> {
-                    UUID userId = getUserIdByProjectIdAndPlatformDetails(
-                        projectId, platform, msg.getAuthor().getIdentifier());
-                    return msg.getJsonString(userId, projectId);
-                })
-                .toList();
+        // Select client
+        switch (platform) {
+            case DISCORD:
+                client = this.discordClient;
+                break;
+            default:
+                return "Platform not supported.";
+        }
 
-            String messageJsonArray = "";
-            
-            // Convert to a single string of a JSON array
-            ObjectMapper mapper = new ObjectMapper();
-            try {
-                messageJsonArray = mapper.writeValueAsString(jsonMessages);
-            } catch (Exception e) {}
+        if (lastMessageId == null) {
+            lastMessageId = connectionRepo.findById(new ConnectionCompositeKey(projectId, channelId, platform)).get().getLastMessageId();
+        }
 
-            // Send to the gen AI microservice
-            //commsClient.sendMessageListToGenAi(messageJsonArray);
+        // Get the messages in batches
+        messageBatch.addAll(client.getChannelMessages(channelId, lastMessageId, projectId));
 
-            return messageJsonArray;
-        } else {
+        if (messageBatch.isEmpty()) {
+            return "[]";
+        }
+
+        if (updateLastMessageId) {
+            String newLastMessageId = messageBatch.get(0).getId();
+            saveConnection(projectId, channelId, platform, newLastMessageId);
+        }
+
+        // Convert to a list of JSON strings
+        List<GenAiMessage> jsonMessages = messageBatch.stream()
+            .map(msg -> {
+                UUID userId = getUserIdByProjectIdAndPlatformDetails(
+                    projectId, platform, msg.getAuthor().getIdentifier());
+                return msg.getGenAiMessage(userId, projectId);
+            })
+            .toList();
+
+        String messageJsonList = "";
+        
+        // Convert to a single string of a JSON array
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            messageJsonList = mapper.writeValueAsString(jsonMessages);
+        } catch (Exception e) {
             return "";
         }
+
+        if (sendToGenAi) {
+            traceClient.sendMessageListToGenAi(messageJsonList);
+        }
+
+        return messageJsonList;
     }
 }

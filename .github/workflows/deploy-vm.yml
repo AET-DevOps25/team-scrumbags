@@ -15,10 +15,15 @@ on:
       sdlc-image-tag:
         description: 'SDLC image tag to deploy'
         required: false
-      meeting-notes-image-tag:
-        description: 'Meeting Notes image tag to deploy'
+      communication-image-tag:
+        description: 'Communication image tag to deploy'
         required: false
-      
+      transcription-image-tag:
+        description: 'Transcription image tag to deploy'
+        required: false
+      genai-image-tag:
+        description: 'GenAI image tag to deploy'
+        required: false
 
 jobs:
   deploy:
@@ -74,9 +79,27 @@ jobs:
             echo "SDLC_DB_PASSWORD=${{ secrets.SDLC_DB_PASSWORD }}" >> .env
             echo "SDLC_TOKEN_SECRET=${{ secrets.SDLC_TOKEN_SECRET }}" >> .env
 
-            echo "MEETING_NOTES_IMAGE_TAG=${{ inputs.meeting-notes-image-tag || inputs.image-tag}}" >> .env
+            echo "COMM_IMAGE_TAG=${{ inputs.communication-image-tag || inputs.image-tag }}" >> .env
+            echo "COMM_DB_PASSWORD=${{ secrets.COMM_DB_PASSWORD }}" >> .env
+            echo "COMM_DISCORD_SECRET=${{ secrets.COMM_DISCORD_SECRET }}" >> .env
+            echo "COMM_DISCORD_BOT_ID=${{ vars.COMM_DISCORD_BOT_ID }}" >> .env
+            echo "COMM_DISCORD_API_VERSION=${{ vars.COMM_DISCORD_API_VERSION }}" >> .env
+            echo "COMM_DISCORD_BASE_URL=${{ vars.COMM_DISCORD_BASE_URL }}" >> .env
 
+            echo "TRANSCRIPTION_IMAGE_TAG=${{ inputs.transcription-image-tag || inputs.image-tag}}" >> .env
+            echo "TRANSCRIPTION_DB_PASSWORD=${{ secrets.TRANSCRIPTION_DB_PASSWORD }}" >> .env
+            echo "TRANSCRIPTION_HF_TOKEN=${{ secrets.TRANSCRIPTION_HF_TOKEN }}" >> .env
+            echo "TRANSCRIPTION_ASSEMBLYAI_API_KEY=${{ secrets.TRANSCRIPTION_ASSEMBLYAI_API_KEY }}" >> .env
+            echo "TRANSCRIPTION_TIMEOUT=${{ vars.TRANSCRIPTION_TIMEOUT }}" >> .env
 
+            echo "GENAI_IMAGE_TAG=${{ inputs.genai-image-tag || inputs.image-tag}}" >> .env
+            echo "GENAI_DB_PASSWORD=${{ secrets.GENAI_DB_PASSWORD }}" >> .env
+            echo "GENAI_OLLAMA_CLOUD_URL=${{ vars.GENAI_OLLAMA_CLOUD_URL }}" >> .env
+            echo "GENAI_NOMIC_API_KEY=${{ secrets.GENAI_NOMIC_API_KEY }}" >> .env
+            echo "GENAI_OPEN_WEBUI_BEARER=${{ secrets.GENAI_OPEN_WEBUI_BEARER }}" >> .env
+            echo "GENAI_RABBITMQ_USER=${{ secrets.GENAI_RABBITMQ_USER }}" >> .env
+            echo "GENAI_RABBITMQ_PASSWORD=${{ secrets.GENAI_RABBITMQ_PASSWORD }}" >> .env
+         
       - name: SSH to VM and Execute Docker-Compose Up
         uses: appleboy/ssh-action@v1.0.3
         with:
