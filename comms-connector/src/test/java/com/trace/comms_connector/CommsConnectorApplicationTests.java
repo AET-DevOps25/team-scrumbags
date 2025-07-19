@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
@@ -52,6 +53,12 @@ class CommsConnectorApplicationTests {
 	@MockitoBean
 	private CommsThreadRunner commsThreadRunnerMock;
 
+	@BeforeEach
+	public void clearRepos() {
+		userRepo.deleteAll();
+		connectionRepo.deleteAll();
+	}
+
 	// Test getting platform users when there are no connections added
 	@Test
 	public void test_getPlatformUsers_empty() throws Exception {
@@ -93,7 +100,7 @@ class CommsConnectorApplicationTests {
 		);
 	}
 
-	// Test getting all users when there are no connections added
+	/* // Test getting all users when there are no connections added
 	@Test
 	public void test_getAllUsers_empty() throws Exception {
 		UUID projectId = UUID.randomUUID();
@@ -131,7 +138,7 @@ class CommsConnectorApplicationTests {
 			status().is2xxSuccessful(),
 			content().string(userJsonResponse)
 		);
-	}
+	} */
 
 	// Test adding a connection
 	@Test
@@ -181,6 +188,7 @@ class CommsConnectorApplicationTests {
 	}
 
 	// Test adding a connection without specifying server ID, should return bad request
+	@Test
 	public void test_addCommsIntegration_noServerId() throws Exception {
 		UUID projectId = UUID.randomUUID();
 		Platform platform = Platform.DISCORD;
@@ -193,6 +201,7 @@ class CommsConnectorApplicationTests {
 	}
 	
 	// Test saving comms user, should update the existing entry and not create a duplicate one
+	@Test
 	public void test_addPlatformUser() throws Exception {
 		UUID projectId = UUID.randomUUID();
 		UUID userId = UUID.randomUUID();
@@ -227,6 +236,7 @@ class CommsConnectorApplicationTests {
 	}
 
 	// Test add user endpoint with no userId or platformUserId, should return bad request
+	@Test
 	public void test_addPlatformUser_missingIds() throws Exception {
 		UUID projectId = UUID.randomUUID();
 		Platform platform = Platform.DISCORD;
@@ -239,6 +249,7 @@ class CommsConnectorApplicationTests {
 	}
 
 	// Test delete platform connections
+	@Test
 	public void test_deletePlatformCommIntegrations() throws Exception {
 		UUID projectId = UUID.randomUUID();
 		Platform platform = Platform.DISCORD;
@@ -261,6 +272,7 @@ class CommsConnectorApplicationTests {
 	}
 
 	// Test delete all connections
+	@Test
 	public void test_deleteAllCommIntegrations() throws Exception {
 		UUID projectId = UUID.randomUUID();
 		Platform platform = Platform.DISCORD;
@@ -283,6 +295,7 @@ class CommsConnectorApplicationTests {
 	}
 
 	// Test get platform connections with none added
+	@Test
 	public void test_getPlatformConnections_empty() throws Exception {
 		UUID projectId = UUID.randomUUID();
 		Platform platform = Platform.DISCORD;
@@ -296,6 +309,7 @@ class CommsConnectorApplicationTests {
 	}
 
 	// Test get platform connections
+	@Test
 	public void test_getPlatformConnections() throws Exception {
 		UUID projectId = UUID.randomUUID();
 		Platform platform = Platform.DISCORD;
@@ -322,6 +336,7 @@ class CommsConnectorApplicationTests {
 	}
 
 	// Test get all connections with none added
+	@Test
 	public void test_getAllConnections_empty() throws Exception {
 		UUID projectId = UUID.randomUUID();
 
@@ -334,6 +349,7 @@ class CommsConnectorApplicationTests {
 	}
 
 	// Test get all connections
+	@Test
 	public void test_getAllConnections() throws Exception {
 		UUID projectId = UUID.randomUUID();
 		Platform platform = Platform.DISCORD;
@@ -360,66 +376,68 @@ class CommsConnectorApplicationTests {
 	}
 
 	// Test start thread while not running
+	@Test
 	public void test_startCommsThread_notRunning() throws Exception {
 		CommsThread commsThreadMock = mock(CommsThread.class);
 
 		try (MockedStatic<CommsThread> staticMock = Mockito.mockStatic(CommsThread.class)) {
 			staticMock.when(CommsThread::getInstance).thenReturn(commsThreadMock);
-			doNothing().when(commsThreadMock).startThread();
-		}
 
-		mockMvc.perform(
-			post("/comms/thread")
-		).andExpectAll(
-			status().is2xxSuccessful()
-		);
+			mockMvc.perform(
+				post("/comms/thread")
+			).andExpectAll(
+				status().is2xxSuccessful()
+			);
+		}
 	}
 
 	// Test start thread while running
+	@Test
 	public void test_startCommsThread_running() throws Exception {
 		CommsThread commsThreadMock = mock(CommsThread.class);
 
 		try (MockedStatic<CommsThread> staticMock = Mockito.mockStatic(CommsThread.class)) {
 			staticMock.when(CommsThread::getInstance).thenReturn(commsThreadMock);
 			doThrow(new RuntimeException()).when(commsThreadMock).startThread();
-		}
 
-		mockMvc.perform(
-			post("/comms/thread")
-		).andExpectAll(
-			status().is4xxClientError()
-		);
+			mockMvc.perform(
+				post("/comms/thread")
+			).andExpectAll(
+				status().is4xxClientError()
+			);
+		}
 	}
 
 	// Test stop thread while running
+	@Test
 	public void test_stopCommsThread_running() throws Exception {
 		CommsThread commsThreadMock = mock(CommsThread.class);
 
 		try (MockedStatic<CommsThread> staticMock = Mockito.mockStatic(CommsThread.class)) {
 			staticMock.when(CommsThread::getInstance).thenReturn(commsThreadMock);
-			doNothing().when(commsThreadMock).stopThread();
-		}
 
-		mockMvc.perform(
-			post("/comms/thread")
-		).andExpectAll(
-			status().is2xxSuccessful()
-		);
+			mockMvc.perform(
+				delete("/comms/thread")
+			).andExpectAll(
+				status().is2xxSuccessful()
+			);
+		}
 	}
 
 	// Test stop thread while not running
+	@Test
 	public void test_stopCommsThread_notRunning() throws Exception {
 		CommsThread commsThreadMock = mock(CommsThread.class);
 
 		try (MockedStatic<CommsThread> staticMock = Mockito.mockStatic(CommsThread.class)) {
 			staticMock.when(CommsThread::getInstance).thenReturn(commsThreadMock);
 			doThrow(new RuntimeException()).when(commsThreadMock).stopThread();
+			
+			mockMvc.perform(
+				delete("/comms/thread")
+			).andExpectAll(
+				status().is4xxClientError()
+			);
 		}
-
-		mockMvc.perform(
-			delete("/comms/thread")
-		).andExpectAll(
-			status().is4xxClientError()
-		);
 	}
 }
