@@ -87,7 +87,7 @@ public class CommsController {
         @RequestParam(required = false) String platformUserId
     ) {
         if (userId == null || platformUserId == null) {
-            return ResponseEntity.badRequest().body("User ID and platform username must be specified!");
+            return ResponseEntity.badRequest().body("User ID and platform user ID must be specified!");
         }
 
         var userEntity = commsService.saveUser(projectId, platformUserId, platform, userId);
@@ -140,8 +140,8 @@ public class CommsController {
      * @return String in the format of a JSON array of objects with the format of the gen AI microservice
      */
     @Operation(
-        summary = "Get Discord messages from channel",
-        description = "Returns a list of a batch of 100 platform messages from the specified channel ID (for Discord: the ID of a text" +
+        summary = "Get batch of messages from channel",
+        description = "Returns a batch of messages from the specified channel ID (for Discord: <=100 messages from the ID of a text" +
             " channel that was added to the connections database using add integration endpoint prior to this). The messages are formatted" +
             " according to the JSON format specified by the gen AI microservice. Last message ID can be specified to only get the" +
             " messages after a specific message with the given ID. If lastMessageId is not specified, the last message ID is fetched" +
@@ -165,6 +165,46 @@ public class CommsController {
             projectId, platform, channelId, lastMessageId, updateLastMessageId, sendToGenAi);
 
         return ResponseEntity.ok(messageJsonList);
+    }
+
+    /**
+     * Get a list of connections for a project from the specified platform
+     * 
+     * @param projectId
+     * @param platform
+     * @return list of connections on platform
+     */
+    @Operation(
+        summary = "Get all connections for a project from a specific platform",
+        description = "Get all connections added to a project with the given ID that is on the given platform. In case of Discord," +
+            " the returned entries' IDs correspond to a text channel ID."
+    )
+    @GetMapping("/projects/{projectId}/comms/{platform}")
+    public ResponseEntity<?> getPlatformConnections(
+        @PathVariable UUID projectId,
+        @PathVariable Platform platform
+    ) {
+        var connections = commsService.getConnections(projectId, platform);
+        return ResponseEntity.ok(connections);
+    }
+
+    /**
+     * Get a list of connections for a project
+     * 
+     * @param projectId
+     * @return list of connections
+     */
+    @Operation(
+        summary = "Get all connections for a project",
+        description = "Get all connections added to a project with the given ID. In case of Discord," +
+            " the returned entries' IDs correspond to a text channel ID."
+    )
+    @GetMapping("/projects/{projectId}/comms")
+    public ResponseEntity<?> getAllConnections(
+        @PathVariable UUID projectId
+    ) {
+        var connections = commsService.getConnections(projectId, null);
+        return ResponseEntity.ok(connections);
     }
 
     @Operation(
