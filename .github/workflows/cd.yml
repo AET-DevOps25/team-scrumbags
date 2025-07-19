@@ -35,3 +35,4 @@ jobs:
             --set secrets.openWebuiBearer="${{ secrets.OPEN_WEBUI_BEARER }}" \
             --set secrets.grafanaAdminPassword="${{ secrets.GRAFANA_ADMIN_PASSWORD }}" \
             --set secrets.discordAlertmanagerWebhookUrl="${{ secrets.DISCORD_ALERTMANAGER_WEBHOOK_URL }}" \
+            --set environment.keycloakAdminPassword="${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}"

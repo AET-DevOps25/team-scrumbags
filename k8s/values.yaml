@@ -10,7 +10,6 @@ environment:
   keycloakRealm: trace
   keycloakClient: trace-api
   keycloakAdminUsername: admin
-  keycloakAdminPassword: admin
   postgresDbUser: user
   sdlcTokenSecret: meinsecret
   sdlcMode: forward
