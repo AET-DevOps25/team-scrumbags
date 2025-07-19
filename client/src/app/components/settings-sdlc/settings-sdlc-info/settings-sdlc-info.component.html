@@ -10,14 +10,46 @@
 <div mat-dialog-content>
   <mat-stepper #stepper labelPosition="bottom">
     <mat-step completed="false">
+      <img
+        src="assets/sdlc-secret.gif"
+        alt="Secret Input GIF"
+        class="mx-auto w-auto mb-2"
+      />
       <p class="text-base">
-        Welcome to the Version Control Setup Guide. Click next to continue.
+        Add a secure secret for the webhook to be configured in the next step.
+        This can be any string, but it is recommended to use a strong, random
+        value.
       </p>
     </mat-step>
     <mat-step completed="false">
+      <img
+        src="assets/sdlc-webhook-settings.gif"
+        alt="Guide GIF"
+        class="mx-auto w-auto mb-2"
+      />
+      <p class="text-base">Navigate to the websocket setting in Github.</p>
+    </mat-step>
+    <mat-step completed="false">
+      <img
+        src="assets/sdlc-webhook-add.gif"
+        alt="Guide GIF"
+        class="mx-auto w-auto mb-2"
+      />
       <p class="text-base">
-        This guide will help you configure the version control settings for your
-        project. Please follow the steps carefully to ensure proper setup.
+        Add
+        <a class="underline break-all">
+          {{ websocketUrl() }}
+        </a>
+        <button
+          mat-icon-button
+          type="button"
+          [cdkCopyToClipboard]="websocketUrl()"
+          matTooltip="Copy URL"
+          aria-label="Copy URL"
+        >
+          <mat-icon>content_copy</mat-icon>
+        </button>
+        as the webhook URL, set to JSON and add the secret you created in the previous step. You can configure events you want to receive.
       </p>
     </mat-step>
   </mat-stepper>
