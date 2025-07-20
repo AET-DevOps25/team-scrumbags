@@ -1,7 +1,7 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal, OnDestroy } from '@angular/core';
 import { ProjectApi } from './project.api';
 import { ProjectState } from '../states/project.state';
-import { filter, finalize, Observable, tap } from 'rxjs';
+import { filter, finalize, Observable, tap, takeUntil, Subject } from 'rxjs';
 import { Project } from '../models/project.model';
 import { NavigationEnd, Router } from '@angular/router';
 import Keycloak from 'keycloak-js';
@@ -10,12 +10,13 @@ import { User } from '../models/user.model';
 @Injectable({
   providedIn: 'root',
 })
-export class ProjectService {
+export class ProjectService implements OnDestroy {
   private api = inject(ProjectApi);
   private state = inject(ProjectState);
   private router = inject(Router);
 
   private keycloak = inject(Keycloak);
+  private destroy$ = new Subject<void>();
 
   private _isLoadingProjectList = signal<boolean>(false);
   public isLoadingProjectList = this._isLoadingProjectList.asReadonly();
@@ -29,13 +30,21 @@ export class ProjectService {
 
   constructor() {
     this.router.events
-      .pipe(filter((event) => event instanceof NavigationEnd))
+      .pipe(
+        filter((event) => event instanceof NavigationEnd),
+        takeUntil(this.destroy$)
+      )
       .subscribe(() => {
         const url = this.router.url;
         const match = url.match(/^\/projects\/([^/]+)/);
         const projectId = match ? match[1] : undefined;
         this.selectProject(projectId).subscribe();
       });
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   public loadProjectList(): Observable<Project[]> {
