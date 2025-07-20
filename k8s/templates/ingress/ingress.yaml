@@ -13,7 +13,6 @@ spec:
     - hosts:
         - {{ .Values.ingress.host }}
         - {{ .Values.ingress.keycloakHost }}
-        - tttt.{{ .Values.ingress.host}}
       secretName: trace-tls-secret
   rules:
     - host: {{.Values.ingress.keycloakHost }}
