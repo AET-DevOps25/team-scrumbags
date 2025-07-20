@@ -18,10 +18,10 @@ export class ReportApi {
       .pipe(
         map((reports) => {
           for (const report of reports) {
-            report.startTime = new Date(Number(report.startTime) * 1000); // convert from seconds to milliseconds
-            report.endTime = new Date(Number(report.endTime) * 1000); // convert from seconds to milliseconds
-            report.generatedAt = new Date(report.generatedAt); // should be already in milliseconds
-          } 
+            report.startTime = new Date(report.startTime);
+            report.endTime = new Date(report.endTime);
+            report.generatedAt = new Date(report.generatedAt);
+          }
           return reports;
         }),
         catchError(handleError('Error fetching reports metadata'))
@@ -35,9 +35,9 @@ export class ReportApi {
       )
       .pipe(
         map((report) => {
-          report.startTime = new Date(Number(report.startTime) * 1000); // convert from seconds to milliseconds
-          report.endTime = new Date(Number(report.endTime) * 1000); // convert from seconds to milliseconds
-          report.generatedAt = new Date(report.generatedAt); // should be already in milliseconds
+          report.startTime = new Date(report.startTime);
+          report.endTime = new Date(report.endTime);
+          report.generatedAt = new Date(report.generatedAt);
           return report;
         }),
         catchError(
@@ -55,16 +55,10 @@ export class ReportApi {
     const url = `${environment.genAiUrl}/projects/${projectId}/summary`;
     const params = new URLSearchParams();
     if (periodStart) {
-      params.append(
-        'startTime',
-        Math.floor(periodStart.getTime() / 1000).toString()
-      ); // unix timestamp in seconds
+      params.append('startTime', periodStart.getTime().toString());
     }
     if (periodEnd) {
-      params.append(
-        'endTime',
-        Math.floor(periodEnd.getTime() / 1000).toString()
-      ); // unix timestamp in seconds
+      params.append('endTime', periodEnd.getTime().toString());
     }
     if (userIds && userIds.length > 0) {
       userIds.forEach((id) => params.append('userIds', id));

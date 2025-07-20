@@ -42,7 +42,7 @@ public class DiscordMessage extends CommsMessage {
         return new GenAiMessage(
             "communicationMessage",
             (userId == null ? null : userId),
-            Instant.parse(this.getTimestamp()).getEpochSecond(),
+            Instant.parse(this.getTimestamp()).getEpochSecond() * 1000,
             projectId,
             Platform.DISCORD,
             this.getContent(),
