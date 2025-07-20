@@ -28,6 +28,8 @@ spec:
       labels:
         app: mysql
     spec:
+      imagePullSecrets:
+        - name: dockerhub-auth
       containers:
         - name: mysql
           image: {{ .Values.mysql.image }}

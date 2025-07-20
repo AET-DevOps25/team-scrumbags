@@ -28,6 +28,8 @@ spec:
       labels:
         app: ollama
     spec:
+      imagePullSecrets:
+        - name: dockerhub-auth
       containers:
         - name: ollama
           image: {{ .Values.ollama.image }}

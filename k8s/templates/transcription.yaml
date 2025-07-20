@@ -16,9 +16,13 @@ spec:
       labels:
         app: transcription
     spec:
+      imagePullSecrets:
+        - name: ghcr-auth
+        - name: dockerhub-auth
       containers:
         - name: transcription
           image: {{ .Values.transcription.image }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
           ports:
             - containerPort: {{ .Values.transcription.port }}
           env:

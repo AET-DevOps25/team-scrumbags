@@ -6,6 +6,8 @@ metadata:
   namespace: {{ .Values.global.namespace }}
 spec:
   replicas: {{ .Values.projectManagement.replicas }}
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: project-management
@@ -14,6 +16,9 @@ spec:
       labels:
         app: project-management
     spec:
+      imagePullSecrets:
+        - name: ghcr-auth
+        - name: dockerhub-auth
       initContainers:
         - name: wait-for-postgres
           image: postgres:alpine
@@ -28,6 +33,7 @@ spec:
       containers:
         - name: project-management
           image: {{ .Values.projectManagement.image }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
           ports:
             - containerPort: {{ .Values.projectManagement.port }}
           envFrom:

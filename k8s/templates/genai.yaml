@@ -16,9 +16,13 @@ spec:
       labels:
         app: genai
     spec:
+      imagePullSecrets:
+        - name: ghcr-auth
+        - name: dockerhub-auth
       containers:
         - name: genai
           image: {{ .Values.genai.image }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
           ports:
             - containerPort: {{ .Values.genai.port }}
           env:

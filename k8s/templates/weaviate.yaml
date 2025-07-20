@@ -28,6 +28,9 @@ spec:
       labels:
         app: weaviate
     spec:
+      imagePullSecrets:
+        - name: dockerhub-auth
+        - name: ghcr-auth
       containers:
         - name: weaviate
           image: {{ .Values.weaviate.image }}

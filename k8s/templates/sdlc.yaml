@@ -16,6 +16,9 @@ spec:
       labels:
         app: sdlc
     spec:
+      imagePullSecrets:
+        - name: ghcr-auth
+        - name: dockerhub-auth
       initContainers:
         - name: wait-for-postgres
           image: postgres:alpine
@@ -30,6 +33,7 @@ spec:
       containers:
         - name: sdlc-connector
           image: {{ .Values.sdlc.image }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
           ports:
             - containerPort: {{ .Values.sdlc.port }}
           env:

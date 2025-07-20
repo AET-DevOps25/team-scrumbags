@@ -16,6 +16,8 @@ spec:
       labels:
         app: keycloak
     spec:
+      imagePullSecrets:
+        - name: dockerhub-auth
       containers:
         - name: keycloak
           image: {{ .Values.keycloak.image }}

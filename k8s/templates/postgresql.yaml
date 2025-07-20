@@ -28,6 +28,8 @@ spec:
       labels:
         app: postgresql
     spec:
+      imagePullSecrets:
+        - name: dockerhub-auth
       containers:
         - name: postgresql
           image: {{ .Values.postgresql.image }}

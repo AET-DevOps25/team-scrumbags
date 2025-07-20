@@ -48,6 +48,8 @@ spec:
       labels:
         app: grafana
     spec:
+      imagePullSecrets:
+        - name: dockerhub-auth
       securityContext:
         fsGroup: 472
         runAsUser: 472

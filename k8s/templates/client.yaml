@@ -16,9 +16,13 @@ spec:
       labels:
         app: client
     spec:
+      imagePullSecrets:
+        - name: ghcr-auth
+        - name: dockerhub-auth
       containers:
         - name: client
           image: {{ .Values.client.image }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
           ports:
             - containerPort: {{ .Values.client.port }}
           envFrom:

@@ -80,6 +80,8 @@ spec:
       labels:
         app: prometheus
     spec:
+      imagePullSecrets:
+        - name: dockerhub-auth
       serviceAccountName: prometheus
       securityContext:
         fsGroup: 65534

@@ -40,6 +40,8 @@ spec:
       labels:
         app: alertmanager
     spec:
+      imagePullSecrets:
+        - name: dockerhub-auth
       securityContext:
         fsGroup: 65534
         runAsUser: 65534

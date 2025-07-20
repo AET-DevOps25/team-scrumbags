@@ -40,6 +40,8 @@ spec:
       labels:
         app: rabbitmq
     spec:
+      imagePullSecrets:
+        - name: dockerhub-auth
       containers:
         - name: rabbitmq
           image: {{ .Values.rabbitmq.image }}
