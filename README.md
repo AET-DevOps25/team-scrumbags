@@ -189,7 +189,28 @@ FR4.1: The system can proactively propose issues to the user based on the data i
 
 ### Jeremy Dix
 
-1.
+1. Contribute to system architecture design
+2. Set up project structure and initial configuration
+3. Implement the Transcription Microservice
+   1. Implement the transcription service using Whisper ([WhisperX](https://github.com/m-bain/whisperX)) as a local solution and [AssemblyAI](https://www.assemblyai.com/products/speech-to-text) as a cloud solution
+   2. Implement docker compose setup for local testing and create GitHub actions for building, testing and packaging the service (CI)
+   3. Implement integration tests for the transcription service
+   4. Add JavaDoc documentation for the transcription service
+   5. Add Swagger documentation for the transcription service
+4. Implement the GenAI Microservice
+   1. Implement the GenAI service using Python FastAPI, LangChain and Weaviate (for RAG)
+   2. Implement docker compose setup for local testing and create GitHub actions for building, testing and packaging the service (CI)
+   3. Implement integration tests for the GenAI service
+   4. Add Swagger documentation for the GenAI service
+5. Implement Transcription Settings in the Client where users can upload and assign speaking samples to team members
+6. Create Helm chart for the project to deploy the system to the Rancher student cluster
+   1. Deploy all microservices
+   2. Set up 2 ingress controllers for the client and the API
+   3. Set up monitoring via Prometheus and Grafana using (incorporating AlertManager and NodeExporter) for the deployed system
+   4. Set up continuous deployment via GitHub actions
+7. Contributions to setting up the CI/CD pipeline for the project
+8. Test and review other services' pull requests
+
 
 ### Dennis Jandow
 
