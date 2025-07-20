@@ -64,6 +64,10 @@ services:
         {
         "url": "https://${DOMAIN}/api/transcription/v3/api-docs",
         "name": "Transcription API"
+        },
+        {
+        "url": "https://${DOMAIN}/api/genai/openapi.json",
+        "name": "GenAI API"
         }
         ]'
       - 'BASE_URL=/api/docs'
