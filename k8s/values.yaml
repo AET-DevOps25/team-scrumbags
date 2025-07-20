@@ -1,7 +1,7 @@
 # Global configuration
 global:
   imageRegistry: ghcr.io/aet-devops25/team-scrumbags
-  imagePullPolicy: IfNotPresent
+  imagePullPolicy: Always
   namespace: team-scrumbags
 
 # Environment variables
