@@ -39,7 +39,7 @@ docker compose -f docker-compose.local.yml up -d
 
 the client can then be accessed at [http://localhost:4200](http://localhost:4200)
 
-**PAY ATTENTION: This docker setup is running in network mode host. So pay attention that all ports are free and enable it in your docker settings.**
+**PAY ATTENTION: This docker setup is running in network mode host. So make sure that it is enabled in your docker settings and that all ports are free.**
 
 ## System Design
 
