@@ -1,5 +1,18 @@
 <div class="flex flex-col gap-4">
-  <h2 class="text-lg font-medium">Communication Platform Integration Settings</h2>
+  <div class="flex flex-row gap-2 items-center">
+    <h2 class="text-lg font-medium">
+      Communication Platform Integration Settings
+    </h2>
+    <button
+      matIconButton
+      (click)="openInfoDialog()"
+      matTooltip="Communication Settings Guide"
+      matTooltipPosition="right"
+      aria-label="Communication Settings Guide"
+    >
+      <mat-icon>help_outline</mat-icon>
+    </button>
+  </div>
 
   <app-settings-comms-server-id></app-settings-comms-server-id>
 
