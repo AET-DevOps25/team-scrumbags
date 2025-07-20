@@ -56,6 +56,13 @@ spec:
                 name: genai-service
                 port:
                   number: {{ .Values.genai.port }}
+          - path: /api/docs(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: swagger-ui-service
+                port:
+                  number: 8080
 
 ---
 apiVersion: v1

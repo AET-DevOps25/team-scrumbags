@@ -38,6 +38,13 @@ client:
   nodePort: 30000
   replicas: 1
 
+swagger:
+  enabled: true
+  image: swaggerapi/swagger-ui:latest
+  port: 8080
+  nodePort: 30015
+  replicas: 1
+
 projectManagement:
   enabled: true
   image: ghcr.io/aet-devops25/team-scrumbags/project-management:main
