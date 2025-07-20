@@ -6,6 +6,8 @@ metadata:
   namespace: {{ .Values.global.namespace }}
 spec:
   replicas: {{ .Values.sdlc.replicas }}
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: sdlc
@@ -14,25 +16,55 @@ spec:
       labels:
         app: sdlc
     spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: postgres:alpine
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h postgresql-service -p {{ .Values.postgresql.port }}; do
+                echo "Waiting for PostgreSQL on port {{ .Values.postgresql.port }}..."
+                sleep 2
+              done
       containers:
-        - name: sdlc
+        - name: sdlc-connector
           image: {{ .Values.sdlc.image }}
           ports:
             - containerPort: {{ .Values.sdlc.port }}
           env:
             - name: SERVER_PORT
               value: "{{ .Values.sdlc.port }}"
-            - name: DEBUG
-              value: "true"
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: trace-config
+                  key: SDLC_DB_URL
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: trace-secrets
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: trace-secrets
+                  key: POSTGRES_PASSWORD
+            - name: SPRING_PROFILES_ACTIVE
+              valueFrom:
+                configMapKeyRef:
+                  name: trace-config
+                  key: SDLC_MODE
+            - name: TOKEN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: trace-secrets
+                  key: SDLC_TOKEN_SECRET
           envFrom:
             - configMapRef:
                 name: trace-config
             - secretRef:
                 name: trace-secrets
-      initContainers:
-        - name: wait-for-db
-          image: busybox:1.35
-          command: ['sh', '-c', 'until nc -z postgresql-service {{ .Values.postgresql.port }}; do sleep 1; done']
 ---
 apiVersion: v1
 kind: Service

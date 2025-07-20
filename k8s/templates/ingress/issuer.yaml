@@ -1,0 +1,15 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: letsencrypt-prod
+  namespace: {{ .Values.global.namespace }}
+spec:
+  acme:
+    email: ge58ler@mytum.de
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-prod-key-private
+    solvers:
+      - http01:
+          ingress:
+            class: nginx

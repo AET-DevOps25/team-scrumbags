@@ -6,6 +6,8 @@ metadata:
   namespace: {{ .Values.global.namespace }}
 spec:
   replicas: {{ .Values.genai.replicas }}
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: genai
@@ -20,10 +22,13 @@ spec:
           ports:
             - containerPort: {{ .Values.genai.port }}
           env:
-            - name: SERVER_PORT
-              value: "{{ .Values.genai.port }}"
             - name: DEBUG
-              value: "true"
+              value: "false"
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: trace-secrets
+                  key: MYSQL_ROOT_PASSWORD
           envFrom:
             - configMapRef:
                 name: trace-config
@@ -50,5 +55,5 @@ spec:
     app: genai
   ports:
     - port: {{ .Values.genai.port }}
-      targetPort: {{ .Values.genai.port }}
+      targetPort: 4242
 {{- end }}

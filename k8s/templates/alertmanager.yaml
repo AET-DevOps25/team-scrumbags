@@ -1,0 +1,108 @@
+{{- if .Values.alertmanager.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: {{ .Values.global.namespace }}
+data:
+  config.yml: |
+    global:
+      resolve_timeout: 5m
+    route:
+      group_by: ['alertname']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 1h
+      receiver: '{{- if .Values.secrets.discordAlertmanagerWebhookUrl }}discord{{ else }}null{{ end }}'
+    receivers:
+      - name: 'null'
+      {{- if .Values.secrets.discordAlertmanagerWebhookUrl }}
+      - name: 'discord'
+        discord_configs:
+          - webhook_url_file: /etc/secrets/discord-webhook-url
+            send_resolved: true
+      {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: {{ .Values.alertmanager.replicas }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: alertmanager
+  template:
+    metadata:
+      labels:
+        app: alertmanager
+    spec:
+      securityContext:
+        fsGroup: 65534
+        runAsUser: 65534
+        runAsGroup: 65534
+      containers:
+        - name: alertmanager
+          image: {{ .Values.alertmanager.image }}
+          args:
+            - '--config.file=/etc/alertmanager/config.yml'
+            - '--storage.path=/alertmanager'
+            - '--web.external-url=https://{{ .Values.ingress.host }}/alertmanager'
+            - '--web.route-prefix=/alertmanager'
+          ports:
+            - containerPort: {{ .Values.alertmanager.port }}
+          volumeMounts:
+            - name: alertmanager-config
+              mountPath: /etc/alertmanager
+            - name: alertmanager-storage
+              mountPath: /alertmanager
+            {{- if .Values.secrets.discordAlertmanagerWebhookUrl }}
+            - name: discord-webhook-secret
+              mountPath: /etc/secrets
+              readOnly: true
+            {{- end }}
+      volumes:
+        - name: alertmanager-config
+          configMap:
+            name: alertmanager-config
+        - name: alertmanager-storage
+          persistentVolumeClaim:
+            claimName: alertmanager-pvc
+        {{- if .Values.secrets.discordAlertmanagerWebhookUrl }}
+        - name: discord-webhook-secret
+          secret:
+            secretName: trace-secrets
+            items:
+              - key: DISCORD_ALERTMANAGER_WEBHOOK_URL
+                path: discord-webhook-url
+        {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager-service
+  namespace: {{ .Values.global.namespace }}
+spec:
+  selector:
+    app: alertmanager
+  type: NodePort
+  ports:
+    - port: {{ .Values.alertmanager.port }}
+      targetPort: {{ .Values.alertmanager.port }}
+      nodePort: {{ .Values.alertmanager.nodePort }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: alertmanager-pvc
+  namespace: {{ .Values.global.namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.alertmanager.storageSize }}
+{{- end }}

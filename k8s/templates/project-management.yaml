@@ -14,23 +14,45 @@ spec:
       labels:
         app: project-management
     spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: postgres:alpine
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h postgresql-service -p {{ .Values.postgresql.port }}; do
+                echo "Waiting for PostgreSQL on port {{ .Values.postgresql.port }}..."
+                sleep 2
+              done
       containers:
         - name: project-management
           image: {{ .Values.projectManagement.image }}
           ports:
             - containerPort: {{ .Values.projectManagement.port }}
-          env:
-            - name: SERVER_PORT
-              value: "{{ .Values.projectManagement.port }}"
           envFrom:
             - configMapRef:
                 name: trace-config
             - secretRef:
                 name: trace-secrets
-      initContainers:
-        - name: wait-for-db
-          image: busybox:1.35
-          command: ['sh', '-c', 'until nc -z postgresql-service {{ .Values.postgresql.port }}; do sleep 1; done']
+          env:
+            - name: SERVER_PORT
+              value: "{{ .Values.projectManagement.port }}"
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: trace-config
+                  key: PM_DB_URL
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: trace-secrets
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: trace-secrets
+                  key: POSTGRES_PASSWORD
 ---
 apiVersion: v1
 kind: Service

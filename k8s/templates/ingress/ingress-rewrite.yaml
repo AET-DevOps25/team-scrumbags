@@ -1,0 +1,70 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: trace-api-ingress
+  namespace: {{ .Values.global.namespace }}
+  annotations:
+    cert-manager.io/issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/proxy-body-size: {{ .Values.environment.proxyBodySize }}
+#    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+#    nginx.ingress.kubernetes.io/proxy-set-headers: "{{ .Values.global.namespace }}/proxy-headers"
+spec:
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host }}
+        - {{ .Values.ingress.keycloakHost }}
+      secretName: trace-tls-secret
+  rules:
+
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          - path: /api/project-management(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: project-management-service
+                port:
+                  number: {{ .Values.projectManagement.port }}
+          - path: /api/sdlc(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: sdlc-service
+                port:
+                  number: {{ .Values.sdlc.port }}
+          - path: /api/communication(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: communication-service
+                port:
+                  number: {{ .Values.communication.port }}
+          - path: /api/meeting-notes(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: transcription-service
+                port:
+                  number: {{ .Values.transcription.port }}
+          - path: /api/gen-ai(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: genai-service
+                port:
+                  number: {{ .Values.genai.port }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trace-api-ingress
+  namespace: {{ .Values.global.namespace }}
+data:
+  enable-vts-status: "true"
+  error-log-level: "debug"
+
+

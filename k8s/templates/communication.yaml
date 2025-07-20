@@ -6,6 +6,8 @@ metadata:
   namespace: {{ .Values.global.namespace }}
 spec:
   replicas: {{ .Values.communication.replicas }}
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: communication
@@ -22,17 +24,18 @@ spec:
           env:
             - name: SERVER_PORT
               value: "{{ .Values.communication.port }}"
-            - name: DEBUG
-              value: "true"
           envFrom:
             - configMapRef:
                 name: trace-config
             - secretRef:
                 name: trace-secrets
+          # Add this to debug environment variables
+          command: ["/bin/sh"]
+          args: ["-c", "echo 'DB User:' $COMM_DB_USER && echo 'DB URL:' $COMM_DB_URL && java -jar /app/app.jar"]
       initContainers:
         - name: wait-for-mysql
           image: busybox:1.35
-          command: ['sh', '-c', 'until nc -z mysql-service {{ .Values.mysql.port }}; do sleep 1; done']
+          command: [ 'sh', '-c', 'until nc -z mysql-service {{ .Values.mysql.port }}; do sleep 1; done' ]
 ---
 apiVersion: v1
 kind: Service

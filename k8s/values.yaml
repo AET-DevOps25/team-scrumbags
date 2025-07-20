@@ -1,9 +1,8 @@
 # Global configuration
 global:
-  namespace: team-scrumbags
   imageRegistry: ghcr.io/aet-devops25/team-scrumbags
   imagePullPolicy: IfNotPresent
-
+  namespace: team-scrumbags
 
 # Environment variables
 environment:
@@ -11,56 +10,61 @@ environment:
   keycloakRealm: trace
   keycloakClient: trace-api
   keycloakAdminUsername: admin
-  keycloakAdminPassword: admin
   postgresDbUser: user
-  postgresDbPassword: test
-  mysqlRootPassword: test
   sdlcTokenSecret: meinsecret
   sdlcMode: forward
   useWhisperx: false
   useCloud: true
   transcriptionTimeout: 300000
+  commDiscordBotId: "1377229494263222302"
+  commDiscordApiVersion: "v10"
+  commDiscordBaseUrl: "https://discord.com/api"
+  proxyBodySize: "5g"
+
+# Secrets passed during deployment
+secrets: {}
 
 # Ingress configuration
 ingress:
   enabled: true
   host: trace.student.k8s.aet.cit.tum.de
+  keycloakHost: kc.trace.student.k8s.aet.cit.tum.de
 
 # Service configurations
 client:
   enabled: true
-  image: ghcr.io/aet-devops25/team-scrumbags/client:latest
+  image: ghcr.io/aet-devops25/team-scrumbags/client:main
   port: 80
   nodePort: 30000
   replicas: 1
 
 projectManagement:
   enabled: true
-  image: ghcr.io/aet-devops25/team-scrumbags/project-management:latest
+  image: ghcr.io/aet-devops25/team-scrumbags/project-management:main
   port: 30001
   replicas: 1
 
 sdlc:
   enabled: true
-  image: ghcr.io/aet-devops25/team-scrumbags/sdlc-connector:latest
+  image: ghcr.io/aet-devops25/team-scrumbags/sdlc-connector:main
   port: 30002
   replicas: 1
 
 communication:
   enabled: true
-  image: ghcr.io/aet-devops25/team-scrumbags/comms-connector:latest
+  image: ghcr.io/aet-devops25/team-scrumbags/comms-connector:main
   port: 30003
   replicas: 1
 
 transcription:
   enabled: true
-  image: ghcr.io/aet-devops25/team-scrumbags/transcription:latest
+  image: ghcr.io/aet-devops25/team-scrumbags/transcription:main
   port: 30004
   replicas: 1
 
 genai:
   enabled: true
-  image: ghcr.io/aet-devops25/team-scrumbags/genai:latest
+  image: ghcr.io/aet-devops25/team-scrumbags/genai:main
   port: 30005
   replicas: 1
 
@@ -69,13 +73,15 @@ postgresql:
   enabled: true
   image: postgres:latest
   port: 30006
-  storageSize: 10Gi
+  storageSize: 20Gi
+  replicas: 1
 
 mysql:
   enabled: true
   image: mysql:8.0
   port: 30007
-  storageSize: 20Gi
+  storageSize: 30Gi
+  replicas: 1
 
 keycloak:
   enabled: true
@@ -87,7 +93,8 @@ ollama:
   enabled: false
   image: ollama/ollama:latest
   port: 30009
-  storageSize: 20Gi
+  storageSize: 15Gi
+  replicas: 1
 
 rabbitmq:
   enabled: true
@@ -95,9 +102,42 @@ rabbitmq:
   port: 30010
   managementPort: 15672
   storageSize: 5Gi
+  replicas: 1
 
 weaviate:
   enabled: true
   image: cr.weaviate.io/semitechnologies/weaviate:1.31.2
   port: 30011
-  storageSize: 10Gi
+  storageSize: 20Gi
+  replicas: 1
+
+# Monitoring
+prometheus:
+  enabled: true
+  image: prom/prometheus:latest
+  port: 9090
+  nodePort: 30013
+  storageSize: 8Gi
+  replicas: 1
+
+nodeExporter:
+  enabled: true
+  image: prom/node-exporter:latest
+  port: 9100
+
+grafana:
+  enabled: true
+  image: grafana/grafana:latest
+  port: 3000
+  nodePort: 30012
+  storageSize: 5Gi
+  replicas: 1
+  adminUser: admin
+
+alertmanager:
+  enabled: true
+  image: prom/alertmanager:latest
+  port: 9093
+  nodePort: 30014
+  storageSize: 2Gi
+  replicas: 1

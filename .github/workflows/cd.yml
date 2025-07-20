@@ -1,4 +1,4 @@
-name: Deploy to Kubernetes (Rancher) with Helm
+name: CD (Deploy to Kubernetes via Helm)
 
 on:
   push:
@@ -9,6 +9,7 @@ jobs:
   deploy-helm:
     name: Kubernetes Deployment with Helm
     runs-on: ubuntu-latest
+    environment: kubernetes
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -24,9 +25,14 @@ jobs:
 
       - name: Deploy with Helm
         run: |
-          helm upgrade --install -n team-scrumbags trace ./k8s \
+          helm upgrade --install -n team-scrumbags trace ./k8s  \
+            --set secrets.postgresDbPassword="${{ secrets.POSTGRES_DB_PASSWORD }}" \
+            --set secrets.mysqlRootPassword="${{ secrets.MYSQL_ROOT_PASSWORD }}" \
             --set secrets.assemblyAiKey="${{ secrets.ASSEMBLYAI_API_KEY }}" \
             --set secrets.commDiscordSecret="${{ secrets.COMM_DISCORD_SECRET }}" \
             --set secrets.hfToken="${{ secrets.HF_TOKEN }}" \
             --set secrets.nomicApiKey="${{ secrets.NOMIC_API_KEY }}" \
-            --set secrets.openWebuiBearer="${{ secrets.OPEN_WEBUI_BEARER }}"
+            --set secrets.openWebuiBearer="${{ secrets.OPEN_WEBUI_BEARER }}" \
+            --set secrets.grafanaAdminPassword="${{ secrets.GRAFANA_ADMIN_PASSWORD }}" \
+            --set secrets.discordAlertmanagerWebhookUrl="${{ secrets.DISCORD_ALERTMANAGER_WEBHOOK_URL }}" \
+            --set environment.keycloakAdminPassword="${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}"
