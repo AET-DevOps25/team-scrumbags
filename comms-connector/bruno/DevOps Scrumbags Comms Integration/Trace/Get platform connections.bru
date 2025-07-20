@@ -1,0 +1,16 @@
+meta {
+  name: Get platform connections
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/projects/:projectId/comms/:platform
+  body: none
+  auth: inherit
+}
+
+params:path {
+  projectId: 52db9da6-0c9e-4528-babb-c85eb6e7f27d
+  platform: DISCORD
+}
