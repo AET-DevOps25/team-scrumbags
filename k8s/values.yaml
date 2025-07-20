@@ -19,6 +19,7 @@ environment:
   commDiscordBotId: "1377229494263222302"
   commDiscordApiVersion: "v10"
   commDiscordBaseUrl: "https://discord.com/api"
+  proxyBodySize: "5g"
 
 # Secrets passed during deployment
 secrets: {}
