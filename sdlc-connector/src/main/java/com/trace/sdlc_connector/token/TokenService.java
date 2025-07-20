@@ -19,15 +19,18 @@ public class TokenService {
         this.securityService = securityService;
     }
 
-    public TokenEntity saveToken(@NonNull UUID projectId, @NonNull SupportedSystem supportedSystem, @NonNull String token) {
+    public TokenEntity saveToken(@NonNull UUID projectId, @NonNull SupportedSystem supportedSystem, @Nullable String token) {
         if (!securityService.hasProjectAccess(projectId)) {
             throw new SecurityException("Access denied to project with ID: " + projectId);
         }
 
-        var tokenEntity = new TokenEntity(token, projectId, supportedSystem);
+        TokenEntity tokenEntity = new TokenEntity(token, projectId, supportedSystem);
+        if (token == null || token.isBlank()) {
+            tokenRepo.deleteById(new TokenEntity.TokenEntityId(projectId, supportedSystem));
+        } else {
+            tokenEntity = tokenRepo.save(tokenEntity);
+        }
 
-        // Save the tokenEntity to the database using your repository
-        tokenEntity = tokenRepo.save(tokenEntity);
         return tokenEntity;
     }
 
@@ -44,18 +47,4 @@ public class TokenService {
         }
         return tokens;
     }
-
-    public TokenEntity getTokenById(@NonNull UUID projectId, @NonNull UUID tokenId) {
-        if (!securityService.hasProjectAccess(projectId)) {
-            throw new SecurityException("Access denied to project with ID: " + projectId);
-        }
-
-        var token = tokenRepo.findById(tokenId).orElse(null);
-        if (token != null && !token.getProjectId().equals(projectId)) {
-            throw new SecurityException("Token with ID: " + tokenId + " does not belong to project with ID: " + projectId);
-        }
-
-        return token;
-    }
-
 }

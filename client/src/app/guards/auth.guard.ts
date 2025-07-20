@@ -1,6 +1,7 @@
 import {
   ActivatedRouteSnapshot,
   CanActivateFn,
+  Router,
   RouterStateSnapshot,
 } from '@angular/router';
 import { inject } from '@angular/core';
@@ -58,6 +59,7 @@ const hasProjectAccess = async (
   // If user doesn't have access, show snackbar and redirect
   if (!hasAccess) {
     const snackBar = inject(MatSnackBar);
+    const router = inject(Router);
 
     snackBar.open(
       `Access denied: You don't have permission to view Project #${projectId}`,
@@ -68,6 +70,8 @@ const hasProjectAccess = async (
         verticalPosition: 'bottom',
       }
     );
+
+    router.navigate(['/']);
   }
 
   return hasAccess;

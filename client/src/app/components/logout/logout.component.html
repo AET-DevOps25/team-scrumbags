@@ -1,0 +1,20 @@
+<div mat-dialog-title>
+  <div class="flex flex-row justify-center">
+    <span class="text-base font-semibold">Do you want to logout?</span>
+  </div>
+</div>
+
+<div mat-dialog-content class="!pt-1"></div>
+
+<div mat-dialog-actions>
+  <div class="w-full flex flex-row justify-center gap-2">
+    <button mat-button (click)="onCancel()">Cancel</button>
+    <button
+      mat-raised-button
+      class="!bg-(--mat-sys-error) !text-(--mat-sys-on-error)"
+      (click)="logout()"
+    >
+      Logout
+    </button>
+  </div>
+</div>
