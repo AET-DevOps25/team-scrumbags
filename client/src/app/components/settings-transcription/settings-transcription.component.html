@@ -1,4 +1,12 @@
 <div class="flex flex-col gap-4">
-  <h2 class="text-lg font-medium">Transcription Settings</h2>
+  <div class="flex flex-row gap-2 items-center">
+    <h2 class="text-lg font-medium">Transcription Settings</h2>
+        <button matIconButton
+            matTooltip="Voice Samples should be at least 15 sec long" 
+            matTooltipPosition="right"
+            aria-label="Min Voice Sample Length 15 sec ">
+      <mat-icon>help_outline</mat-icon>
+    </button>
+  </div>
   <app-settings-transcription-users></app-settings-transcription-users>
 </div>
