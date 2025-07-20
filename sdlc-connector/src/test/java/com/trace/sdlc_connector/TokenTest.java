@@ -69,7 +69,11 @@ class TokenTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .header("Authorization", "Bearer " + jwtUtils.constructJWT(UUID.randomUUID(), projectId))
                 )
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isOk());
+
+        // verify that the token is deleted from the database
+        var savedTokens = tokenRepo.findAllByProjectId(projectId);
+        assertThat(savedTokens.size()).isEqualTo(0);
     }
 
     @Test
