@@ -12,6 +12,7 @@ import { ProjectAddDialog } from '../../components/project-add/project-add.compo
 import { ProjectService } from '../../services/project.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { catchError, EMPTY } from 'rxjs';
+import { LogoutDialog } from '../../components/logout/logout.component';
 
 @Component({
   selector: 'app-sidebar',
@@ -40,18 +41,19 @@ export class SidebarComponent implements OnInit {
 
   ngOnInit(): void {
     // load project list from API
-    this.service.loadProjectList()
-    .pipe(
-      catchError((error) => {
-        this.snackBar.open(
-          `Error loading project list: ${error.message}`,
-          'Close',
-          { duration: 3000 }
-        );
-        return EMPTY;
-      })
-    )
-    .subscribe();
+    this.service
+      .loadProjectList()
+      .pipe(
+        catchError((error) => {
+          this.snackBar.open(
+            `Error loading project list: ${error.message}`,
+            'Close',
+            { duration: 3000 }
+          );
+          return EMPTY;
+        })
+      )
+      .subscribe();
   }
 
   toggleSidebar(): void {
@@ -68,16 +70,12 @@ export class SidebarComponent implements OnInit {
 
   openAddProjectDialog(): void {
     this.dialog.open(ProjectAddDialog, {
-      width: '500px',
       disableClose: false,
+      panelClass: 'w-xl',
     });
   }
 
-  navigateToSettings(): void {
-    this.router.navigate([
-      '/projects',
-      this.service.selectedProjectId(),
-      'settings',
-    ]);
+  openLogoutDialog(): void {
+    this.dialog.open(LogoutDialog);
   }
 }

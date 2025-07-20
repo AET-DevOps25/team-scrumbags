@@ -4,41 +4,48 @@
   <mat-sidenav
     mode="side"
     [opened]="true"
-    class="flex flex-col !w-1/5 transition-all duration-300 !outline !outline-(--mat-sys-outline-variant) !shadow-(--mat-sys-level2) !sidebar-shadow-offset"
+    class="!w-1/5 transition-all duration-300 !outline !outline-(--mat-sys-outline-variant) !shadow-(--mat-sys-level2) !sidebar-shadow-offset"
   >
-    <mat-toolbar color="primary" class="flex justify-between items-center">
-      <button mat-icon-button (click)="openAddProjectDialog()" class="mr-1">
-        <mat-icon>add</mat-icon>
-      </button>
+    <div class="h-full flex flex-col">
+      <mat-toolbar class="flex justify-between items-center">
+        <button mat-icon-button (click)="openAddProjectDialog()" class="mr-1">
+          <mat-icon>add</mat-icon>
+        </button>
 
-      <span
-        tabindex="0"
-        (keydown.enter)="navigateToProjectOverview()"
-        class="font-semibold flex-1 text-center cursor-pointer hover:underline"
-        (click)="navigateToProjectOverview()"
-        >Projects</span
-      >
+        <span
+          tabindex="0"
+          (keydown.enter)="navigateToProjectOverview()"
+          class="font-semibold flex-1 text-center cursor-pointer hover:underline"
+          (click)="navigateToProjectOverview()"
+          >Projects</span
+        >
 
-      <button
-        mat-icon-button
-        (click)="toggleSidebar()"
-        aria-label="Collapse sidebar"
-      >
-        <mat-icon>chevron_left</mat-icon>
-      </button>
-    </mat-toolbar>
+        <button
+          mat-icon-button
+          (click)="toggleSidebar()"
+          aria-label="Collapse sidebar"
+        >
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+      </mat-toolbar>
 
-    <mat-nav-list class="flex-1">
-      @for (project of state.allProjects().values(); track project.id) {
-      <mat-list-item
-        (click)="navigateToProject(project.id)"
-        [activated]="service.selectedProjectId() === project.id"
-        class="cursor-pointer"
-      >
-        <span matListItemTitle>{{ project.name }}</span>
-      </mat-list-item>
-      }
-    </mat-nav-list>
+      <mat-nav-list class="flex-1 overflow-y-auto">
+        @for (project of state.allProjects().values(); track project.id) {
+        <mat-list-item
+          (click)="navigateToProject(project.id)"
+          [activated]="service.selectedProjectId() === project.id"
+          class="cursor-pointer"
+        >
+          <span matListItemTitle>{{ project.name }}</span>
+        </mat-list-item>
+        }
+      </mat-nav-list>
+      <div class="w-full flex flex-row justify-end">
+        <button mat-icon-button class="m-2" (click)="openLogoutDialog()">
+          <mat-icon>logout</mat-icon>
+        </button>
+      </div>
+    </div>
   </mat-sidenav>
   } @else {
   <mat-sidenav
@@ -46,15 +53,22 @@
     [opened]="true"
     class="!w-[3rem] transition-all duration-300 !outline !outline-(--mat-sys-outline-variant) !shadow-(--mat-sys-level2) !sidebar-shadow-offset"
   >
-    <mat-toolbar class="flex justify-center !p-0">
-      <button
-        mat-icon-button
-        (click)="toggleSidebar()"
-        aria-label="Collapse sidebar"
-      >
-        <mat-icon>chevron_right</mat-icon>
-      </button>
-    </mat-toolbar>
+    <div class="h-full flex flex-col justify-between">
+      <mat-toolbar class="flex justify-center !p-0">
+        <button
+          mat-icon-button
+          (click)="toggleSidebar()"
+          aria-label="Collapse sidebar"
+        >
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </mat-toolbar>
+      <div class="flex flex-row justify-center">
+        <button mat-icon-button class="m-2" (click)="openLogoutDialog()">
+          <mat-icon>logout</mat-icon>
+        </button>
+      </div>
+    </div>
   </mat-sidenav>
   }
 
