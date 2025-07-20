@@ -1,23 +1,35 @@
 package com.trace.sdlc_connector.token;
 
 import com.trace.sdlc_connector.SupportedSystem;
+import com.trace.sdlc_connector.user.UserMapping;
 import jakarta.persistence.*;
 
+import java.io.Serializable;
 import java.util.UUID;
 
 @Entity
 @Table(name = "token")
+@IdClass(TokenEntity.TokenEntityId.class)
 public class TokenEntity {
 
-    @Id
-    @GeneratedValue
-    private UUID id;
+    public static class TokenEntityId implements Serializable {
+        private UUID projectId;
+        private SupportedSystem supportedSystem;
 
-    @Column(nullable = false)
+        public TokenEntityId() {
+        }
+
+        public TokenEntityId(UUID projectId, SupportedSystem supportedSystem) {
+            this.projectId = projectId;
+            this.supportedSystem = supportedSystem;
+        }
+    }
+
+    @Id
     private UUID projectId;
 
+    @Id
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private SupportedSystem supportedSystem;
 
     @Convert(converter = TokenConverter.class)
@@ -32,10 +44,6 @@ public class TokenEntity {
         this.token = token;
         this.projectId = projectId;
         this.supportedSystem = supportedSystem;
-    }
-
-    public UUID getId() {
-        return id;
     }
 
     public UUID getProjectId() {

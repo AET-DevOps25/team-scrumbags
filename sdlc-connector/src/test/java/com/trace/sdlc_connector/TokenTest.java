@@ -93,46 +93,8 @@ class TokenTest {
         assertThat(returnedTokens).isNotEmpty();
 
         var returnedToken = returnedTokens[0];
-        assertThat(returnedToken.getId()).isEqualTo(savedToken.getId());
         assertThat(returnedToken.getProjectId()).isEqualTo(savedToken.getProjectId());
         assertThat(returnedToken.getSupportedSystem()).isEqualTo(savedToken.getSupportedSystem());
         assertThat(returnedToken.getToken()).isEqualTo(savedToken.getToken());
-    }
-
-    @Test
-    void getTokenById() throws Exception {
-        // setup a token in the database
-        var token = "test-token";
-        var savedToken = new TokenEntity(token, UUID.randomUUID(), SupportedSystem.GITHUB);
-        tokenRepo.save(savedToken);
-
-        // query the token by api request
-        var resp = mockMvc.perform(get("/projects/{projectId}/token/{tokenId}", savedToken.getProjectId(), savedToken.getId())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header("Authorization", "Bearer " + jwtUtils.constructJWT(UUID.randomUUID(), savedToken.getProjectId()))
-                )
-                .andExpect(status().isOk())
-                .andReturn().getResponse();
-
-        // verify that the returned token is equal to what we saved
-        TokenEntity returnedToken = new ObjectMapper().readValue(resp.getContentAsString(), TokenEntity.class);
-        assertThat(returnedToken.getId()).isEqualTo(savedToken.getId());
-        assertThat(returnedToken.getProjectId()).isEqualTo(savedToken.getProjectId());
-        assertThat(returnedToken.getSupportedSystem()).isEqualTo(savedToken.getSupportedSystem());
-        assertThat(returnedToken.getToken()).isEqualTo(savedToken.getToken());
-    }
-
-    @Test
-    void getTokenByIdNotFound() throws Exception {
-        // setup a different token in the database
-        var token = "test-token";
-        var savedToken = new TokenEntity(token, UUID.randomUUID(), SupportedSystem.GITHUB);
-        tokenRepo.save(savedToken);
-
-        mockMvc.perform(get("/projects/{projectId}/token/{tokenId}", savedToken.getProjectId(), UUID.randomUUID())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header("Authorization", "Bearer " + jwtUtils.constructJWT(UUID.randomUUID(), savedToken.getProjectId()))
-                )
-                .andExpect(status().isNotFound());
     }
 }
