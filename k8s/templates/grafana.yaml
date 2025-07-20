@@ -29,7 +29,7 @@ metadata:
   name: grafana-dashboards
   namespace: {{ .Values.global.namespace }}
 data:
-  {{- (.Files.Glob "grafana/dashboards/*.json").AsConfig | nindent 2 }}
+  {{ (.Files.Glob "grafana/dashboards/*.json").AsConfig | nindent 2 }}
 ---
 apiVersion: apps/v1
 kind: Deployment

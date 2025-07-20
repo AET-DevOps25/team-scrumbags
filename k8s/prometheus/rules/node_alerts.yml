@@ -27,32 +27,3 @@ groups:
         annotations:
           summary: "High disk usage (instance {{ $labels.instance }})"
           description: "Disk usage is > 85%\n  VALUE = {{ $value }}%\n  LABELS: {{ $labels }}"
-
-#  - name: test_alerts
-#    rules:
-#      - alert: AlwaysFiring
-#        expr: vector(1)
-#        for: 0m
-#        labels:
-#          severity: test
-#        annotations:
-#          summary: "Test alert - always firing"
-#          description: "This alert should always be active for testing purposes"
-#
-#      - alert: PrometheusUp
-#        expr: up{job="prometheus"} == 1
-#        for: 0m
-#        labels:
-#          severity: info
-#        annotations:
-#          summary: "Prometheus is up"
-#          description: "Prometheus instance is running"
-#
-#      - alert: ProgramStarted
-#        expr: up == 1
-#        for: 0m
-#        labels:
-#          severity: test
-#        annotations:
-#          summary: "Yet another test alert"
-#          description: "Last test alert for now, hopefully."
