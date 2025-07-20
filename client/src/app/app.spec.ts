@@ -26,7 +26,7 @@ describe('App', () => {
 
   it('should have title "trace-client"', () => {
     // Access protected property via bracket notation for test
-    expect((component as any).title).toEqual('trace-client');
+    expect((component as unknown as { title: string }).title).toEqual('trace-client');
   });
 
   it('should render router outlet', () => {

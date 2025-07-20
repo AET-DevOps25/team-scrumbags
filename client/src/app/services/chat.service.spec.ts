@@ -52,7 +52,7 @@ describe('ChatService', () => {
   describe('loadAllMessages', () => {
     it('should load messages and update state', () => {
       mockChatApi.getChatMessages.and.returnValue(of(mockMessages));
-      spyOn(service as any, 'pollMessage');
+      spyOn(service as unknown as { pollMessage: (projectId: string, messageId: string, userId: string) => void }, 'pollMessage');
       
       service.loadAllMessages('project-1').subscribe(messages => {
         expect(messages).toEqual(mockMessages);
@@ -64,11 +64,11 @@ describe('ChatService', () => {
 
     it('should trigger polling for loading messages', () => {
       mockChatApi.getChatMessages.and.returnValue(of(mockMessages));
-      spyOn(service as any, 'pollMessage');
+      spyOn(service as unknown as { pollMessage: (projectId: string, messageId: string, userId: string) => void }, 'pollMessage');
       
       service.loadAllMessages('project-1').subscribe();
       
-      expect((service as any).pollMessage).toHaveBeenCalledWith('project-1', 'msg2', 'user1');
+      expect((service as unknown as { pollMessage: (projectId: string, messageId: string, userId: string) => void }).pollMessage).toHaveBeenCalledWith('project-1', 'msg2', 'user1');
     });
 
     it('should throw error when user is not signed in', () => {
@@ -88,7 +88,7 @@ describe('ChatService', () => {
 
     it('should send message and update state', () => {
       mockChatApi.sendMessage.and.returnValue(of(responseMessages));
-      spyOn(service as any, 'pollMessage');
+      spyOn(service as unknown as { pollMessage: (projectId: string, messageId: string, userId: string) => void }, 'pollMessage');
       
       service.sendMessage('project-1', 'Hello').subscribe(messages => {
         expect(messages).toEqual(responseMessages);
@@ -100,11 +100,11 @@ describe('ChatService', () => {
 
     it('should trigger polling for loading response messages', () => {
       mockChatApi.sendMessage.and.returnValue(of(responseMessages));
-      spyOn(service as any, 'pollMessage');
+      spyOn(service as unknown as { pollMessage: (projectId: string, messageId: string, userId: string) => void }, 'pollMessage');
       
       service.sendMessage('project-1', 'Hello').subscribe();
       
-      expect((service as any).pollMessage).toHaveBeenCalledWith('project-1', 'msg4', 'user1');
+      expect((service as unknown as { pollMessage: (projectId: string, messageId: string, userId: string) => void }).pollMessage).toHaveBeenCalledWith('project-1', 'msg4', 'user1');
     });
 
     it('should throw error when user is not signed in', () => {
@@ -137,7 +137,7 @@ describe('ChatService', () => {
       
       mockChatApi.getChatMessageById.and.returnValue(of(completedMessage));
       
-      (service as any).pollMessage('project-1', 'msg1', 'user1');
+      (service as unknown as { pollMessage: (projectId: string, messageId: string, userId: string) => void }).pollMessage('project-1', 'msg1', 'user1');
       tick(5000);
       
       expect(mockChatApi.getChatMessageById).toHaveBeenCalledWith('project-1', 'msg1', 'user1');
@@ -157,7 +157,7 @@ describe('ChatService', () => {
       mockChatApi.getChatMessageById.and.returnValue(of(loadingMessage));
       
       // Mock the polling method to avoid infinite recursion in tests
-      spyOn(service as any, 'pollMessage').and.callFake((projectId: string, messageId: string, userId: string, count = 0) => {
+      spyOn(service as unknown as { pollMessage: (projectId: string, messageId: string, userId: string, count?: number) => void }, 'pollMessage').and.callFake((projectId: string, messageId: string, userId: string, count = 0) => {
         if (count >= 10) {
           return;
         }
@@ -167,7 +167,7 @@ describe('ChatService', () => {
         }, 5000);
       });
       
-      (service as any).pollMessage('project-1', 'msg1', 'user1');
+      (service as unknown as { pollMessage: (projectId: string, messageId: string, userId: string) => void }).pollMessage('project-1', 'msg1', 'user1');
       tick(5000);
       
       expect(mockChatApi.getChatMessageById).toHaveBeenCalledWith('project-1', 'msg1', 'user1');
@@ -176,7 +176,7 @@ describe('ChatService', () => {
     it('should stop polling after 10 attempts', fakeAsync(() => {
       spyOn(console, 'warn');
       
-      (service as any).pollMessage('project-1', 'stuck-msg', 'user1', 10);
+      (service as unknown as { pollMessage: (projectId: string, messageId: string, userId: string, count?: number) => void }).pollMessage('project-1', 'stuck-msg', 'user1', 10);
       tick(5000);
       
       expect(mockChatApi.getChatMessageById).not.toHaveBeenCalled();

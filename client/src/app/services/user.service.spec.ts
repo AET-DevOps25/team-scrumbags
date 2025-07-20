@@ -43,7 +43,7 @@ describe('UserService', () => {
     service = TestBed.inject(UserService);
     mockUserApi = TestBed.inject(UserApi) as jasmine.SpyObj<UserApi>;
     mockUserState = TestBed.inject(UserState) as jasmine.SpyObj<UserState>;
-    mockKeycloak = TestBed.inject(Keycloak) as any;
+    mockKeycloak = TestBed.inject(Keycloak) as jasmine.SpyObj<Keycloak>;
   });
 
   it('should be created', () => {
@@ -62,7 +62,7 @@ describe('UserService', () => {
     });
 
     it('should handle missing token fields gracefully', () => {
-      (mockKeycloak as any).tokenParsed = {
+      (mockKeycloak as unknown as { tokenParsed: Partial<typeof mockKeycloak.tokenParsed> }).tokenParsed = {
         sub: 'test-user-id'
         // missing preferred_username and email
       };
@@ -77,7 +77,7 @@ describe('UserService', () => {
     });
 
     it('should return undefined when no token available', () => {
-      (mockKeycloak as any).tokenParsed = null;
+      (mockKeycloak as unknown as { tokenParsed: null }).tokenParsed = null;
       
       const result = service.getSignedInUser();
       

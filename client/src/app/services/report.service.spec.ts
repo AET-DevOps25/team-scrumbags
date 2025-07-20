@@ -74,7 +74,7 @@ describe('ReportService', () => {
   describe('loadReportsMetadata', () => {
     it('should load reports and update state', () => {
       mockReportApi.getReports.and.returnValue(of(mockReports));
-      spyOn(service as any, 'pollReport');
+      spyOn(service as unknown as { pollReport: (projectId: string, reportId: string) => void }, 'pollReport');
       
       service.loadReportsMetadata('project-1').subscribe(reports => {
         expect(reports).toEqual(mockReports);
@@ -85,7 +85,7 @@ describe('ReportService', () => {
     });
 
     it('should set default name for reports without names', () => {
-      const reportsWithoutNames: Report[] = [
+      const reportsWithoutNames: Partial<Report>[] = [
         { 
           id: 'report1', 
           name: '', 
@@ -99,17 +99,17 @@ describe('ReportService', () => {
         },
         { 
           id: 'report2', 
-          name: null as any, 
+          name: undefined, 
           loading: false, 
           projectId: 'project-1',
           startTime: new Date('2024-01-08'),
           endTime: new Date('2024-01-14'),
           userIds: ['user2'],
           generatedAt: new Date(), 
-          summary: 'Content' 
+          summary: 'Content'
         }
       ];
-      mockReportApi.getReports.and.returnValue(of(reportsWithoutNames));
+      mockReportApi.getReports.and.returnValue(of(reportsWithoutNames as Report[]));
       
       service.loadReportsMetadata('project-1').subscribe();
       
@@ -123,11 +123,11 @@ describe('ReportService', () => {
 
     it('should trigger polling for loading reports', () => {
       mockReportApi.getReports.and.returnValue(of(mockReports));
-      spyOn(service as any, 'pollReport');
+      spyOn(service as unknown as { pollReport: (projectId: string, reportId: string) => void }, 'pollReport');
       
       service.loadReportsMetadata('project-1').subscribe();
       
-      expect((service as any).pollReport).toHaveBeenCalledWith('project-1', 'report2');
+      expect((service as unknown as { pollReport: (projectId: string, reportId: string) => void }).pollReport).toHaveBeenCalledWith('project-1', 'report2');
     });
   });
 
@@ -150,7 +150,7 @@ describe('ReportService', () => {
       const userIds = ['user1', 'user2'];
       
       mockReportApi.generateReport.and.returnValue(of(generatedReport));
-      spyOn(service as any, 'pollReport');
+      spyOn(service as unknown as { pollReport: (projectId: string, reportId: string) => void }, 'pollReport');
       
       service.generateReport('project-1', startDate, endDate, userIds).subscribe(report => {
         expect(report).toEqual(jasmine.objectContaining({ 
@@ -165,7 +165,7 @@ describe('ReportService', () => {
 
     it('should set default name for generated report', () => {
       mockReportApi.generateReport.and.returnValue(of(generatedReport));
-      spyOn(service as any, 'pollReport');
+      spyOn(service as unknown as { pollReport: (projectId: string, reportId: string) => void }, 'pollReport');
       
       service.generateReport('project-1', null, null).subscribe();
       
@@ -197,11 +197,11 @@ describe('ReportService', () => {
 
     it('should trigger polling for loading generated report', () => {
       mockReportApi.generateReport.and.returnValue(of(generatedReport));
-      spyOn(service as any, 'pollReport');
+      spyOn(service as unknown as { pollReport: (projectId: string, reportId: string) => void }, 'pollReport');
       
       service.generateReport('project-1', null, null).subscribe();
       
-      expect((service as any).pollReport).toHaveBeenCalledWith('project-1', 'new-report');
+      expect((service as unknown as { pollReport: (projectId: string, reportId: string) => void }).pollReport).toHaveBeenCalledWith('project-1', 'new-report');
     });
 
     it('should not trigger polling for completed generated report', () => {
@@ -217,11 +217,11 @@ describe('ReportService', () => {
         summary: 'Completed content' 
       };
       mockReportApi.generateReport.and.returnValue(of(completedReport));
-      spyOn(service as any, 'pollReport');
+      spyOn(service as unknown as { pollReport: (projectId: string, reportId: string) => void }, 'pollReport');
       
       service.generateReport('project-1', null, null).subscribe();
       
-      expect((service as any).pollReport).not.toHaveBeenCalled();
+      expect((service as unknown as { pollReport: (projectId: string, reportId: string) => void }).pollReport).not.toHaveBeenCalled();
     });
   });
 
@@ -249,7 +249,7 @@ describe('ReportService', () => {
       
       mockReportApi.getReportbyId.and.returnValue(of(completedReport));
       
-      (service as any).pollReport('project-1', 'polling-report');
+      (service as unknown as { pollReport: (projectId: string, reportId: string) => void }).pollReport('project-1', 'polling-report');
       tick(5000);
       
       expect(mockReportApi.getReportbyId).toHaveBeenCalledWith('project-1', 'polling-report');
@@ -272,7 +272,7 @@ describe('ReportService', () => {
       mockReportApi.getReportbyId.and.returnValue(of(loadingReport));
       
       // Mock the polling method to avoid infinite recursion in tests
-      spyOn(service as any, 'pollReport').and.callFake((projectId: string, reportId: string, count = 0) => {
+      spyOn(service as unknown as { pollReport: (projectId: string, reportId: string, count?: number) => void }, 'pollReport').and.callFake((projectId: string, reportId: string, count = 0) => {
         if (count >= 10) {
           return;
         }
@@ -282,7 +282,7 @@ describe('ReportService', () => {
         }, 5000);
       });
       
-      (service as any).pollReport('project-1', 'loading-report');
+      (service as unknown as { pollReport: (projectId: string, reportId: string) => void }).pollReport('project-1', 'loading-report');
       tick(5000);
       
       expect(mockReportApi.getReportbyId).toHaveBeenCalledWith('project-1', 'loading-report');
@@ -291,7 +291,7 @@ describe('ReportService', () => {
     it('should stop polling after 10 attempts', fakeAsync(() => {
       spyOn(console, 'warn');
       
-      (service as any).pollReport('project-1', 'stuck-report', 10);
+      (service as unknown as { pollReport: (projectId: string, reportId: string, count?: number) => void }).pollReport('project-1', 'stuck-report', 10);
       tick(5000);
       
       expect(mockReportApi.getReportbyId).not.toHaveBeenCalled();
@@ -313,7 +313,7 @@ describe('ReportService', () => {
       
       mockReportApi.getReportbyId.and.returnValue(of(reportWithoutName));
       
-      (service as any).pollReport('project-1', 'unnamed-report');
+      (service as unknown as { pollReport: (projectId: string, reportId: string) => void }).pollReport('project-1', 'unnamed-report');
       tick(5000);
       
       expect(mockProjectState.updateReport).toHaveBeenCalledWith('project-1', 

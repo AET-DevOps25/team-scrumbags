@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, NavigationEnd } from '@angular/router';
-import { of, Subject, throwError, from, filter } from 'rxjs';
+import { of, Subject, from, Observable } from 'rxjs';
 import { fakeAsync, tick } from '@angular/core/testing';
 import { ProjectService } from './project.service';
 import { ProjectApi } from './project.api';
@@ -13,9 +13,8 @@ describe('ProjectService', () => {
   let service: ProjectService;
   let mockProjectApi: jasmine.SpyObj<ProjectApi>;
   let mockProjectState: jasmine.SpyObj<ProjectState>;
-  let mockRouter: jasmine.SpyObj<Router>;
   let mockKeycloak: jasmine.SpyObj<Keycloak>;
-  let routerEvents: Subject<any>;
+  let routerEvents: Subject<NavigationEnd>;
 
   const mockProject: Project = {
     id: 'project-1',
@@ -62,7 +61,6 @@ describe('ProjectService', () => {
     service = TestBed.inject(ProjectService);
     mockProjectApi = TestBed.inject(ProjectApi) as jasmine.SpyObj<ProjectApi>;
     mockProjectState = TestBed.inject(ProjectState) as jasmine.SpyObj<ProjectState>;
-    mockRouter = TestBed.inject(Router) as jasmine.SpyObj<Router>;
     mockKeycloak = TestBed.inject(Keycloak) as jasmine.SpyObj<Keycloak>;
     
     // Set up default return values to prevent undefined errors
@@ -98,10 +96,10 @@ describe('ProjectService', () => {
 
     it('should handle URLs without project ID', () => {
       // Test the internal selectProject method directly with undefined
-      const selectProjectSpy = spyOn(service as any, 'selectProject').and.callThrough();
+      const selectProjectSpy = spyOn(service as unknown as { selectProject: (projectId: string | undefined) => Observable<Project | undefined> }, 'selectProject').and.callThrough();
       
       // Call selectProject with undefined (simulating no project ID in URL)
-      (service as any).selectProject(undefined).subscribe();
+      (service as unknown as { selectProject: (projectId: string | undefined) => Observable<Project | undefined> }).selectProject(undefined).subscribe();
       
       expect(selectProjectSpy).toHaveBeenCalledWith(undefined);
       expect(service.selectedProjectId()).toBeUndefined();

@@ -44,7 +44,7 @@ describe('MeetingNotesService', () => {
   describe('loadMeetingNotes', () => {
     it('should load meeting notes and update state', () => {
       mockMeetingNotesApi.getMeetingNotesMetadata.and.returnValue(of(mockMeetingNotes));
-      spyOn(service as any, 'pollMeetingNote');
+      spyOn(service as unknown as { pollMeetingNote: (projectId: string, noteId: string) => void }, 'pollMeetingNote');
       
       service.loadMeetingNotes('project-1').subscribe(notes => {
         expect(notes).toEqual(mockMeetingNotes);
@@ -55,11 +55,11 @@ describe('MeetingNotesService', () => {
     });
 
     it('should set default name for notes without names', () => {
-      const notesWithoutNames = [
+      const notesWithoutNames: Partial<MeetingNote>[] = [
         { id: 'note1', name: '', loading: false },
-        { id: 'note2', name: null as any, loading: false }
+        { id: 'note2', name: undefined, loading: false }
       ];
-      mockMeetingNotesApi.getMeetingNotesMetadata.and.returnValue(of(notesWithoutNames));
+      mockMeetingNotesApi.getMeetingNotesMetadata.and.returnValue(of(notesWithoutNames as MeetingNote[]));
       
       service.loadMeetingNotes('project-1').subscribe();
       
@@ -72,13 +72,13 @@ describe('MeetingNotesService', () => {
     });
 
     it('should trigger polling for loading notes', fakeAsync(() => {
-      spyOn(service as any, 'pollMeetingNote');
+      spyOn(service as unknown as { pollMeetingNote: (projectId: string, noteId: string) => void }, 'pollMeetingNote');
       mockMeetingNotesApi.getMeetingNotesMetadata.and.returnValue(of(mockMeetingNotes));
       
       service.loadMeetingNotes('project-1').subscribe();
       tick();
       
-      expect((service as any).pollMeetingNote).toHaveBeenCalledWith('project-1', 'note2');
+      expect((service as unknown as { pollMeetingNote: (projectId: string, noteId: string) => void }).pollMeetingNote).toHaveBeenCalledWith('project-1', 'note2');
     }));
   });
 
@@ -88,7 +88,7 @@ describe('MeetingNotesService', () => {
 
     it('should upload file and update state', () => {
       mockMeetingNotesApi.uploadMeetingNoteFile.and.returnValue(of(uploadedNote));
-      spyOn(service as any, 'pollMeetingNote');
+      spyOn(service as unknown as { pollMeetingNote: (projectId: string, noteId: string) => void }, 'pollMeetingNote');
       spyOn(console, 'log');
       
       service.uploadMeetingNoteFile('project-1', 2, mockFile).subscribe(note => {
@@ -115,23 +115,23 @@ describe('MeetingNotesService', () => {
     it('should trigger polling for uploaded loading note', () => {
       const loadingUpload: MeetingNote = { id: 'loading-upload', name: '', loading: true };
       mockMeetingNotesApi.uploadMeetingNoteFile.and.returnValue(of(loadingUpload));
-      spyOn(service as any, 'pollMeetingNote');
+      spyOn(service as unknown as { pollMeetingNote: (projectId: string, noteId: string) => void }, 'pollMeetingNote');
       spyOn(console, 'log');
       
       service.uploadMeetingNoteFile('project-1', 2, mockFile).subscribe();
       
-      expect((service as any).pollMeetingNote).toHaveBeenCalledWith('project-1', 'loading-upload');
+      expect((service as unknown as { pollMeetingNote: (projectId: string, noteId: string) => void }).pollMeetingNote).toHaveBeenCalledWith('project-1', 'loading-upload');
     });
 
     it('should not trigger polling for completed uploaded note', () => {
       const completedUpload: MeetingNote = { id: 'completed-upload', name: 'Completed Note', loading: false };
       mockMeetingNotesApi.uploadMeetingNoteFile.and.returnValue(of(completedUpload));
-      spyOn(service as any, 'pollMeetingNote');
+      spyOn(service as unknown as { pollMeetingNote: (projectId: string, noteId: string) => void }, 'pollMeetingNote');
       spyOn(console, 'log');
       
       service.uploadMeetingNoteFile('project-1', 2, mockFile).subscribe();
       
-      expect((service as any).pollMeetingNote).not.toHaveBeenCalled();
+      expect((service as unknown as { pollMeetingNote: (projectId: string, noteId: string) => void }).pollMeetingNote).not.toHaveBeenCalled();
     });
   });
 
@@ -145,12 +145,11 @@ describe('MeetingNotesService', () => {
     });
 
     it('should poll until note is no longer loading', fakeAsync(() => {
-      const loadingNote: MeetingNote = { id: 'polling-note', name: 'Polling Note', loading: true };
       const completedNote: MeetingNote = { id: 'polling-note', name: 'Polling Note', loading: false };
       
       mockMeetingNotesApi.getMeetingNote.and.returnValue(of(completedNote));
       
-      (service as any).pollMeetingNote('project-1', 'polling-note');
+      (service as unknown as { pollMeetingNote: (projectId: string, noteId: string) => void }).pollMeetingNote('project-1', 'polling-note');
       tick(5000);
       
       expect(mockMeetingNotesApi.getMeetingNote).toHaveBeenCalledWith('project-1', 'polling-note');
@@ -160,7 +159,7 @@ describe('MeetingNotesService', () => {
     it('should stop polling after 10 attempts', fakeAsync(() => {
       spyOn(console, 'warn');
       
-      (service as any).pollMeetingNote('project-1', 'stuck-note', 10);
+      (service as unknown as { pollMeetingNote: (projectId: string, noteId: string, count?: number) => void }).pollMeetingNote('project-1', 'stuck-note', 10);
       tick(5000);
       
       expect(mockMeetingNotesApi.getMeetingNote).not.toHaveBeenCalled();
