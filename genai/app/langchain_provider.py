@@ -91,7 +91,7 @@ async def summarize_entries(projectId: str, start: int, end: int, userIds: list[
         Use the contentTimestamps to determine the order of events.
         Whenever you include the contentTimestamps in the text, write down the time and date
         in a human-readable format.
-        
+
         Use a title that accurately reflects the content.
         Create an introduction paragraph that provides an overview of the topic.
         Create bullet points that list the key points of the text, where appropriate.
