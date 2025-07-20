@@ -42,7 +42,7 @@ export class MeetingNotesApi {
     formData.append('file', file);
     return this.http
       .post<MeetingNote>(
-        `${environment.meetingNotesUrl}/projects/${projectId}/transcripts?speakerAmount=${speakerAmount}`,
+        `${environment.meetingNotesUrl}/projects/${projectId}/transcripts?speakerAmount=${speakerAmount}&timestamp=${file.lastModified}`,
         formData
       )
       .pipe(catchError(handleError('Error uploading meeting note')));
