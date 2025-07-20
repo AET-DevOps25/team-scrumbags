@@ -23,6 +23,8 @@ export class SdlcSettings {
   private dialog = inject(MatDialog);
 
   openInfoDialog() {
-    this.dialog.open(SettingsSdlcInfoDialog);
+    this.dialog.open(SettingsSdlcInfoDialog, {
+      panelClass: 'w-xl',
+    });
   }
 }

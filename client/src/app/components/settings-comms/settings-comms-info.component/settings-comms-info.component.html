@@ -1,0 +1,32 @@
+<div mat-dialog-title class="h-auto !w-full !pt-0">
+  <div class="flex flex-row justify-between items-center">
+    <h2 class="text-xl font-semibold">Communication Setting Guide</h2>
+    <button mat-icon-button (click)="onCancel()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+</div>
+
+<div mat-dialog-content>
+  <div class="flex flex-col gap-4">
+    <p class="text-base">
+      1. Navigate to Discord settings &gt; Advanced &gt; Enable developer mode
+    </p>
+    <p class="text-base">
+      2. Install the Discord bot on your server
+      <a
+        mat-icon-button
+        href="https://discord.com/oauth2/authorize?client_id=1377229494263222302"
+        target="_blank"
+        rel="noopener"
+        aria-label="Install Discord bot"
+      >
+        <mat-icon>open_in_new</mat-icon> </a
+      >, and follow the prompts in the Discord app
+    </p>
+    <p class="text-base">
+      3. Right click your Discord server icon, select "Copy Server ID", and use
+      this as the input to add the integration
+    </p>
+  </div>
+</div>
