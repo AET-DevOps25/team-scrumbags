@@ -142,7 +142,7 @@ def get_entries(projectId: str, start: int, end: int) -> List:
                     Filter.by_property("timestamp").greater_or_equal(start_dt) &
                     Filter.by_property("timestamp").less_or_equal(end_dt)
             ),
-            limit=150
+            limit=300
         )
 
         print(f"Found {len(results.objects)} objects in collection {COLLECTION_NAME}")
