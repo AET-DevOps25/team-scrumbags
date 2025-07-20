@@ -25,7 +25,7 @@ spec:
             - name: SERVER_PORT
               value: "{{ .Values.transcription.port }}"
             - name: DEBUG
-              value: "true"
+              value: "false"
           envFrom:
             - configMapRef:
                 name: trace-config

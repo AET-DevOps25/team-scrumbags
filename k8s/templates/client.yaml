@@ -24,6 +24,8 @@ spec:
           envFrom:
             - configMapRef:
                 name: trace-config
+            - secretRef:
+                name: trace-secrets
 ---
 apiVersion: v1
 kind: Service

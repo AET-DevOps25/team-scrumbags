@@ -12,10 +12,10 @@ data:
   KEYCLOAK_AUTH_URL: "https://{{ .Values.ingress.keycloakHost }}"
   KEYCLOAK_URL: "https://{{ .Values.ingress.keycloakHost }}"
   RABBITMQ_HOST: "rabbitmq-service"
-  RABBITMQ_URL: "amqp://guest:guest@rabbitmq-service/"
+  RABBITMQ_URL: "amqp://guest:guest@rabbitmq-service:{{ .Values.rabbitmq.port }}/"
 
   # Project Management
-  DB_URL: "jdbc:postgresql://postgresql-service:{{ .Values.postgresql.port }}/pm-db"
+  PM_DB_URL: "jdbc:postgresql://postgresql-service:{{ .Values.postgresql.port }}/pm-db"
 
   # SDLC
   SDLC_DB_URL: "jdbc:postgresql://postgresql-service:{{ .Values.postgresql.port }}/sdlc-db"
@@ -34,6 +34,7 @@ data:
   USE_WHISPERX: {{ .Values.environment.useWhisperx | quote }}
   USE_CLOUD: {{ .Values.environment.useCloud | quote }}
   TRANSCRIPTION_TIMEOUT: {{ .Values.environment.transcriptionTimeout | quote }}
+  GENAI_URL: "http://genai-service:{{ .Values.genai.port }}"
 
   # GenAI
   MYSQL_HOST: "mysql-service"
