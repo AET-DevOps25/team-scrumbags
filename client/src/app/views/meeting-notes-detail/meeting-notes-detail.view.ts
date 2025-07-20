@@ -2,6 +2,9 @@ import { Component, inject, OnInit } from '@angular/core';
 import { MeetingNotesApi } from '../../services/meeting-notes.api';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { catchError } from 'rxjs/operators';
+import { EMPTY } from 'rxjs';
 
 @Component({
   selector: 'app-meeting-notes-detail',
@@ -13,6 +16,7 @@ export class MeetingNotesDetailView implements OnInit {
   private meetingNoteApi = inject(MeetingNotesApi);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private snackBar = inject(MatSnackBar);
 
   private projectId: string | null = null;
   private noteId: string | null = null;
@@ -33,6 +37,16 @@ export class MeetingNotesDetailView implements OnInit {
 
     this.meetingNoteApi
       .getMeetingNoteUrl(this.projectId, this.noteId)
+      .pipe(
+        catchError((error) => {
+          this.snackBar.open(
+            `Error fetching meeting note: ${error.message}`,
+            'Close',
+            { duration: 3000 }
+          );
+          return EMPTY;
+        })
+      )
       .subscribe({
         next: (url) => {
           window.location.href = url;

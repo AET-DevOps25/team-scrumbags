@@ -33,9 +33,9 @@ RUN apt-get update && apt-get install -y wget curl ffmpeg ca-certificates --no-i
 ARG TARGETARCH
 RUN set -e; \
     if [ "$TARGETARCH" = "amd64" ]; then \
-        JDK_URL="https://github.com/adoptium/temurin21-binaries/releases/latest/download/OpenJDK21U-jdk_x64_linux_hotspot_21.0.7_6.tar.gz"; \
+        JDK_URL="https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.7%2B6/OpenJDK21U-jdk_x64_linux_hotspot_21.0.7_6.tar.gz"; \
     elif [ "$TARGETARCH" = "arm64" ]; then \
-        JDK_URL="https://github.com/adoptium/temurin21-binaries/releases/latest/download/OpenJDK21U-jdk_aarch64_linux_hotspot_21.0.7_6.tar.gz"; \
+        JDK_URL="https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.7%2B6/OpenJDK21U-jdk_aarch64_linux_hotspot_21.0.7_6.tar.gz"; \
     else \
         echo "Unsupported architecture: $TARGETARCH"; exit 1; \
     fi; \

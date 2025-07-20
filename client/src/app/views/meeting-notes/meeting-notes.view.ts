@@ -18,6 +18,8 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { catchError, EMPTY, finalize } from 'rxjs';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-meeting-notes',
@@ -28,7 +30,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
     MatListModule,
     MatIconModule,
     MatButtonModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
   ],
   templateUrl: './meeting-notes.view.html',
   styleUrl: './meeting-notes.view.scss',
@@ -38,6 +40,7 @@ export class MeetingNotesView {
   projectService = inject(ProjectService);
   meetingNotesService = inject(MeetingNotesService);
   private dialog = inject(MatDialog);
+  private snackBar;
 
   prelookInput = input<number | undefined>(undefined);
   prelookCount = signal<number | undefined>(undefined);
@@ -63,11 +66,28 @@ export class MeetingNotesView {
     return end ? notesMetadata.slice(0, end) : notesMetadata;
   });
 
+  isLoading = signal(false);
+
   constructor() {
+    this.snackBar = inject(MatSnackBar);
     effect(() => {
       const projectId = this.projectService.selectedProjectId();
       if (projectId) {
-        this.meetingNotesService.loadMeetingNotes(projectId).subscribe();
+        this.isLoading.set(true);
+        this.meetingNotesService
+          .loadMeetingNotes(projectId)
+          .pipe(
+            catchError((error) => {
+              this.snackBar.open(
+                `Error loading meeting notes: ${error.message}`,
+                'Close',
+                { duration: 3000 }
+              );
+              return EMPTY;
+            }),
+            finalize(() => this.isLoading.set(false))
+          )
+          .subscribe();
       }
 
       this.prelookCount.set(this.prelookInput());

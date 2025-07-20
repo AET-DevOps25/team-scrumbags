@@ -66,6 +66,9 @@ export class MeetingNotesService {
         return;
       }
 
+      if (!note.name || note.name === '') {
+        note.name = 'Note ' + note.id;
+      }
       this.projectState.updateMeetingNote(projectId, note);
     });
   }

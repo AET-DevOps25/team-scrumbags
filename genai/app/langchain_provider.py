@@ -22,6 +22,7 @@ NOMIC_API_KEY = os.getenv("NOMIC_API_KEY", None)
 # Initialize embeddings lazily
 _embeddings = None
 
+
 def get_embeddings():
     global _embeddings
     if _embeddings is None:
