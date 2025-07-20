@@ -43,6 +43,37 @@ services:
       - "traefik.http.middlewares.client-compress.compress=true"
       - "traefik.http.routers.client.middlewares=client-compress"
 
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    ports:
+      - "8090:8080"
+    environment:
+      - 'URLS=[
+        {
+        "url": "https://${DOMAIN}/api/project-management/v3/api-docs",
+        "name": "Project Management API"
+        },
+        {
+        "url": "https://${DOMAIN}/api/sdlc/v3/api-docs",
+        "name": "SDLC Connector API"
+        },
+        {
+        "url": "https://${DOMAIN}/api/communication/v3/api-docs",
+        "name": "Communication API"
+        },
+        {
+        "url": "https://${DOMAIN}/api/transcription/v3/api-docs",
+        "name": "Transcription API"
+        }
+        ]'
+      - 'BASE_URL=/api/docs'
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.swagger.rule=Host(`${DOMAIN}`) && PathPrefix(`/api/docs`)"
+      - "traefik.http.services.swagger.loadbalancer.server.port=8080"
+      - "traefik.http.routers.swagger.entrypoints=websecure"
+      - "traefik.http.routers.swagger.tls.certresolver=letsencrypt"
+
   project-management:
     image: ghcr.io/aet-devops25/team-scrumbags/project-management:${PROJECT_IMAGE_TAG:-main}
     ports:
@@ -101,7 +132,7 @@ services:
       - "traefik.http.routers.sdlc.tls.certresolver=letsencrypt"
       - "traefik.http.middlewares.strip-sdlc.stripprefix.prefixes=/api/sdlc"
       - "traefik.http.routers.sdlc.middlewares=strip-sdlc"
-  
+
   sdlc-db:
     image: postgres:17
     environment:
@@ -110,13 +141,13 @@ services:
       POSTGRES_DB: sdlc-db
     volumes:
       - sdlc_db_data:/var/lib/postgresql/data
-  
+
   communication:
     image: ghcr.io/aet-devops25/team-scrumbags/comms-connector:${COMM_IMAGE_TAG:-main}
     ports:
       - "8082:8080"
     depends_on:
-      comms-db: 
+      comms-db:
         condition: service_healthy
     environment:
       - DEBUG=${DEBUG:-false}
@@ -227,7 +258,7 @@ services:
       interval: 3s
       retries: 10
       timeout: 5s
-  
+
   rabbitmq:
     image: rabbitmq:management
     ports:
