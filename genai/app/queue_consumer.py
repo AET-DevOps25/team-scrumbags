@@ -53,6 +53,6 @@ async def handle_message(message: AbstractIncomingMessage):
                 print("Invalid message format, skipping...")
                 return
             await store_entry_async(payload)
-            print("Message processed successfully")
+            #print("Message processed successfully")
         except Exception as e:
             print(f"Error processing message: {e}")

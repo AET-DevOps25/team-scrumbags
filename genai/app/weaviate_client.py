@@ -24,7 +24,6 @@ _embeddings = None
 def get_client():
     global _client
     if _client is None:
-        # Parse URL to extract host and port correctly
         url = WEAVIATE_URL.rstrip('/')
         if '://' in url:
             protocol, rest = url.split('://', 1)
@@ -77,24 +76,25 @@ def init_collection():
 
 
 async def store_entry_async(entry: dict):
-    """Store a content entry in Weaviate"""
     try:
-        await asyncio.to_thread(store_entry, entry)  # if store_entry is blocking
+        await asyncio.to_thread(store_entry, entry)
     except Exception as e:
         print(e)
 
 
 def store_entry(entry: dict):
-    """Store a content entry in Weaviate"""
     try:
         client = get_client()
 
+        # Expecting timestamp in milliseconds
+        ts_millis = entry["metadata"]["timestamp"]
+        ts_seconds = ts_millis / 1000.0
+
         entry["content"]["userId"] = entry["metadata"]["user"]
         entry["content"]["contentType"] = entry["metadata"]["type"]
-        entry["content"]["unixTimestamp"] = entry["metadata"]["timestamp"]
+        entry["content"]["contentTimestamp"] = datetime.fromtimestamp(ts_seconds, tz=timezone.utc).isoformat()  # Store as datetime string
 
         content_text = str(entry["content"])
-        # Compute embedding using the chosen model
         vector = get_embeddings().embed_documents([content_text])[0]
 
         metadata = entry["metadata"]
@@ -102,17 +102,18 @@ def store_entry(entry: dict):
         entry_obj = {
             "type": metadata.get("type") if metadata.get("type") not in [None, "None", "null"] else None,
             "user": metadata.get("user") if metadata.get("user") not in [None, "None", "null"] else None,
-            "timestamp": datetime.fromtimestamp(metadata["timestamp"], tz=timezone.utc).isoformat(),
+            "timestamp": datetime.fromtimestamp(ts_seconds, tz=timezone.utc).isoformat(),
             "projectId": str(metadata["projectId"]),
             "content": content_text,
         }
-        content_uuid = generate_uuid5(f"{entry['metadata']['projectId']}{entry['metadata']['timestamp']}{content_text}")
+
+        content_uuid = generate_uuid5(f"{metadata['projectId']}{ts_millis}{content_text}")
 
         try:
             collection = client.collections.get(COLLECTION_NAME)
             with collection.batch.fixed_size(batch_size=1) as batch:
                 batch.add_object(properties=entry_obj, uuid=content_uuid, vector=vector)
-            print(f"Stored entry with UUID {content_uuid} in collection {COLLECTION_NAME}")
+            #print(f"Stored entry with UUID {content_uuid} in collection {COLLECTION_NAME}")
         except weaviate.exceptions as e:
             print(f"Failed to store entry: {e}")
 
@@ -121,7 +122,6 @@ def store_entry(entry: dict):
 
 
 def get_entries(projectId: str, start: int, end: int) -> List:
-    """Retrieve entries from Weaviate based on project ID and time range"""
     try:
         client = get_client()
         collection = client.collections.get(COLLECTION_NAME)
@@ -129,18 +129,19 @@ def get_entries(projectId: str, start: int, end: int) -> List:
         if start == -1:
             start = 0
         if end == -1:
-            end = int(datetime.now(timezone.utc).timestamp())
+            end = int(datetime.now(timezone.utc).timestamp() * 1000)
 
-        start_dt = datetime.fromtimestamp(start, tz=timezone.utc).isoformat()
-        end_dt = datetime.fromtimestamp(end, tz=timezone.utc).isoformat()
+        # Convert milliseconds to datetime
+        start_dt = datetime.fromtimestamp(start / 1000.0, tz=timezone.utc).isoformat()
+        end_dt = datetime.fromtimestamp(end / 1000.0, tz=timezone.utc).isoformat()
 
         results = collection.query.fetch_objects(
             filters=(
-                    Filter.by_property("projectId").equal(projectId) &
-                    Filter.by_property("timestamp").greater_or_equal(start_dt) &
-                    Filter.by_property("timestamp").less_or_equal(end_dt)
+                Filter.by_property("projectId").equal(projectId) &
+                Filter.by_property("timestamp").greater_or_equal(start_dt) &
+                Filter.by_property("timestamp").less_or_equal(end_dt)
             ),
-            limit=1000
+            limit=150
         )
 
         print(f"Found {len(results.objects)} objects in collection {COLLECTION_NAME}")

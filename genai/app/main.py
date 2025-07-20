@@ -161,6 +161,8 @@ async def post_content(
                 status_code=422,
                 detail="Each entry must have a projectId and timestamp."
             )
+        if entry.metadata.timestamp < 1e12:  # If timestamp is in seconds
+            entry.metadata.timestamp *= 1000
         raw = entry.model_dump_json()
         message = aio_pika.Message(body=raw.encode(), delivery_mode=2)  # persistent
         await rabbit_channel.default_exchange.publish(
@@ -214,9 +216,9 @@ async def generate_summary(
         projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)",
                                 examples=["123e4567-e89b-12d3-a456-426614174000"]),
         startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp. Use -1 for no start limit",
-                               examples=[1640995200]),
+                               examples=[1753019779312]),
         endTime: int = Query(-1, ge=-1, description="End UNIX timestamp. Use -1 for no end limit",
-                             examples=[1641081600]),
+                             examples=[1753019776666]),
         userIds: List[UUID4] = Query([],
                                      description="Optional list of user UUIDs to focus the summary on specific users",
                                      examples=[["456e7890-e12f-34a5-b678-526614174111"]])
@@ -310,9 +312,9 @@ async def refresh_summary(
         projectId: UUID4 = Path(..., description="Project UUID (must be UUID4)",
                                 examples=["123e4567-e89b-12d3-a456-426614174000"]),
         startTime: int = Query(-1, ge=-1, description="Start UNIX timestamp. Use -1 for no start limit",
-                               examples=[1640995200]),
+                               examples=[1753019779312]),
         endTime: int = Query(-1, ge=-1, description="End UNIX timestamp. Use -1 for no end limit",
-                             examples=[1641081600]),
+                             examples=[1753019779666]),
         userIds: List[UUID4] = Query([],
                                      description="Optional list of user UUIDs to focus the summary on specific users",
                                      examples=[["456e7890-e12f-34a5-b678-526614174111"]])

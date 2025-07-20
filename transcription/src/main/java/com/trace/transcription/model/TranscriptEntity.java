@@ -33,7 +33,7 @@ public class TranscriptEntity {
     private String audioExtension;
 
     @Temporal(TemporalType.TIMESTAMP)
-    private Date timestamp;
+    private long timestamp;
 
     private boolean isLoading;
 
@@ -45,7 +45,7 @@ public class TranscriptEntity {
         this.projectId = projectId;
         this.audio = bytes;
         this.audioExtension = extension;
-        this.timestamp = new Date(timestamp);
+        this.timestamp = timestamp;
         this.isLoading = isLoading;
     }
 
@@ -73,11 +73,11 @@ public class TranscriptEntity {
         this.projectId = projectId;
     }
 
-    public Date getTimestamp() {
+    public long getTimestamp() {
         return timestamp;
     }
 
-    public void setTimestamp(Date timestamp) {
+    public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
     }
 

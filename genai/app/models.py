@@ -6,7 +6,7 @@ from pydantic import BaseModel, UUID4
 class Metadata(BaseModel):
     type: str
     user: Union[UUID4, None]
-    timestamp: int  # UNIX time
+    timestamp: int  # UNIX time in ms
     projectId: UUID4
 
 
