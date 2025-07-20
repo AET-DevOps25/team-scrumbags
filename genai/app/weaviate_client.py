@@ -1,15 +1,13 @@
 import asyncio
 import os
-import uuid
 from datetime import datetime, timezone
 from typing import List
 
 import weaviate
+import weaviate.classes.config as wc
 from dotenv import load_dotenv
 from langchain_nomic import NomicEmbeddings
-from weaviate.classes.config import Configure
 from weaviate.collections.classes.filters import Filter
-import weaviate.classes.config as wc
 from weaviate.util import generate_uuid5
 
 load_dotenv()
@@ -74,8 +72,9 @@ def init_collection():
                 wc.Property(name="projectId", data_type=wc.DataType.UUID),
                 wc.Property(name="content", data_type=wc.DataType.TEXT),
             ]
-    )
+        )
     print(f"Collection {COLLECTION_NAME} created successfully")
+
 
 async def store_entry_async(entry: dict):
     """Store a content entry in Weaviate"""
@@ -83,6 +82,7 @@ async def store_entry_async(entry: dict):
         await asyncio.to_thread(store_entry, entry)  # if store_entry is blocking
     except Exception as e:
         print(e)
+
 
 def store_entry(entry: dict):
     """Store a content entry in Weaviate"""
