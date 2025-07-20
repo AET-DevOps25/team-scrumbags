@@ -6,20 +6,18 @@ The goal of this project is to create a system that can summarize the progress o
 
 ## Table of Contents
 
-- [TRACE – Team Reporting & Activity Context Engine](#trace--team-reporting--activity-context-engine)
-  - [Table of Contents](#table-of-contents)
-  - [Usage](#usage)
-  - [Setup](#setup)
-  - [System Design](#system-design)
-    - [Architecture](#architecture)
-    - [CI/CD Pipeline](#cicd-pipeline)
-  - [Requirements Analysis](#requirements-analysis)
-    - [Main Functionality](#main-functionality)
-    - [Intended Users](#intended-users)
-    - [GenAI Integration](#genai-integration)
-    - [Scenarios](#scenarios)
-    - [Functional Requirements](#functional-requirements)
-  - [Contributors](#contributors)
+- [Usage](#usage)
+- [Setup](#setup)
+- [System Design](#system-design)
+  - [Architecture](#architecture)
+  - [CI/CD Pipeline](#cicd-pipeline)
+- [Requirements Analysis](#requirements-analysis)
+  - [Main Functionality](#main-functionality)
+  - [Intended Users](#intended-users)
+  - [GenAI Integration](#genai-integration)
+  - [Scenarios](#scenarios)
+  - [Functional Requirements](#functional-requirements)
+- [Contributors](#contributors)
 
 ## Usage
 
