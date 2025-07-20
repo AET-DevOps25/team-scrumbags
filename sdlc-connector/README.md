@@ -27,7 +27,7 @@ If you want to adjust the configuration, you can create a `.env` file in the `sd
 
 ## API Documentation
 
-Swagger API docs can be viewed at [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html).
+Swagger API docs can be viewed at [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html) after microservice start.
 
 **Note**: If the project is run using `../docker-compose.local.yml`, the docs can be accessed via [http://localhost:8081/swagger-ui/index.html](http://localhost:8081/swagger-ui/index.html).
 
@@ -42,7 +42,7 @@ Furthermore a secret token can be set to verify the authenticity of the incoming
 
 ## Integration Tests
 
-There are tests implemented that test each functionality of each endpoint separately. This is implemented using the Spring MVC test framework (`MockMvc`).
+There are tests implemented that test the functionality of each endpoint separately. This is implemented using the Spring MVC test framework (`MockMvc`).
 
 ## CI/CD Pipeline
 
