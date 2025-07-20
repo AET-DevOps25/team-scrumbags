@@ -73,14 +73,14 @@ postgresql:
   enabled: true
   image: postgres:latest
   port: 30006
-  storageSize: 10Gi
+  storageSize: 20Gi
   replicas: 1
 
 mysql:
   enabled: true
   image: mysql:8.0
   port: 30007
-  storageSize: 20Gi
+  storageSize: 30Gi
   replicas: 1
 
 keycloak:
@@ -93,7 +93,7 @@ ollama:
   enabled: false
   image: ollama/ollama:latest
   port: 30009
-  storageSize: 20Gi
+  storageSize: 15Gi
   replicas: 1
 
 rabbitmq:
@@ -108,7 +108,7 @@ weaviate:
   enabled: true
   image: cr.weaviate.io/semitechnologies/weaviate:1.31.2
   port: 30011
-  storageSize: 10Gi
+  storageSize: 20Gi
   replicas: 1
 
 # Monitoring

@@ -33,9 +33,20 @@ data:
         - targets: ['localhost:{{ .Values.prometheus.port }}']
 
     - job_name: 'node-exporter'
-      static_configs:
-        - targets: ['node-exporter-service:{{ .Values.nodeExporter.port }}']
       scrape_interval: 15s
+      kubernetes_sd_configs:
+        - role: endpoints
+          namespaces:
+            names:
+              - team-scrumbags
+      relabel_configs:
+        # keep only the node-exporter service endpoints
+        - source_labels: [__meta_kubernetes_service_name]
+          regex: node-exporter-service
+          action: keep
+        - source_labels: [__meta_kubernetes_endpoint_port_name]
+          regex: metrics
+          action: keep
 
     - job_name: 'alertmanager'
       static_configs:
@@ -69,6 +80,7 @@ spec:
       labels:
         app: prometheus
     spec:
+      serviceAccountName: prometheus
       securityContext:
         fsGroup: 65534
         runAsUser: 65534
@@ -128,3 +140,33 @@ spec:
     requests:
       storage: {{ .Values.prometheus.storageSize }}
 {{- end }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: team-scrumbags
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: prometheus-k8s
+  namespace: team-scrumbags
+rules:
+  - apiGroups: [""]
+    resources: ["services", "endpoints", "pods"]
+    verbs: ["get","list","watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: prometheus-k8s
+  namespace: team-scrumbags
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: prometheus-k8s
+subjects:
+  - kind: ServiceAccount
+    name: prometheus
+    namespace: team-scrumbags
