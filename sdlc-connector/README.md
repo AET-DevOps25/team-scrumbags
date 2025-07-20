@@ -4,15 +4,12 @@ The SDLC Connector connects to various tools and services used in the software d
 
 ## Table of Contents
 
-- [Software Development Life Cycle (SDLC) Connector](#software-development-life-cycle-sdlc-connector)
-
-  - [Table of Contents](#table-of-contents)
-  - [Setup](#setup)
-  - [API Documentation](#api-documentation)
-  - [Software Design](#software-design)
-  - [Integration Tests](#integration-tests)
-  - [CI/CD Pipeline](#cicd-pipeline)
-  - [Github Webhook Integration Guide](#github-webhook-integration-guide)
+- [Setup](#setup)
+- [API Documentation](#api-documentation)
+- [Software Design](#software-design)
+- [Integration Tests](#integration-tests)
+- [CI/CD Pipeline](#cicd-pipeline)
+- [Github Webhook Integration Guide](#github-webhook-integration-guide)
 
 ## Setup
 

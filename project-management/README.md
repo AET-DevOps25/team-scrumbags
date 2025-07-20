@@ -4,15 +4,12 @@ The project management microservice
 
 ## Table of Contents
 
-- [Software Development Life Cycle (SDLC) Connector](#software-development-life-cycle-sdlc-connector)
-
-  - [Table of Contents](#table-of-contents)
-  - [Setup](#setup)
-  - [API Documentation](#api-documentation)
-  - [Software Design](#software-design)
-  - [Integration Tests](#integration-tests)
-  - [CI/CD Pipeline](#cicd-pipeline)
-  - [Github Webhook Integration Guide](#github-webhook-integration-guide)
+- [Setup](#setup)
+- [API Documentation](#api-documentation)
+- [Software Design](#software-design)
+- [Integration Tests](#integration-tests)
+- [CI/CD Pipeline](#cicd-pipeline)
+- [Github Webhook Integration Guide](#github-webhook-integration-guide)
 
 ## Setup
 
@@ -30,6 +27,7 @@ If you want to adjust the configuration, you can create a `.env` file in the `pr
 Swagger API docs can be viewed at [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html) after microservice start.
 
 ## Software Design
+
 The project management microservice is designed to be modular and extensible. It uses a typical Spring Boot architecture with controllers, services, repositories, and entities. The microservice handles project management tasks such as creating projects and managing users in the projects.
 
 ## Integration Tests
