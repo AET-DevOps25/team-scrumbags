@@ -126,7 +126,9 @@ app.add_middleware(
     "/content",
     summary="Submit content entries for processing",
     description="Publishes a list of content entries to the processing queue. "
-                "Each entry must include projectId and timestamp metadata.",
+                "Each entry must include projectId and timestamp metadata. "
+                "The exact entries in the content field depends on which service the "
+                "content comes from.",
     responses={
         200: {"description": "Content entries successfully queued for processing"},
         422: {"description": "Validation error - missing required fields"},
@@ -140,10 +142,17 @@ async def post_content(
             ...,
             description="List of content entries to be processed",
             examples=[[{
-                "content": "Sample content text",
                 "metadata": {
-                    "projectId": "123e4567-e89b-12d3-a456-426614174000",
-                    "timestamp": 1640995200
+                    "type": "communicationMessage",
+                    "user": "3e6c5c2c-ecee-4166-9e5d-8867e8c7c824",
+                    "timestamp": 1640995200,
+                    "projectId": "6f31ffb4-be67-40b6-892b-d1ff02d93d8d"
+                },
+                "content": {
+                    "platform": "DISCORD",
+                    "message": "this is a test message",
+                    "platformUserId": "userId",
+                    "platformGlobalName": "GlobalUserName"
                 }
             }]]
         )
