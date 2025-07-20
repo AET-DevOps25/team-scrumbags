@@ -6,20 +6,18 @@ The goal of this project is to create a system that can summarize the progress o
 
 ## Table of Contents
 
-- [TRACE – Team Reporting & Activity Context Engine](#trace--team-reporting--activity-context-engine)
-  - [Table of Contents](#table-of-contents)
-  - [Usage](#usage)
-  - [Setup](#setup)
-  - [System Design](#system-design)
-    - [Architecture](#architecture)
-    - [CI/CD Pipeline](#cicd-pipeline)
-  - [Requirements Analysis](#requirements-analysis)
-    - [Main Functionality](#main-functionality)
-    - [Intended Users](#intended-users)
-    - [GenAI Integration](#genai-integration)
-    - [Scenarios](#scenarios)
-    - [Functional Requirements](#functional-requirements)
-  - [Contributors](#contributors)
+- [Usage](#usage)
+- [Setup](#setup)
+- [System Design](#system-design)
+  - [Architecture](#architecture)
+  - [CI/CD Pipeline](#cicd-pipeline)
+- [Requirements Analysis](#requirements-analysis)
+  - [Main Functionality](#main-functionality)
+  - [Intended Users](#intended-users)
+  - [GenAI Integration](#genai-integration)
+  - [Scenarios](#scenarios)
+  - [Functional Requirements](#functional-requirements)
+- [Contributors](#contributors)
 
 ## Usage
 
@@ -39,7 +37,7 @@ docker compose -f docker-compose.local.yml up -d
 
 the client can then be accessed at [http://localhost:4200](http://localhost:4200)
 
-**PAY ATTENTION: This docker setup is running in network mode host. So pay attention that all ports are free and enable it in your docker settings.**
+**PAY ATTENTION: This docker setup is running in network mode host. So make sure that it is enabled in your docker settings and that all ports are free.**
 
 ## System Design
 
@@ -214,4 +212,14 @@ FR4.1: The system can proactively propose issues to the user based on the data i
 
 ### Dennis Jandow
 
-1.
+1. Create initial requirements analysis
+2. Create system architecture design
+3. Implement the SDLC Connector microservice (logic, tests, integration)
+4. Implement the Project Management microservice (logic, tests, integration)
+5. Add client scaffolding as implementation guide
+6. Implement most of the client functionality
+7. Setup vm deployment with docker compose
+8. Setup CI/CD pipeline for sdlc, project management and client
+
+
+
