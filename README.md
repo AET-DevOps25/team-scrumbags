@@ -191,4 +191,14 @@ FR4.1: The system can proactively propose issues to the user based on the data i
 
 ### Dennis Jandow
 
-1.
+1. Create initial requirements analysis
+2. Create system architecture design
+3. Implement the SDLC Connector microservice (logic, tests, integration)
+4. Implement the Project Management microservice (logic, tests, integration)
+5. Add client scaffolding as implementation guide
+6. Implement most of the client functionality
+7. Setup vm deployment with docker compose
+8. Setup CI/CD pipeline for sdlc, project management and client
+
+
+
