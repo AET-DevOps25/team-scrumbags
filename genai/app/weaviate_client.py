@@ -92,7 +92,8 @@ def store_entry(entry: dict):
 
         entry["content"]["userId"] = entry["metadata"]["user"]
         entry["content"]["contentType"] = entry["metadata"]["type"]
-        entry["content"]["contentTimestamp"] = datetime.fromtimestamp(ts_seconds, tz=timezone.utc).isoformat()  # Store as datetime string
+        entry["content"]["contentTimestamp"] = datetime.fromtimestamp(ts_seconds,
+                                                                      tz=timezone.utc).isoformat()
 
         content_text = str(entry["content"])
         vector = get_embeddings().embed_documents([content_text])[0]
@@ -113,7 +114,7 @@ def store_entry(entry: dict):
             collection = client.collections.get(COLLECTION_NAME)
             with collection.batch.fixed_size(batch_size=1) as batch:
                 batch.add_object(properties=entry_obj, uuid=content_uuid, vector=vector)
-            #print(f"Stored entry with UUID {content_uuid} in collection {COLLECTION_NAME}")
+            # print(f"Stored entry with UUID {content_uuid} in collection {COLLECTION_NAME}")
         except weaviate.exceptions as e:
             print(f"Failed to store entry: {e}")
 
@@ -137,9 +138,9 @@ def get_entries(projectId: str, start: int, end: int) -> List:
 
         results = collection.query.fetch_objects(
             filters=(
-                Filter.by_property("projectId").equal(projectId) &
-                Filter.by_property("timestamp").greater_or_equal(start_dt) &
-                Filter.by_property("timestamp").less_or_equal(end_dt)
+                    Filter.by_property("projectId").equal(projectId) &
+                    Filter.by_property("timestamp").greater_or_equal(start_dt) &
+                    Filter.by_property("timestamp").less_or_equal(end_dt)
             ),
             limit=150
         )
