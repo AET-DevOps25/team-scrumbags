@@ -11,7 +11,7 @@ This microservice is a Java Spring Boot app connects to external communication p
     - [Setup](#setup)
     - [Testing Endpoints](#testing-endpoints)
     - [Software Design](#software-design)
-    - [Testing](#unit-tests)
+    - [Integration Tests](#integration-tests)
     - [CI/CD Pipeline](#cicd-pipeline)
 
 ## Setup
@@ -30,12 +30,12 @@ After starting the comms-connector container, Swagger API docs can be viewed at 
 
 In the case that the whole project is run using `../docker-compose.local.yml`, then the docs can be accessed via http://localhost:8082/swagger-ui/index.html.
 
-For Discord: A Discord bot has to be installed to the desired server first. This can be done using this URL and then following the prompts in the Discord app: https://discord.com/oauth2/authorize?client_id=1377229494263222302. Afterwards, the server ID required by the microservice can be accessed by:
+**For Discord:** A Discord bot has to be installed to the desired server first. This can be done using this URL and then following the prompts in the Discord app: https://discord.com/oauth2/authorize?client_id=1377229494263222302. Afterwards, the server ID required by the microservice can be accessed by:
 - Navigating to Discord settings > Advanced > Enable Developer Mode
 - Right-click the server icon of the server with the bot installed
 - Click "Copy Server ID"
 
-Please note: When using the message batch endpoint at `GET /projects/{projectId}/comms/{platform}/messages` the channel ID parameter corresponds to a Discord text channel ID from an added server connection and not the server ID itself.
+**Please note:** When using the message batch endpoint at `GET /projects/{projectId}/comms/{platform}/messages` the channel ID parameter corresponds to a Discord text channel ID from an added server connection and not the server ID itself.
 
 
 ## Software Design
@@ -54,9 +54,9 @@ While currently only Discord is supported as an external communication platform,
 Upon starting the Spring Boot app, a separate thread is run to pull all new messages from all added connections, and then sleep until the next cycle. The thread can be stopped and a new thread started using API endpoints. As the supported platforms do not allow both live messages and also getting older messages using the same mechanisms, periodically pulling the messages was the optimal solution. Furthermore, this allows the app to do the most resource intensive tasks during low-usage times.
 
 
-## Unit Tests
+## Integration Tests
 
-There are unit tests implemented that test each functionality of each endpoint separately. This is implemented using the Spring MVC test framework (`MockMvc`). External API calls (such as to Discord) are mocked so that testing is not dependent on these services.
+There are tests implemented that test each functionality of each endpoint separately. This is implemented using the Spring MVC test framework (`MockMvc`). External API calls (such as to Discord) are mocked so that testing is not dependent on these services.
 
 
 ## CI/CD Pipeline
