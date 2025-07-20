@@ -8,7 +8,6 @@ from sqlalchemy.orm import declarative_base
 load_dotenv()
 
 DATABASE_URL = (f"mysql+asyncmy://{os.getenv('MYSQL_USER')}:{os.getenv('MYSQL_PASSWORD')}"
-                f"@{os.getenv('MYSQL_HOST')}:{os.getenv('MYSQL_PORT', 3306)}/{os.getenv('MYSQL_DB', 'summaries')}")
                 f"@{os.getenv('MYSQL_HOST', "genai-db")}:{os.getenv('MYSQL_PORT', 3306)}"
                 f"/{os.getenv('MYSQL_DB', 'summaries')}")
 
